@@ -12,6 +12,7 @@ now_bri_file="/sys/devices/virtual/mi_display/disp_feature/disp-DSI-0/brightness
 max_bri_file="$MODDIR/brightness/max"
 lim_bri_file="$MODDIR/brightness/lim"
 lim_bri=$(cat $lim_bri_file)
+touch $MODDIR/modenable
 inj_bri=''
 
 # 读取配置
@@ -42,7 +43,7 @@ dec_up() {
 }
 
 dec_success() {
-    dec_up "模块状态 调整完成 | 当前亮度 ${now_bri} | 前台最高 ${lim_bri} | 极限亮度 ${max_bri} | 刷新间隔 ${flash_interval}s"
+    dec_up "模块状态 调整完成 | 当前亮度 ${now_bri} | 前台最高 ${lim_bri} | 峰值亮度 ${max_bri} | 刷新间隔 ${flash_interval}s"
 }
 
 dec_failure() {
@@ -81,7 +82,7 @@ while true; do
     else
         mod_info="😭关闭"
     fi
-    dec_up "模块状态 ${mod_info} | 当前亮度 ${now_bri} | 前台最高 ${lim_bri} | 极限亮度 ${max_bri} | 刷新间隔 ${flash_interval}s"
+    dec_up "模块状态 ${mod_info} | 当前亮度 ${now_bri} | 前台最高 ${lim_bri} | 峰值亮度 ${max_bri} | 刷新间隔 ${flash_interval}s"
 
     if [ -f $MODDIR/modenable ] && [ $now_bri -eq $lim_bri ]; then
         bri_promot

@@ -1,7 +1,7 @@
 SKIPUNZIP=0
 now_bri_file="/sys/devices/virtual/mi_display/disp_feature/disp-DSI-0/brightness_clone"
 max_bri_file="/sys/devices/virtual/mi_display/disp_feature/disp-DSI-0/max_brightness_clone"
-touch $MODPATH/modenable
+rm -f /data/adb/modules/LuminPro/modenable
 
 error() {
     echo "! $1"

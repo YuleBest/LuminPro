@@ -7,17 +7,7 @@ error() {
     exit 1
 }
 
-# 获取 Magisk 版本以决定要不要使用 action.sh
-magisk_version=$(magisk -V)
-if [ $magisk_version -ge "28000" ]; then
-    echo "😚 Magisk 版本符合要求，开启 action.sh"
-    cp $MODPATH/script/action.sh $MODPATH/
-else
-    echo "😅 Magisk 版本不符合要求，不开启 action.sh"
-fi
-
 # 提示用户把亮度拉满进行测试
-echo ""
 echo "😎 将进行亮度测试"
 echo "1️⃣ 请下拉控制中心，关闭自动亮度后将亮度拉满"
 echo "2️⃣ 等待几秒"
@@ -30,15 +20,17 @@ echo ""
 
 now_bri=$(cat $now_bri_file)
 lim_bri="$now_bri"
-[ -f $max_bri_file ] && max_bri=$(cat $max_bri_file)
 echo ""
 echo "🤓 手机前台亮度限制为: $lim_bri"
 break
 
-if [ -f "/sdcard/峰值亮度.txt" ]; then
-    $max_bri=$(cat "/sdcard/峰值亮度.txt")
-fi
+echo "😎 进行峰值亮度测试，手机屏幕会变亮"
+echo -n "30000" > $now_bri_file
+sleep 2
+max_bri=$(cat $now_bri_file)
+
 echo "🤗 手机峰值亮度为:    $max_bri"
+echo -n "$lim_bri" > $now_bri_file
 
 echo -n $now_bri > $MODPATH/brightness/now
 echo -n $lim_bri > $MODPATH/brightness/lim
