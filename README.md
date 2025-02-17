@@ -1,8 +1,12 @@
+<div align="center">
+
 # 日常屏幕亮度强化
 
 中文简体  丨  [English](https://github.com/YuleBest/LuminPro/blob/main/README_en.md)
 
 让你的 Android 设备随时可以使用激发亮度显示屏幕内容
+
+</div>
 
 ## 模块介绍  
 本模块旨在让你的 Android 设备随时可以使用激发亮度显示屏幕内容。无论设备当前亮度如何，只要满足设定条件，模块便会自动提升屏幕亮度至最高状态，确保你在任何情况下都能获得清晰的显示效果。
