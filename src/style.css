@@ -1,0 +1,297 @@
+:root {
+  --md-sys-color-background: #111318;
+  --md-sys-color-on-background: #e2e2e9;
+  --md-sys-color-surface: #1e1f25;
+  --md-sys-color-surface-container: #212429;
+  --md-sys-color-surface-container-high: #2b2930;
+  --md-sys-color-on-surface: #e2e2e9;
+  --md-sys-color-on-surface-variant: #c4c6d0;
+  --md-sys-color-primary: #a8c7fa;
+  --md-sys-color-on-primary: #062e6f;
+  --md-sys-color-primary-container: #1b4b9b;
+  --md-sys-color-on-primary-container: #d3e3fd;
+  --md-sys-color-outline: #8e9099;
+  --md-sys-color-outline-variant: #44474f;
+  --md-sys-color-error: #ffb4ab;
+  --md-sys-color-on-error: #690005;
+
+  --border-radius-m: 16px;
+  --border-radius-s: 8px;
+  --spacing-s: 8px;
+  --spacing-m: 16px;
+  --spacing-l: 24px;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  /* insets 会在这里被 internal/insets.css 处理，我们预留顶底内边距 */
+  padding-top: var(--safe-area-inset-top, 0);
+  padding-bottom: var(--safe-area-inset-bottom, 0);
+  background-color: var(--md-sys-color-background);
+  color: var(--md-sys-color-on-background);
+  font-family: 'Noto Sans SC', system-ui, -apple-system, sans-serif;
+  line-height: 1.5;
+}
+
+#app {
+  padding: var(--spacing-m);
+  max-width: 600px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-m);
+}
+
+/* Header */
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-m) 0;
+}
+
+.header-content {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-m);
+}
+
+.header-icon {
+  font-size: 2rem;
+  background: var(--md-sys-color-surface-container-high);
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.header-text h1 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 500;
+  color: var(--md-sys-color-on-background);
+}
+
+.header-subtitle {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.header-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--md-sys-color-surface-container);
+  padding: 4px 12px;
+  border-radius: 100px;
+  font-size: 0.875rem;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--md-sys-color-error); /* 默认离线红色，在线动态改为绿色 #4caf50 */
+}
+
+/* Cards */
+.card {
+  background-color: var(--md-sys-color-surface);
+  border-radius: var(--border-radius-m);
+  padding: var(--spacing-l);
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.3), 0 4px 8px 3px rgba(0, 0, 0, 0.15);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-s);
+  margin-bottom: var(--spacing-l);
+}
+
+.card-header h2 {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 500;
+  color: var(--md-sys-color-on-surface);
+  flex-grow: 1;
+}
+
+/* Config Items */
+.config-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-m);
+  padding-bottom: var(--spacing-m);
+  border-bottom: 1px solid var(--md-sys-color-outline-variant);
+}
+
+.config-item:last-of-type {
+  border-bottom: none;
+  margin-bottom: 0;
+}
+
+.config-label {
+  display: flex;
+  flex-direction: column;
+}
+
+.config-name {
+  font-size: 1rem;
+  color: var(--md-sys-color-on-surface);
+}
+
+.config-desc {
+  font-size: 0.875rem;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.config-input {
+  background-color: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface);
+  border: 1px solid var(--md-sys-color-outline);
+  border-radius: var(--border-radius-s);
+  padding: 8px 12px;
+  font-size: 1rem;
+  width: 100px;
+  text-align: right;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.config-input:focus {
+  border-color: var(--md-sys-color-primary);
+  box-shadow: 0 0 0 2px rgba(168, 199, 250, 0.3);
+}
+
+.config-input-wide {
+  width: 140px;
+}
+
+/* Status Grid */
+.status-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-m);
+}
+
+.status-item {
+  display: flex;
+  flex-direction: column;
+  background-color: var(--md-sys-color-surface-container);
+  padding: var(--spacing-m);
+  border-radius: var(--border-radius-s);
+}
+
+.status-label {
+  font-size: 0.75rem;
+  color: var(--md-sys-color-on-surface-variant);
+  margin-bottom: 4px;
+}
+
+.status-value {
+  font-size: 1.125rem;
+  font-weight: 500;
+  color: var(--md-sys-color-primary);
+  word-break: break-all;
+}
+
+/* Actions */
+.card-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--spacing-l);
+  padding-top: var(--spacing-m);
+  border-top: 1px solid var(--md-sys-color-outline-variant);
+}
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 24px;
+  border-radius: 100px;
+  border: none;
+  font-size: 0.875rem;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background-color 0.2s, opacity 0.2s;
+}
+
+.btn:active {
+  opacity: 0.8;
+}
+
+.btn-primary {
+  background-color: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+}
+
+.btn-icon-only {
+  background: transparent;
+  border: none;
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: 1.25rem;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-icon-only:active {
+  background-color: var(--md-sys-color-surface-container-high);
+}
+
+/* Logs */
+.log-output {
+  background-color: #000;
+  color: #0f0;
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 0.75rem;
+  padding: var(--spacing-s);
+  border-radius: var(--border-radius-s);
+  height: 200px;
+  overflow-y: auto;
+  margin: 0;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+/* Simple Toast */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(100px);
+  background-color: var(--md-sys-color-on-surface);
+  color: var(--md-sys-color-surface);
+  padding: 12px 24px;
+  border-radius: var(--border-radius-s);
+  font-size: 0.875rem;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4);
+  transition: transform 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+  z-index: 1000;
+  width: max-content;
+  max-width: 90vw;
+  text-align: center;
+}
+
+.toast.show {
+  transform: translateX(-50%) translateY(0);
+}
