@@ -1,6 +1,6 @@
 <div align="center">
 
-# 日常屏幕亮度强化 (LuminPro)
+# 日用屏幕亮度强化 (LuminPro)
 
 中文简体  丨  [English](https://github.com/YuleBest/LuminPro/blob/main/README_en.md)
 
