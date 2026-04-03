@@ -22,6 +22,20 @@
   --spacing-l: 24px;
 }
 
+@font-face {
+  font-family: 'Geist';
+  src: url('/Geist-VariableFont_wght.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Google Sans Code';
+  src: url('/GoogleSansCode-VariableFont_wght.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+}
+
 * {
   box-sizing: border-box;
   -webkit-tap-highlight-color: transparent;
@@ -35,7 +49,7 @@ body {
   padding-bottom: var(--safe-area-inset-bottom, 0);
   background-color: var(--md-sys-color-background);
   color: var(--md-sys-color-on-background);
-  font-family: 'Noto Sans SC', system-ui, -apple-system, sans-serif;
+  font-family: 'Geist', system-ui, -apple-system, sans-serif;
   line-height: 1.5;
 }
 
@@ -131,14 +145,11 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: var(--spacing-m);
-  padding-bottom: var(--spacing-m);
-  border-bottom: 1px solid var(--md-sys-color-outline-variant);
 }
 
-.config-item:last-of-type {
-  border-bottom: none;
-  margin-bottom: 0;
+.config-item + .config-item {
+  margin-top: var(--spacing-m);
+  padding-top: var(--spacing-m);
 }
 
 .config-label {
@@ -260,9 +271,7 @@ body {
 
 /* Logs */
 .log-output {
-  background-color: #000;
-  color: #0f0;
-  font-family: 'Consolas', 'Courier New', monospace;
+  font-family: 'Google Sans Code', 'Consolas', 'Courier New', monospace;
   font-size: 0.75rem;
   padding: var(--spacing-s);
   border-radius: var(--border-radius-s);

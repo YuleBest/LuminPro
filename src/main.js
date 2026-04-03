@@ -1,31 +1,12 @@
 import { exec } from 'kernelsu';
 import { createIcons, Sun, Settings, Save, Activity, RefreshCw, FileText } from 'lucide';
 
-// ==========================
-// 调试与配置区
-// ==========================
-// 在电脑端浏览器调试时设置为 true，会使用虚拟数据
-const IS_DEBUG = !window.navigator.userAgent.includes('KernelSU');
-
 const CONFIG_DIR = '/data/adb/modules/LuminPro/config';
 const PID_FILE = '/data/adb/modules/LuminPro/pid/inotifyd.pid';
 const FLAG_FILE = '/data/adb/modules/LuminPro/pid/up.flag';
 const LOG_FILE = '/data/adb/modules/LuminPro/service.log';
 const NOW_BRI_FILE = '/sys/class/backlight/panel0-backlight/brightness';
 const SYS_MAX_BRI_FILE = '/sys/class/backlight/panel0-backlight/max_brightness';
-
-// ==========================
-// 虚拟数据 (Debug Mode)
-// ==========================
-const mockData = {
-  ui_max_bri: '3515',
-  max_bri: '4094',
-  sleep_time: '1900-0600',
-  current_bri: '2000',
-  sys_max_bri: '4094',
-  inotifyd_pid: '12345',
-  logs: '[25 10:00:00.000] [service] LuminPro 已启动\n[25 10:00:00.050] [service.up] 亮度被调整...\n'
-};
 
 // ==========================
 // 工具函数
@@ -37,29 +18,14 @@ function showToast(msg) {
   setTimeout(() => toast.classList.remove('show'), 3000);
 }
 
-// 封装的 exec，按需返回真实执行结果或虚拟数据
+// 封装的 exec，按需返回真实执行结果
 async function runCmd(cmd) {
-  if (IS_DEBUG) {
-    console.log(`[Mock CMD Exec]: ${cmd}`);
-    // 简单的命令模拟
-    if (cmd.includes('ui_max_bri.txt')) return { errno: 0, stdout: mockData.ui_max_bri, stderr: '' };
-    if (cmd.includes('config/max_bri.txt')) return { errno: 0, stdout: mockData.max_bri, stderr: '' };
-    if (cmd.includes('sleep_time.txt')) return { errno: 0, stdout: mockData.sleep_time, stderr: '' };
-    if (cmd.includes(NOW_BRI_FILE)) return { errno: 0, stdout: mockData.current_bri, stderr: '' };
-    if (cmd.includes(SYS_MAX_BRI_FILE)) return { errno: 0, stdout: mockData.sys_max_bri, stderr: '' };
-    if (cmd.includes('cat ' + PID_FILE)) return { errno: 0, stdout: mockData.inotifyd_pid, stderr: '' };
-    if (cmd.includes('tail -n')) return { errno: 0, stdout: mockData.logs, stderr: '' };
-    if (cmd.includes('kill')) return { errno: 0, stdout: '', stderr: '' };
-    if (cmd.includes('ehco -n')) return { errno: 0, stdout: '', stderr: '' };
-    return { errno: 0, stdout: '', stderr: '' };
-  } else {
-    try {
-      const res = await exec(cmd);
-      return res;
-    } catch (e) {
-      console.error(e);
-      return { errno: -1, stdout: '', stderr: String(e) };
-    }
+  try {
+    const res = await exec(cmd);
+    return res;
+  } catch (e) {
+    console.error(e);
+    return { errno: -1, stdout: '', stderr: String(e) };
   }
 }
 
@@ -181,10 +147,6 @@ async function loadLogs() {
 // 初始化
 // ==========================
 async function init() {
-  if (!IS_DEBUG) {
-    // 启用全屏或者沉浸式如果需要
-    // enableInsets(true); // 开启内边距适配
-  }
 
   // 初始化 Lucide 图标
   createIcons({

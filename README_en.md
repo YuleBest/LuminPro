@@ -1,78 +1,51 @@
 <div align="center">
 
-# Lumin Pro
+# LuminPro
 
 [中文简体](https://github.com/YuleBest/LuminPro/blob/main/README.md)  丨  English
 
 Enable your Android device to display content at boosted brightness anytime
+*Based on KernelSU WebUI + Event-Driven Architecture*
 
 </div>
 
 ## Module Introduction
-This module aims to allow your Android device to utilize boosted brightness for screen content display at any time. Regardless of the current brightness level, the module will automatically elevate screen brightness to its maximum state when configured conditions are met, ensuring clear visibility in all scenarios.
+This module allows your Android device to constantly utilize boosted brightness for screen content display. When manually adjusting brightness over a designated threshold limit, the module automatically and smoothly elevates the screen brightness parameter to its maximum hardware-driven state, ensuring clear readability even in strong outdoor daylight.
 
-## Features
-- **Customizable Brightness Parameters**
-Configure via `CONFIG.prop`:
-- `custom_thr_bri`: Custom threshold brightness (optional, defaults to measured `FDBRI`). Triggers brightness boost when current brightness matches this value.
-- `custom_max_bri`: Custom maximum brightness (optional, defaults to measured `MAXBRI`). Ensures optimal screen clarity.
+## V2.1 Core Features
 
-- **Smooth Brightness Transition**
-Two brightness boost modes:
-- **Mode 1**: Instant boost from threshold to maximum brightness for urgent scenarios.
-- **Mode 2**: Step-by-step brightness increase for smoother visual transitions.
+- **Zero Drain Background Monitoring (inotifyd)**  
+  Say goodbye to infinite loops and heavy active polling overhead. LuminPro natively utilizes an event-driven `inotifyd` listener to respond *only* when the brightness sysfs node alters, fundamentally preserving your device's overall battery life.
 
-- **Dynamic Parameter Updates**
-Configuration reloads automatically before each loop cycle. Real-time parameter adjustments take effect without rebooting.
+- **Modernized KernelSU WebUI**  
+  No more manual text editing in generic config files! Simply tap the module settings inside your KernelSU manager to seamlessly adjust options directly in a tailored Dark Mode interface:
+  - `Foreground Max Brightness`: The original UI threshold dragging point that initiates the brightness boost.
+  - `Peak Maximum Brightness`: The extreme and ultimate targeted hardware brightness your screen will soar to.
 
-- **Sleep Time Rules**
-Configure `sleep_start` and `sleep_stop` to disable automatic brightness adjustments during specified nighttime/quiet hours.
+- **Smooth Step Transitions**  
+  Abrupt, rigid jumps in brightness ruin visual coherence. LuminPro operates via an embedded millisecond-level, 50-step computation curve that scales backlight inputs naturally and sequentially.
 
-- **Logging & Management**
-Detailed operation logs with automatic archiving. Maintains log size limits and manages archive files for efficient troubleshooting.
+- **Sleep & Quiet Hours**  
+  You do not need a blinding torch in bed. Tweak quiet night hours (e.g., `1900-0600`) locally via the WebUI. During your configured timeframe, the module enters a silent hibernation ensuring your retinas and sleep remain undisturbed.
 
-## Workflow
-1. **Initialization**
-   - Load custom/default parameters (e.g., `FDBRI`, `MAXBRI`).
-   - Initialize log files and module descriptors.
+- **Live Status & Direct Logs Dashboard**  
+  Capture crucial runtime performance status at a glance. Attain realtime active backlight parameters, executing daemon service PIDs, and direct service logs dynamically straight from the integrated UI.
 
-2. **Configuration Update (`CONFIG_UPDATE`)**
-   - Reload `CONFIG.prop` before each cycle.
-   - Validate parameters; revert to defaults if invalid.
-   - Adjust critical parameters (`boost_wait_time`, `flash_wait_time`, `bri_update_mode`).
+## Operations Workflow
+1. **Initial Calibration Setup**  
+   - Employs minimal physical volume-key prompts during ZIP installation to read and memorize your device’s specific maximum limitations. Users upgrading smoothly bypass calibration logic if previous files are preserved.
+2. **Event Tracking Mode**  
+   - Submits a background `inotifyd` observer attaching safely without looping variables toward the standard Android illumination logic path. 
+3. **Debounce Optimization Engine**  
+   - Interacting with display slider changes will safely debounce over sub-second timers, avoiding computational race-conditions. It acknowledges exactly where your sliding ends prior to activating iterative hardware boosts.
 
-3. **Brightness Adjustment Algorithm**
-   - Compare current brightness with threshold.
-   - Apply direct/stepwise boost based on configuration.
+## Quick Installation Instructions
+1. Flash the packaged module ZIP directly through any framework manager backing WebUI specification features.
+2. Walk through standard volume physical key verification presses (you may easily skip recalibrations extending old module environments by just pressing Volume+).
+3. Soft reboot to engage operations.
+4. If parameters or constraints require tweaking, manipulate values across the internal interface view. All operations are **persisted instantly**.
 
-4. **Brightness Check (`BRI_CHECK`)**
-   - Detect if current brightness falls below threshold.
-   - Honor sleep time rules before boosting.
-
-5. **Main Loop**
-   - Wait `boost_wait_time` after startup, then periodically check brightness.
-   - Execute brightness boost when conditions are met (outside sleep hours).
-
-6. **Log Management (`log_cleaner`)**
-   - Archive logs exceeding 100,000 bytes.
-   - Retain up to 5 archived logs; auto-delete oldest files.
-
-## Configuration
-Edit `CONFIG.prop` in the module directory:
-
-- `custom_thr_bri`: Brightness threshold for triggering boost.
-- `custom_max_bri`: Target maximum brightness.
-- `boost_wait_time`: Delay (seconds) before initial brightness check.
-- `flash_wait_time`: Interval (seconds) between brightness checks.
-- `bri_update_mode`: `1` (instant boost) or `2` (stepwise boost).
-- `step_num`: Number of steps for Mode 2.
-- `sleep_start`/`sleep_stop`: Quiet hours in 24h format (e.g., `23-7`).
-
-## Installation
-1. Install the module.
-2. Reboot device to activate.
-3. Edit `CONFIG.prop` as needed – changes apply automatically in the next cycle.
-
-## Notes
-- Ensure parameter values are reasonable to avoid abnormal screen behavior.
-- Check `service.log` for troubleshooting or run `feedback.sh` for support.
+## Vital Precautions
+- **OLED Burn-in & Escalated Thermal Warning**: Persistently overriding and enforcing intensive display peak loads aggressively drives heat emissions up. Doing so vastly skyrockets irreversible UI ghosting & OLED burn-in permanent issues respectively.
+- Verify entered tuning numbers remain securely governed matching acceptable values on your manufacturer's specific screen limit boundaries to avert hardware blackout glitches.
+- Acknowledge inherent hazards prior to extended utilization. If irregular phenomena transpire, inspect native system output records over the built-in front-end log pane.
