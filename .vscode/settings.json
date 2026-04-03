@@ -1,0 +1,7 @@
+{
+  "editor.formatOnSave": true,
+"editor.defaultFormatter": "timonwong.shellcheck",
+"[shellscript]": {
+    "editor.defaultFormatter": "mads-hartmann.bash-ide-vscode"
+}
+}
