@@ -5,7 +5,6 @@ MODDIR="${0%/*/*}"
 PID_DIR="$MODDIR/pid"
 pid_file="$PID_DIR/inotifyd.pid"
 flag_file="$PID_DIR/up.flag"
-now_bri_file="/sys/class/backlight/panel0-backlight/brightness"
 log_file="$MODDIR/service.log"
 
 _log() {
@@ -14,21 +13,23 @@ _log() {
 
 _log "正在手动重启服务..."
 
-# 1. 杀死正在进行的 inotifyd
-if [ -f "$pid_file" ]; then
-    kill -9 "$(cat "$pid_file")" 2>/dev/null
-    _log "已杀死现有 inotifyd ($(cat "$pid_file"))"
-fi
+pause_file="$PID_DIR/daemon.pause"
 
-# 2. 清理遗留文件
+# 1. 强制通知守护进程并执行清理
+_log "通知守护进程执行全局重置..."
+touch "$pause_file"
+killall -9 inotifyd 2>/dev/null
+for p in $(pgrep -f "up.sh"); do
+    [ "$p" != "$$" ] && kill -9 "$p" 2>/dev/null
+done
+
+# 2. 清理遗留标记
 rm -f "$pid_file"
 rm -f "$flag_file"
-_log "已清理 pid 和 flag 文件"
+_log "已清理 pid 和 flag 锁文件"
 
-# 3. 重新启动 inotifyd
-inotifyd "$MODDIR/script/up.sh" "$now_bri_file:c" &
-inotifyd_pid="$!"
-echo "$inotifyd_pid" >"$pid_file"
-_log "inotifyd ($inotifyd_pid) 重新启动成功"
+# 3. 恢复守护进程 (它会自动拉起新 inotifyd)
+rm -f "$pause_file"
+_log "服务正在由守护进程重新拉起..."
 
 exit 0

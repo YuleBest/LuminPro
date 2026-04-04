@@ -155,6 +155,9 @@ IMPORT_OLD_CONFIG() {
         if [ -s "$old_config/log_max_size.txt" ]; then
             echo "  - 日志大小限制: $(cat "$old_config/log_max_size.txt") KB"
         fi
+        if [ -s "$old_config/sleep_time.txt" ]; then
+            echo "  - 休眠时间: $(cat "$old_config/sleep_time.txt")"
+        fi
         echo ""
         echo "* 按音量 + 沿用旧配置, 按音量 - 重新测试"
 
@@ -166,6 +169,7 @@ IMPORT_OLD_CONFIG() {
             [ -s "$old_config/auto_bri_sleep.txt" ] && cp -f "$old_config/auto_bri_sleep.txt" "$mod_config/"
             [ -s "$old_config/steps_num.txt" ] && cp -f "$old_config/steps_num.txt" "$mod_config/"
             [ -s "$old_config/log_max_size.txt" ] && cp -f "$old_config/log_max_size.txt" "$mod_config/"
+            [ -s "$old_config/sleep_time.txt" ] && cp -f "$old_config/sleep_time.txt" "$mod_config/"
 
             # 版本迁移逻辑
             local old_version_code

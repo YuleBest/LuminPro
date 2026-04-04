@@ -5,27 +5,14 @@
 MODDIR="${0%/*/*}"
 CONFIG_DIR="$MODDIR/config"
 PID_DIR="$MODDIR/pid"
-pid_file="$PID_DIR/inotifyd.pid"
 flag_file="$PID_DIR/up.flag"
 stop_file="$PID_DIR/stop.flag"
 log_file="$MODDIR/service.log"
+pause_file="$PID_DIR/daemon.pause"
 now_bri_file="/sys/class/backlight/panel0-backlight/brightness"
-
-# 重新启动 inotifyd 监听
-RESTART_INOTIFYD() {
-    # 保证只有一个 inotifyd 在运行
-    local old_pid
-    old_pid="$(cat "$pid_file" 2>/dev/null)"
-    [ -n "$old_pid" ] && kill -9 "$old_pid" 2>/dev/null
-
-    # 重启监听
-    inotifyd "$MODDIR/script/up.sh" "$now_bri_file:c" &
-    echo "$!" >"$pid_file"
-}
 
 # 日志函数
 _log() {
-    # 如果 stop.flag 存在并且不是正在清理日志，我们仍允许记录停止状态，但此处先检查基础
     case "$1" in
     "日志过大"*) ;;
     *) if [ -f "$stop_file" ]; then return; fi ;;
@@ -40,23 +27,22 @@ _log() {
         local cur_size
         cur_size=$(du -k "$log_file" | cut -f1)
         if [ "$cur_size" -ge "$max_size" ]; then
-            echo "[$(date '+%d %H:%M:%S.%3N')] [service.up] 日志过大 ($cur_size KB), 自动重置" >"$log_file"
+            echo "[$(date '+%d %H:%M:%S.%3N')] [up] 日志过大 ($cur_size KB), 自动重置" >"$log_file"
         fi
     fi
 
-    printf '[%s] [service.up] %s\n' "$(date '+%d %H:%M:%S.%3N')" "$1" >>"$log_file"
+    printf '[%s] [up] %s\n' "$(date '+%d %H:%M:%S.%3N')" "$1" >>"$log_file"
 }
 
-_log "($$) 被 inotifyd 调用..."
+_log "[$$] 收到 inotifyd 通知..."
 
 if [ -f "$stop_file" ]; then
-    _log "($$) 检测到 stop.flag, 停止本次调整 (服务已暂停)"
+    _log "[$$] [拦截] 检测到 stop.flag, 服务已处于手动暂停状态"
     exit 0
 fi
 
-# 建立一个 flag, 避免重复执行; 如果已经有 flag, 则退出
 if [ -f "$flag_file" ]; then
-    _log "($$) 重复执行, 这个进程退出, 将有其他进程接管"
+    _log "[$$] [拦截] 已经有一个 up.sh (${flag_file}) 在运行, 本进程退出"
     exit 1
 fi
 touch "$flag_file"
@@ -109,11 +95,11 @@ update_all() {
 
     # 如果步长为 0 (差值太小), 直接设置目标亮度
     if [ "$step_value" -eq 0 ]; then
-        _log "($$) 步长为 0, 直接设置目标亮度: $target_bri"
+        _log "[$$] 步长为 0, 直接设置目标亮度: $target_bri"
         echo -n "$target_bri" >"$now_bri_file" && return 0 || return 1
     fi
 
-    _log "($$) 开始调整亮度: $start_bri -> $target_bri, 共 $steps_num 步, 每步 $step_value"
+    _log "[$$] 开始调整亮度: $start_bri -> $target_bri, 共 $steps_num 步, 每步 $step_value"
     for step in $(seq 1 "$steps_num"); do
         echo -n $((start_bri + step * step_value)) >"$now_bri_file"
         sleep 0.02
@@ -132,19 +118,29 @@ CHECK_BRI() {
     # shellcheck disable=SC2034
     for cycle_num in $(seq 1 10); do
         now_bri="$(cat "$now_bri_file")"
-        if [ "$now_bri" -ge "$ui_max_bri" ]; then
+        if [ "$now_bri" -ge "$ui_max_bri" ] && [ "$now_bri" -lt "$target_bri" ]; then
+            _log "[$$] [满足提升条件] 当前亮度: $now_bri (>= $ui_max_bri), 目标提升至: $target_bri"
+            _log "[$$] [抢占] 正在清理 inotifyd 和其它上报进程..."
+            touch "$pause_file"
+            killall -9 inotifyd 2>/dev/null
+            for p in $(pgrep -f "up.sh"); do
+                [ "$p" != "$$" ] && kill -9 "$p" 2>/dev/null
+            done
+            rm -f "$flag_file"
+
             if update_all; then
-                _log "($$) 亮度调整完成!"
+                _log "[$$] [成功] 亮度提升任务已完成 (已设为: $target_bri)"
                 _log "--------------------"
                 return 0
             else
-                _log "($$) 亮度调整失败!"
+                _log "[$$] [失败] 亮度提升过程中遇到异常"
                 _log "--------------------"
                 return 1
             fi
         fi
         sleep 0.5
     done
+    _log "[$$] [取消] 循环检测结束, 未持续触发有效提升阈值"
     return 1
 }
 
@@ -154,29 +150,27 @@ MAIN() {
 
     # 解析并判断休眠
     if IS_SLEEP_TIME; then
-        _log "($$) 当前处于休眠时段 ($sleep_start-$sleep_end), 跳过本次调整"
+        _log "[$$] 当前处于休眠时段 ($sleep_start-$sleep_end), 跳过本次调整"
         _log "--------------------"
         rm -f "$flag_file"
-        RESTART_INOTIFYD
         return
     fi
 
     if [ "$auto_bri_sleep" = "1" ]; then
         mode="$(settings get system screen_brightness_mode 2>/dev/null)"
         if [ "$mode" = "1" ]; then
-            _log "($$) 当前为自动亮度模式, 根据设置跳过本次调整"
+            _log "[$$] 当前为自动亮度模式, 根据设置跳过本次调整"
             _log "--------------------"
             rm -f "$flag_file"
-            RESTART_INOTIFYD
             return
         fi
     fi
 
-    _log "($$) 亮度被调整, 将在 0.5s 后检测是否符合条件"
+    _log "[$$] 亮度被调整, 将在 0.5s 后检测是否符合条件"
     sleep 0.5
     CHECK_BRI
-    rm -f "$flag_file" # 删除 flag, 允许下一次调整
-    RESTART_INOTIFYD
+    rm -f "$flag_file"  # 删除成果锁
+    rm -f "$pause_file" # 解锁守护进程，让它自动拉起 inotifyd
 }
 
 MAIN
