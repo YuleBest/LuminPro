@@ -5,16 +5,30 @@
 MODDIR="${0%/*/*}"
 CONFIG_DIR="$MODDIR/config"
 PID_DIR="$MODDIR/pid"
+pid_file="$PID_DIR/inotifyd.pid"
 flag_file="$PID_DIR/up.flag"
 stop_file="$PID_DIR/stop.flag"
 log_file="$MODDIR/service.log"
+now_bri_file="/sys/class/backlight/panel0-backlight/brightness"
+
+# 重新启动 inotifyd 监听
+RESTART_INOTIFYD() {
+    # 保证只有一个 inotifyd 在运行
+    local old_pid
+    old_pid="$(cat "$pid_file" 2>/dev/null)"
+    [ -n "$old_pid" ] && kill -9 "$old_pid" 2>/dev/null
+
+    # 重启监听
+    inotifyd "$MODDIR/script/up.sh" "$now_bri_file:c" &
+    echo "$!" >"$pid_file"
+}
 
 # 日志函数
 _log() {
     # 如果 stop.flag 存在并且不是正在清理日志，我们仍允许记录停止状态，但此处先检查基础
     case "$1" in
-        "日志过大"*) ;;
-        *) if [ -f "$stop_file" ]; then return; fi ;;
+    "日志过大"*) ;;
+    *) if [ -f "$stop_file" ]; then return; fi ;;
     esac
 
     local max_size
@@ -128,50 +142,41 @@ CHECK_BRI() {
                 _log "--------------------"
                 return 1
             fi
-        else
-            sleep 0.5 # 不符合条件, 等待后再次检测
         fi
+        sleep 0.5
     done
-
-    _log "($$) 亮度 ($(cat "$now_bri_file")) 未达到条件, 本次调整取消"
-    return 2
-}
-
-# 判断是否开启了自动亮度且需要休眠
-IS_AUTO_BRI_SLEEP() {
-    if [ "$auto_bri_sleep" = "1" ]; then
-        local mode
-        mode="$(settings get system screen_brightness_mode 2>/dev/null)"
-        if [ "$mode" = "1" ]; then
-            return 0 # 需要休眠
-        fi
-    fi
-    return 1 # 不需要休眠
+    return 1
 }
 
 MAIN() {
-    # 休眠时段内不调整亮度
+    # 0.5 秒等待以避免 inotifyd 刚启动时的误触
+    sleep 0.5
+
+    # 解析并判断休眠
     if IS_SLEEP_TIME; then
         _log "($$) 当前处于休眠时段 ($sleep_start-$sleep_end), 跳过本次调整"
         _log "--------------------"
-        sleep 1
         rm -f "$flag_file"
+        RESTART_INOTIFYD
         return
     fi
 
-    if IS_AUTO_BRI_SLEEP; then
-        _log "($$) 当前为自动亮度模式, 根据设置跳过本次调整"
-        _log "--------------------"
-        sleep 1
-        rm -f "$flag_file"
-        return
+    if [ "$auto_bri_sleep" = "1" ]; then
+        mode="$(settings get system screen_brightness_mode 2>/dev/null)"
+        if [ "$mode" = "1" ]; then
+            _log "($$) 当前为自动亮度模式, 根据设置跳过本次调整"
+            _log "--------------------"
+            rm -f "$flag_file"
+            RESTART_INOTIFYD
+            return
+        fi
     fi
 
     _log "($$) 亮度被调整, 将在 0.5s 后检测是否符合条件"
     sleep 0.5
     CHECK_BRI
-    sleep 0.5          # 稍微延迟一会避免 inotifyd 刚启动就检测到亮度变化
     rm -f "$flag_file" # 删除 flag, 允许下一次调整
+    RESTART_INOTIFYD
 }
 
 MAIN
