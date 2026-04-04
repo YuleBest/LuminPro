@@ -26,6 +26,18 @@ button_listener() {
 }
 
 # 注意事项
+SHOW_CHANGELOG() {
+    local changelog_file="$MODPATH/changelog.md"
+    if [ -f "$changelog_file" ]; then
+        echo "--------------------------------------"
+        echo "- 本次更新日志:"
+        # 提取第一个二级标题及其内容，直到遇到下一个二级标题或文件结束
+        # 使用更具兼容性的 awk 逻辑
+        awk '/^## / { if (p) exit; p=1; print; next } p { print }' "$changelog_file"
+        echo "--------------------------------------"
+    fi
+}
+
 NOTE() {
     cat "$MODPATH/NOTE.txt"
     echo ""
@@ -205,6 +217,7 @@ CREATE_BACKUP() {
 # 主函数
 MAIN() {
     NOTE
+    SHOW_CHANGELOG
     if ! IMPORT_OLD_CONFIG; then
         INIT_CONFIG
         CHECK_FILES

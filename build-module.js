@@ -7,9 +7,26 @@ const versionMatch = propContent.match(/^version=(.*)$/m);
 const versionCodeMatch = propContent.match(/^versionCode=(.*)$/m);
 
 const version = versionMatch ? versionMatch[1].trim() : 'Unknown';
-const versionCode = versionCodeMatch ? versionCodeMatch[1].trim() : '0000';
+const versionCodeStr = versionCodeMatch ? versionCodeMatch[1].trim() : '0000';
+const versionCode = parseInt(versionCodeStr, 10);
 
 const zipName = `LuminPro_${version}-${versionCode}.zip`;
+
+// --- 新增: 自动同步 update.json ---
+const updateJsonPath = 'update.json';
+if (fs.existsSync(updateJsonPath)) {
+  try {
+    const updateJson = JSON.parse(fs.readFileSync(updateJsonPath, 'utf-8'));
+    updateJson.versionCode = versionCode;
+    updateJson.version = version;
+    updateJson.zipUrl = `https://share.yule.ink/magisk/mod/luminpro/module/${zipName}`;
+    fs.writeFileSync(updateJsonPath, JSON.stringify(updateJson, null, 4), 'utf-8');
+    console.log(`>>> [1/2] 已同步 update.json (版本: ${version}, Code: ${versionCode})`);
+  } catch (e) {
+    console.error(`[错误] 无法更新 update.json: ${e.message}`);
+  }
+}
+// ---------------------------------
 
 console.log(`\n>>> [2/2] 创建模块 ZIP 压缩包...`);
 
