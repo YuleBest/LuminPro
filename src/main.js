@@ -2,13 +2,17 @@ import { exec } from 'kernelsu';
 import { createIcons, Sun, Settings, Save, Activity, RefreshCw, FileText } from 'lucide';
 
 const CONFIG_DIR = '/data/adb/modules/LuminPro/config';
+const PATH_CONFIG_DIR = '/data/adb/modules/LuminPro/config/path';
 const BACKUP_DIR = '/data/adb/modules/LuminPro/config/.backup';
 const PID_FILE = '/data/adb/modules/LuminPro/pid/inotifyd.pid';
 const FLAG_FILE = '/data/adb/modules/LuminPro/pid/up.flag';
 const STOP_FLAG_FILE = '/data/adb/modules/LuminPro/pid/stop.flag';
 const LOG_FILE = '/data/adb/modules/LuminPro/service.log';
-const NOW_BRI_FILE = '/sys/class/backlight/panel0-backlight/brightness';
-const SYS_MAX_BRI_FILE = '/sys/class/backlight/panel0-backlight/max_brightness';
+const DEFAULT_NOW_BRI_FILE = '/sys/class/backlight/panel0-backlight/brightness';
+const DEFAULT_SYS_MAX_BRI_FILE = '/sys/class/backlight/panel0-backlight/max_brightness';
+
+let NOW_BRI_FILE = DEFAULT_NOW_BRI_FILE;
+let SYS_MAX_BRI_FILE = DEFAULT_SYS_MAX_BRI_FILE;
 
 // ==========================
 // 工具函数
@@ -43,6 +47,16 @@ async function writeFile(path, content) {
 
 // 1. 加载配置
 async function loadConfig() {
+  // 首先加载设备路径配置
+  const [pathNowRes, pathMaxRes] = await Promise.all([
+    runCmd(`cat "${PATH_CONFIG_DIR}/now_bri_file.txt"`),
+    runCmd(`cat "${PATH_CONFIG_DIR}/max_bri_file.txt"`)
+  ]);
+
+  if (pathNowRes.errno === 0) NOW_BRI_FILE = pathNowRes.stdout.trim();
+  if (pathMaxRes.errno === 0) SYS_MAX_BRI_FILE = pathMaxRes.stdout.trim();
+
+  // 然后加载其他配置
   const [uiRes, maxRes, sleepRes, autoRes, stepsRes, logSizeRes] = await Promise.all([
     runCmd(`cat "${CONFIG_DIR}/ui_max_bri.txt"`),
     runCmd(`cat "${CONFIG_DIR}/max_bri.txt"`),
@@ -54,6 +68,10 @@ async function loadConfig() {
 
   if (uiRes.errno === 0) document.getElementById('input-ui-max-bri').value = uiRes.stdout.trim();
   if (maxRes.errno === 0) document.getElementById('input-max-bri').value = maxRes.stdout.trim();
+  
+  // 加载高级设置中的设备路径
+  document.getElementById('input-now-bri-file').value = NOW_BRI_FILE;
+  document.getElementById('input-sys-max-bri-file').value = SYS_MAX_BRI_FILE;
   
   if (sleepRes.errno === 0) {
     const timeVal = sleepRes.stdout.trim();
@@ -146,6 +164,25 @@ async function saveConfig() {
       showToast('配置已保存 (可能需要在下次调整时生效)');
   } else {
       showToast('配置已保存 (服务未运行)');
+  }
+}
+
+// 2.2 保存高级设置（设备路径）
+async function saveAdvancedConfig() {
+  const nowBriFile = document.getElementById('input-now-bri-file').value || DEFAULT_NOW_BRI_FILE;
+  const sysMaxBriFile = document.getElementById('input-sys-max-bri-file').value || DEFAULT_SYS_MAX_BRI_FILE;
+
+  showToast('保存中...');
+  
+  // 保存设备路径配置
+  const pathChanged = (NOW_BRI_FILE !== nowBriFile) || (SYS_MAX_BRI_FILE !== sysMaxBriFile);
+  await writeFile(`${PATH_CONFIG_DIR}/now_bri_file.txt`, nowBriFile);
+  await writeFile(`${PATH_CONFIG_DIR}/max_bri_file.txt`, sysMaxBriFile);
+  
+  if (pathChanged) {
+    showToast('设备路径已修改，需要重启服务生效');
+  } else {
+    showToast('设置已保存');
   }
 }
 
@@ -355,6 +392,7 @@ async function init() {
 
   // 绑定事件
   document.getElementById('btn-save').addEventListener('click', saveConfig);
+  document.getElementById('btn-save-advanced').addEventListener('click', saveAdvancedConfig);
   document.getElementById('btn-reset').addEventListener('click', handleReset);
   document.getElementById('btn-toggle-service').addEventListener('click', toggleService);
   document.getElementById('btn-restart-service').addEventListener('click', restartService);

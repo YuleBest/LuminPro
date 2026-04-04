@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
   <title>LuminPro</title>
   <link rel="stylesheet" type="text/css" href="/internal/insets.css" />
-  <script type="module" crossorigin src="/assets/index-GvCaVVmw.js"></script>
+  <script type="module" crossorigin src="/assets/index-BjK9R0FR.js"></script>
   <link rel="stylesheet" crossorigin href="/assets/index-DpSbbGTK.css">
 </head>
 
@@ -26,6 +26,37 @@
         <span class="status-text">运行中</span>
       </div>
     </header>
+
+    <!-- 实时状态 -->
+    <section class="card" id="status-section">
+      <div class="card-header">
+        <span class="card-icon"><i data-lucide="activity"></i></span>
+        <h2>实时状态</h2>
+        <div class="header-actions">
+           <button class="btn-text-s" id="btn-toggle-service">暂停</button>
+           <button class="btn-text-s" id="btn-restart-service">重启</button>
+        </div>
+      </div>
+
+      <div class="status-grid">
+        <div class="status-item">
+          <span class="status-label">当前亮度</span>
+          <span class="status-value" id="status-current-bri">—</span>
+        </div>
+        <div class="status-item">
+          <span class="status-label">系统最大亮度</span>
+          <span class="status-value" id="status-sys-max-bri">—</span>
+        </div>
+        <div class="status-item">
+          <span class="status-label">inotifyd PID</span>
+          <span class="status-value" id="status-inotifyd-pid">—</span>
+        </div>
+        <div class="status-item">
+          <span class="status-label">休眠状态</span>
+          <span class="status-value" id="status-sleep">—</span>
+        </div>
+      </div>
+    </section>
 
     <!-- 配置卡片 -->
     <section class="card" id="config-section">
@@ -134,34 +165,38 @@
       </div>
     </section>
 
-    <!-- 实时状态 -->
-    <section class="card" id="status-section">
+    <!-- 高级设置卡片 -->
+    <section class="card" id="advanced-section">
       <div class="card-header">
-        <span class="card-icon"><i data-lucide="activity"></i></span>
-        <h2>实时状态</h2>
-        <div class="header-actions">
-           <button class="btn-text-s" id="btn-toggle-service">暂停</button>
-           <button class="btn-text-s" id="btn-restart-service">重启</button>
+        <span class="card-icon"><i data-lucide="sliders"></i></span>
+        <h2>高级设置</h2>
+      </div>
+
+      <div class="config-group">
+        <div class="config-item">
+          <div class="config-label">
+            <span class="config-name">当前亮度节点</span>
+            <span class="config-desc">修改需重启服务</span>
+          </div>
+          <div class="config-value">
+            <input type="text" id="input-now-bri-file" class="config-input config-input-wide" />
+          </div>
+        </div>
+        <div class="config-item">
+          <div class="config-label">
+            <span class="config-name">最大亮度节点</span>
+            <span class="config-desc">修改需重启服务</span>
+          </div>
+          <div class="config-value">
+            <input type="text" id="input-sys-max-bri-file" class="config-input config-input-wide" />
+          </div>
         </div>
       </div>
 
-      <div class="status-grid">
-        <div class="status-item">
-          <span class="status-label">当前亮度</span>
-          <span class="status-value" id="status-current-bri">—</span>
-        </div>
-        <div class="status-item">
-          <span class="status-label">系统最大亮度</span>
-          <span class="status-value" id="status-sys-max-bri">—</span>
-        </div>
-        <div class="status-item">
-          <span class="status-label">inotifyd PID</span>
-          <span class="status-value" id="status-inotifyd-pid">—</span>
-        </div>
-        <div class="status-item">
-          <span class="status-label">休眠状态</span>
-          <span class="status-value" id="status-sleep">—</span>
-        </div>
+      <div class="card-actions">
+        <button class="btn btn-primary" id="btn-save-advanced">
+          <span class="btn-icon"><i data-lucide="save"></i></span> 保存设置
+        </button>
       </div>
     </section>
 

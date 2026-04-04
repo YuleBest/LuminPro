@@ -4,12 +4,31 @@
 
 MODDIR="${0%/*/*}"
 CONFIG_DIR="$MODDIR/config"
+PATH_CONFIG_DIR="$CONFIG_DIR/path"
 PID_DIR="$MODDIR/pid"
 flag_file="$PID_DIR/up.flag"
 stop_file="$PID_DIR/stop.flag"
 log_file="$MODDIR/service.log"
 pause_file="$PID_DIR/daemon.pause"
-now_bri_file="/sys/class/backlight/panel0-backlight/brightness"
+
+# 默认设备路径
+DEFAULT_NOW_BRI_FILE="/sys/class/backlight/panel0-backlight/brightness"
+DEFAULT_MAX_BRI_FILE="/sys/class/backlight/panel0-backlight/max_brightness"
+
+# 读取配置函数
+get_config() {
+    local config_file="$1"
+    local default_value="$2"
+    if [ -f "$config_file" ]; then
+        cat "$config_file"
+    else
+        echo "$default_value"
+    fi
+}
+
+# 获取亮度文件路径
+now_bri_file="$(get_config "$PATH_CONFIG_DIR/now_bri_file.txt" "$DEFAULT_NOW_BRI_FILE")"
+max_bri_file="$(get_config "$PATH_CONFIG_DIR/max_bri_file.txt" "$DEFAULT_MAX_BRI_FILE")"
 
 # 日志函数
 _log() {
@@ -46,9 +65,6 @@ if [ -f "$flag_file" ]; then
     exit 1
 fi
 touch "$flag_file"
-
-# 节点文件
-now_bri_file="/sys/class/backlight/panel0-backlight/brightness"
 
 # 读取配置 (均为数值)
 ui_max_bri="$(cat "$CONFIG_DIR/ui_max_bri.txt")"
@@ -171,6 +187,15 @@ MAIN() {
     CHECK_BRI
     rm -f "$flag_file"  # 删除成果锁
     rm -f "$pause_file" # 解锁守护进程，让它自动拉起 inotifyd
+
+    # 如果配置文件被修改了，杀掉 inotifyd 让 daemon 重启并重新读取配置
+    local current_now_bri="$(cat "$PATH_CONFIG_DIR/now_bri_file.txt" 2>/dev/null || echo "$DEFAULT_NOW_BRI_FILE")"
+    local cached_now_bri="$(cat "$PATH_CONFIG_DIR/.cached_path" 2>/dev/null || echo "$DEFAULT_NOW_BRI_FILE")"
+
+    if [ "$current_now_bri" != "$cached_now_bri" ]; then
+        _log "[$$] 检测到设备路径配置已改变，重启 inotifyd..."
+        killall -9 inotifyd 2>/dev/null
+    fi
 }
 
 MAIN
