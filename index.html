@@ -33,38 +33,100 @@
         <h2>亮度配置</h2>
       </div>
 
-      <div class="config-item">
-        <div class="config-label">
-          <span class="config-name">前台最大亮度</span>
-          <span class="config-desc">触发亮度提升的阈值</span>
+      <!-- 分类: 亮度调节 -->
+      <div class="config-group">
+        <h3 class="group-title">亮度调节</h3>
+        <div class="config-item">
+          <div class="config-label">
+            <span class="config-name">前台最大亮度</span>
+            <span class="config-desc">触发亮度提升的阈值</span>
+          </div>
+          <div class="config-value">
+            <input type="number" id="input-ui-max-bri" class="config-input" min="0" />
+          </div>
         </div>
-        <div class="config-value">
-          <input type="number" id="input-ui-max-bri" class="config-input" min="0" />
+        <div class="config-item">
+          <div class="config-label">
+            <span class="config-name">峰值最大亮度</span>
+            <span class="config-desc">亮度提升的目标值</span>
+          </div>
+          <div class="config-value">
+            <input type="number" id="input-max-bri" class="config-input" min="0" />
+          </div>
+        </div>
+        <div class="config-item">
+          <div class="config-label">
+            <span class="config-name">亮度提升步数</span>
+            <span class="config-desc">约 0.02 秒 / 步</span>
+          </div>
+          <div class="config-value">
+            <input type="number" id="input-steps-num" class="config-input" min="1" max="500" />
+          </div>
         </div>
       </div>
 
-      <div class="config-item">
-        <div class="config-label">
-          <span class="config-name">峰值最大亮度</span>
-          <span class="config-desc">亮度提升的目标值</span>
+      <!-- 分类: 执行策略 -->
+      <div class="config-group">
+        <h3 class="group-title">执行策略</h3>
+        <div class="config-item">
+          <div class="config-label">
+            <span class="config-name">自动亮度时休眠</span>
+            <span class="config-desc">开启自动亮度时不提升</span>
+          </div>
+          <div class="config-value">
+            <label class="switch">
+              <input type="checkbox" id="input-auto-bri-sleep">
+              <span class="slider"></span>
+            </label>
+          </div>
         </div>
-        <div class="config-value">
-          <input type="number" id="input-max-bri" class="config-input" min="0" />
+        <div class="config-item">
+          <div class="config-label">
+            <span class="config-name">定时休眠</span>
+            <span class="config-desc">设定时段内不提升亮度</span>
+          </div>
+          <div class="config-value">
+            <label class="switch">
+              <input type="checkbox" id="input-sleep-mode">
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+        <div class="config-item-expand" id="sleep-time-expand">
+          <div class="custom-time-picker">
+            <div class="time-unit">
+              <input type="number" id="input-sleep-start-h" class="time-input" min="0" max="23" placeholder="00" />
+              <span>:</span>
+              <input type="number" id="input-sleep-start-m" class="time-input" min="0" max="59" placeholder="00" />
+            </div>
+            <span class="time-sep">至</span>
+            <div class="time-unit">
+              <input type="number" id="input-sleep-end-h" class="time-input" min="0" max="23" placeholder="00" />
+              <span>:</span>
+              <input type="number" id="input-sleep-end-m" class="time-input" min="0" max="59" placeholder="00" />
+            </div>
+          </div>
         </div>
       </div>
 
-      <div class="config-item">
-        <div class="config-label">
-          <span class="config-name">休眠时间</span>
-          <span class="config-desc">该时段内不提升亮度</span>
-        </div>
-        <div class="config-value">
-          <input type="text" id="input-sleep-time" class="config-input config-input-wide"
-            placeholder="如 1900-0600" />
+      <!-- 分类: 系统管理 -->
+      <div class="config-group">
+        <h3 class="group-title">系统管理</h3>
+        <div class="config-item">
+          <div class="config-label">
+            <span class="config-name">日志大小限制</span>
+            <span class="config-desc">单位: KB</span>
+          </div>
+          <div class="config-value">
+            <input type="number" id="input-log-max-size" class="config-input" min="1" max="10240" />
+          </div>
         </div>
       </div>
 
       <div class="card-actions">
+        <button class="btn btn-outline" id="btn-reset">
+          恢复默认
+        </button>
         <button class="btn btn-primary" id="btn-save">
           <span class="btn-icon"><i data-lucide="save"></i></span> 保存配置
         </button>
@@ -76,7 +138,10 @@
       <div class="card-header">
         <span class="card-icon"><i data-lucide="activity"></i></span>
         <h2>实时状态</h2>
-        <button class="btn-icon-only" id="btn-refresh-status" title="刷新"><i data-lucide="refresh-cw"></i></button>
+        <div class="header-actions">
+           <button class="btn-text-s" id="btn-restart-service">重启</button>
+           <button class="btn-text-s" id="btn-refresh-status">刷新</button>
+        </div>
       </div>
 
       <div class="status-grid">
@@ -104,7 +169,7 @@
       <div class="card-header">
         <span class="card-icon"><i data-lucide="file-text"></i></span>
         <h2>运行日志</h2>
-        <button class="btn-icon-only" id="btn-refresh-log" title="刷新"><i data-lucide="refresh-cw"></i></button>
+        <button class="btn-text-s" id="btn-refresh-log">刷新</button>
       </div>
       <pre class="log-output" id="log-output">加载中...</pre>
     </section>

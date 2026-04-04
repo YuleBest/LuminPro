@@ -11,6 +11,19 @@ log_file="$MODDIR/service.log"
 
 # 日志函数
 _log() {
+    local max_size
+    max_size="$(cat "$CONFIG_DIR/log_max_size.txt" 2>/dev/null)"
+    [ -z "$max_size" ] && max_size="500" # 默认 500 KB
+
+    # 获取当前日志大小 (KB)
+    if [ -f "$log_file" ]; then
+        local cur_size
+        cur_size=$(du -k "$log_file" | cut -f1)
+        if [ "$cur_size" -ge "$max_size" ]; then
+            echo "[$(date '+%d %H:%M:%S.%3N')] [service.up] 日志过大 ($cur_size KB), 自动重置" >"$log_file"
+        fi
+    fi
+
     printf '[%s] [service.up] %s\n' "$(date '+%d %H:%M:%S.%3N')" "$1" >>"$log_file"
 }
 
@@ -30,6 +43,7 @@ now_bri_file="/sys/class/backlight/panel0-backlight/brightness"
 ui_max_bri="$(cat "$CONFIG_DIR/ui_max_bri.txt")"
 max_bri="$(cat "$CONFIG_DIR/max_bri.txt")"
 sleep_time="$(cat "$CONFIG_DIR/sleep_time.txt" 2>/dev/null)"
+auto_bri_sleep="$(cat "$CONFIG_DIR/auto_bri_sleep.txt" 2>/dev/null)"
 
 # 解析休眠时间 (格式: HHMM-HHMM, 例如 1900-0600)
 sleep_start="${sleep_time%-*}" # 1900
@@ -56,7 +70,8 @@ IS_SLEEP_TIME() {
 
 # 目标亮度
 target_bri="$max_bri"
-steps_num="50" # 步数
+steps_num="$(cat "$CONFIG_DIR/steps_num.txt" 2>/dev/null)"
+[ -z "$steps_num" ] && steps_num="50" # 步数 (默认 50)
 
 # 循环调整
 update_all() {
@@ -111,6 +126,18 @@ CHECK_BRI() {
     return 2
 }
 
+# 判断是否开启了自动亮度且需要休眠
+IS_AUTO_BRI_SLEEP() {
+    if [ "$auto_bri_sleep" = "1" ]; then
+        local mode
+        mode="$(settings get system screen_brightness_mode 2>/dev/null)"
+        if [ "$mode" = "1" ]; then
+            return 0 # 需要休眠
+        fi
+    fi
+    return 1 # 不需要休眠
+}
+
 MAIN() {
     # 休眠时段内不调整亮度
     if IS_SLEEP_TIME; then
@@ -121,10 +148,18 @@ MAIN() {
         return
     fi
 
+    if IS_AUTO_BRI_SLEEP; then
+        _log "($$) 当前为自动亮度模式, 根据设置跳过本次调整"
+        _log "--------------------"
+        sleep 1
+        rm -f "$flag_file"
+        return
+    fi
+
     _log "($$) 亮度被调整, 将在 0.5s 后检测是否符合条件"
     sleep 0.5
     CHECK_BRI
-    sleep 0.5 # 稍微延迟一会避免 inotifyd 刚启动就检测到亮度变化
+    sleep 0.5          # 稍微延迟一会避免 inotifyd 刚启动就检测到亮度变化
     rm -f "$flag_file" # 删除 flag, 允许下一次调整
 }
 

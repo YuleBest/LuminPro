@@ -141,6 +141,22 @@ body {
 }
 
 /* Config Items */
+.config-group {
+  margin-bottom: var(--spacing-l);
+  padding: var(--spacing-m);
+  background-color: var(--md-sys-color-surface-container);
+  border-radius: var(--border-radius-s);
+}
+
+.group-title {
+  margin: 0 0 var(--spacing-m) 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--md-sys-color-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
 .config-item {
   display: flex;
   justify-content: space-between;
@@ -149,7 +165,6 @@ body {
 
 .config-item + .config-item {
   margin-top: var(--spacing-m);
-  padding-top: var(--spacing-m);
 }
 
 .config-label {
@@ -190,6 +205,111 @@ body {
   width: 140px;
 }
 
+.config-item-expand {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--spacing-s);
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: all 0.3s ease;
+}
+
+.config-item-expand.show {
+  max-height: 100px; /* 调整为适合内容的高度 */
+  opacity: 1;
+  margin-bottom: var(--spacing-m);
+}
+
+/* Custom Time Picker Styles */
+.custom-time-picker {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.time-unit {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background-color: var(--md-sys-color-surface-container-high);
+  padding: 4px 8px;
+  border-radius: var(--border-radius-s);
+  border: 1px solid var(--md-sys-color-outline);
+}
+
+.time-input {
+  width: 42px;
+  background-color: transparent;
+  color: var(--md-sys-color-on-surface);
+  border: none;
+  font-size: 1rem;
+  text-align: center;
+  font-family: 'Google Sans Code', monospace;
+  outline: none;
+  -moz-appearance: textfield;
+}
+
+.time-input::-webkit-outer-spin-button,
+.time-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.time-sep {
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: 0.875rem;
+}
+
+/* Switch Styles */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 52px;
+  height: 32px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--md-sys-color-surface-container-high);
+  transition: .4s;
+  border-radius: 34px;
+  border: 2px solid var(--md-sys-color-outline);
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 24px;
+  width: 24px;
+  left: 2px;
+  bottom: 2px;
+  background-color: var(--md-sys-color-outline);
+  transition: .4s;
+  border-radius: 50%;
+}
+
+input:checked + .slider {
+  background-color: var(--md-sys-color-primary-container);
+  border-color: var(--md-sys-color-primary);
+}
+
+input:checked + .slider:before {
+  transform: translateX(20px);
+  background-color: var(--md-sys-color-primary);
+}
+
 /* Status Grid */
 .status-grid {
   display: grid;
@@ -222,6 +342,7 @@ body {
 .card-actions {
   display: flex;
   justify-content: flex-end;
+  gap: 12px;
   margin-top: var(--spacing-l);
   padding-top: var(--spacing-m);
   border-top: 1px solid var(--md-sys-color-outline-variant);
@@ -252,6 +373,46 @@ body {
   color: var(--md-sys-color-on-primary);
 }
 
+.btn-outline {
+  background-color: transparent;
+  border: 1px solid var(--md-sys-color-outline);
+  color: var(--md-sys-color-primary);
+}
+
+.btn-outline-s, .btn-text-s {
+  background-color: transparent;
+  border: 1px solid var(--md-sys-color-outline-variant);
+  color: var(--md-sys-color-primary);
+  padding: 4px 10px;
+  min-width: 50px;
+  height: 28px;
+  font-size: 0.75rem;
+  border-radius: var(--border-radius-s);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.btn-text-s:active {
+  background-color: var(--md-sys-color-surface-container-high);
+}
+
+.btn-danger {
+  background-color: var(--md-sys-color-error) !important;
+  color: var(--md-sys-color-on-error) !important;
+  border: none !important;
+}
+
+/* Header Actions container */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .btn-icon-only {
   background: transparent;
   border: none;
@@ -267,6 +428,15 @@ body {
 
 .btn-icon-only:active {
   background-color: var(--md-sys-color-surface-container-high);
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 /* Logs */

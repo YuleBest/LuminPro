@@ -134,6 +134,15 @@ IMPORT_OLD_CONFIG() {
         if [ -s "$old_config/sleep_time.txt" ]; then
             echo "  - 休眠时间: $(cat "$old_config/sleep_time.txt")"
         fi
+        if [ -s "$old_config/auto_bri_sleep.txt" ]; then
+            echo "  - 自动亮度时休眠: $(cat "$old_config/auto_bri_sleep.txt" | sed 's/1/开启/;s/0/关闭/')"
+        fi
+        if [ -s "$old_config/steps_num.txt" ]; then
+            echo "  - 亮度提升步数: $(cat "$old_config/steps_num.txt")"
+        fi
+        if [ -s "$old_config/log_max_size.txt" ]; then
+            echo "  - 日志大小限制: $(cat "$old_config/log_max_size.txt") KB"
+        fi
         echo ""
         echo "* 按音量 + 沿用旧配置, 按音量 - 重新测试"
 
@@ -142,6 +151,22 @@ IMPORT_OLD_CONFIG() {
             cp -f "$old_config/ui_max_bri.txt" "$mod_config/"
             cp -f "$old_config/max_bri.txt" "$mod_config/"
             [ -s "$old_config/sleep_time.txt" ] && cp -f "$old_config/sleep_time.txt" "$mod_config/"
+            [ -s "$old_config/auto_bri_sleep.txt" ] && cp -f "$old_config/auto_bri_sleep.txt" "$mod_config/"
+            [ -s "$old_config/steps_num.txt" ] && cp -f "$old_config/steps_num.txt" "$mod_config/"
+            [ -s "$old_config/log_max_size.txt" ] && cp -f "$old_config/log_max_size.txt" "$mod_config/"
+
+            # 版本迁移逻辑 (针对 2101 及更早版本)
+            local old_version_code
+            old_version_code="$(grep_get_prop versionCode "/data/adb/modules/LuminPro/module.prop")"
+            if [ "$old_version_code" = "2101" ] && [ ! -d "$old_config/.backup" ]; then
+                echo "- 检测到从 2101 版本升级, 正在补全备份目录..."
+                mkdir -p "$mod_config/.backup"
+                cp -f "$mod_config/"*.txt "$mod_config/.backup/" 2>/dev/null
+            else
+                # 正常备份同步
+                mkdir -p "$mod_config/.backup"
+                [ -d "$old_config/.backup" ] && cp -rf "$old_config/.backup/." "$mod_config/.backup/"
+            fi
             return 0
         else
             echo "- 将重新测试"
@@ -156,7 +181,23 @@ INIT_CONFIG() {
     touch "$mod_config/ui_max_bri.txt"
     touch "$mod_config/max_bri.txt"
     touch "$mod_config/sleep_time.txt"
+    touch "$mod_config/steps_num.txt"
+    touch "$mod_config/log_max_size.txt"
     echo "1900-0600" >"$mod_config/sleep_time.txt"
+    echo "1" >"$mod_config/auto_bri_sleep.txt"
+    echo "50" >"$mod_config/steps_num.txt"
+    echo "500" >"$mod_config/log_max_size.txt"
+}
+
+# 创建备份 (用于 WebUI 恢复默认)
+CREATE_BACKUP() {
+    mkdir -p "$mod_config/.backup"
+    cp -f "$mod_config/ui_max_bri.txt" "$mod_config/.backup/"
+    cp -f "$mod_config/max_bri.txt" "$mod_config/.backup/"
+    cp -f "$mod_config/sleep_time.txt" "$mod_config/.backup/"
+    cp -f "$mod_config/auto_bri_sleep.txt" "$mod_config/.backup/"
+    cp -f "$mod_config/steps_num.txt" "$mod_config/.backup/"
+    cp -f "$mod_config/log_max_size.txt" "$mod_config/.backup/"
 }
 
 # 主函数
@@ -166,6 +207,7 @@ MAIN() {
         INIT_CONFIG
         CHECK_FILES
         TEST_UI_MAX_BRI
+        CREATE_BACKUP
     fi
     END
 }
