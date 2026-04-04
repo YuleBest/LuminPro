@@ -6,7 +6,6 @@ MODDIR="${0%/*/*}"
 CONFIG_DIR="$MODDIR/config"
 PID_DIR="$MODDIR/pid"
 
-pid_file="$PID_DIR/inotifyd.pid"
 flag_file="$PID_DIR/up.flag"
 log_file="$MODDIR/service.log"
 
@@ -16,13 +15,6 @@ _log() {
 }
 
 _log "($$) 被 inotifyd 调用..."
-
-# 被执行后杀死 inotifyd, 避免重复执行
-if [ -f "$pid_file" ]; then
-    kill -9 "$(cat "$pid_file")" 2>/dev/null
-    _log "($$) inotifyd ($(cat "$pid_file")) 已杀死"
-    rm -f "$pid_file"
-fi
 
 # 建立一个 flag, 避免重复执行; 如果已经有 flag, 则退出
 if [ -f "$flag_file" ]; then
@@ -119,21 +111,12 @@ CHECK_BRI() {
     return 2
 }
 
-# 重启 inotifyd
-REBOOT_INOTIFYD() {
-    inotifyd "$MODDIR/script/up.sh" "$now_bri_file:c" &
-    inotifyd_pid="$!"
-    echo "$inotifyd_pid" >"$pid_file"
-    _log "($$) inotifyd ($inotifyd_pid) 已重启"
-}
-
 MAIN() {
     # 休眠时段内不调整亮度
     if IS_SLEEP_TIME; then
         _log "($$) 当前处于休眠时段 ($sleep_start-$sleep_end), 跳过本次调整"
         _log "--------------------"
         sleep 1
-        REBOOT_INOTIFYD
         rm -f "$flag_file"
         return
     fi
@@ -142,7 +125,6 @@ MAIN() {
     sleep 0.5
     CHECK_BRI
     sleep 0.5 # 稍微延迟一会避免 inotifyd 刚启动就检测到亮度变化
-    REBOOT_INOTIFYD
     rm -f "$flag_file" # 删除 flag, 允许下一次调整
 }
 
