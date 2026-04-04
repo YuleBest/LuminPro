@@ -5,12 +5,18 @@
 MODDIR="${0%/*/*}"
 CONFIG_DIR="$MODDIR/config"
 PID_DIR="$MODDIR/pid"
-
 flag_file="$PID_DIR/up.flag"
+stop_file="$PID_DIR/stop.flag"
 log_file="$MODDIR/service.log"
 
 # 日志函数
 _log() {
+    # 如果 stop.flag 存在并且不是正在清理日志，我们仍允许记录停止状态，但此处先检查基础
+    case "$1" in
+        "日志过大"*) ;;
+        *) if [ -f "$stop_file" ]; then return; fi ;;
+    esac
+
     local max_size
     max_size="$(cat "$CONFIG_DIR/log_max_size.txt" 2>/dev/null)"
     [ -z "$max_size" ] && max_size="500" # 默认 500 KB
@@ -28,6 +34,11 @@ _log() {
 }
 
 _log "($$) 被 inotifyd 调用..."
+
+if [ -f "$stop_file" ]; then
+    _log "($$) 检测到 stop.flag, 停止本次调整 (服务已暂停)"
+    exit 0
+fi
 
 # 建立一个 flag, 避免重复执行; 如果已经有 flag, 则退出
 if [ -f "$flag_file" ]; then

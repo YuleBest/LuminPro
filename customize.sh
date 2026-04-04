@@ -155,7 +155,7 @@ IMPORT_OLD_CONFIG() {
             [ -s "$old_config/steps_num.txt" ] && cp -f "$old_config/steps_num.txt" "$mod_config/"
             [ -s "$old_config/log_max_size.txt" ] && cp -f "$old_config/log_max_size.txt" "$mod_config/"
 
-            # 版本迁移逻辑 (针对 2101 及更早版本)
+            # 版本迁移逻辑
             local old_version_code
             old_version_code="$(grep_get_prop versionCode "/data/adb/modules/LuminPro/module.prop")"
             if [ "$old_version_code" = "2101" ] && [ ! -d "$old_config/.backup" ]; then
@@ -178,15 +178,17 @@ IMPORT_OLD_CONFIG() {
 
 # 初始化默认配置文件
 INIT_CONFIG() {
+    mkdir -p "$mod_config"
     touch "$mod_config/ui_max_bri.txt"
     touch "$mod_config/max_bri.txt"
-    touch "$mod_config/sleep_time.txt"
-    touch "$mod_config/steps_num.txt"
-    touch "$mod_config/log_max_size.txt"
-    echo "1900-0600" >"$mod_config/sleep_time.txt"
-    echo "1" >"$mod_config/auto_bri_sleep.txt"
-    echo "50" >"$mod_config/steps_num.txt"
-    echo "500" >"$mod_config/log_max_size.txt"
+}
+
+# 补全缺失设置并设定默认值
+ENSURE_DEFAULTS() {
+    [ ! -s "$mod_config/sleep_time.txt" ] && echo "1900-0600" >"$mod_config/sleep_time.txt"
+    [ ! -s "$mod_config/auto_bri_sleep.txt" ] && echo "1" >"$mod_config/auto_bri_sleep.txt"
+    [ ! -s "$mod_config/steps_num.txt" ] && echo "50" >"$mod_config/steps_num.txt"
+    [ ! -s "$mod_config/log_max_size.txt" ] && echo "500" >"$mod_config/log_max_size.txt"
 }
 
 # 创建备份 (用于 WebUI 恢复默认)
@@ -207,8 +209,9 @@ MAIN() {
         INIT_CONFIG
         CHECK_FILES
         TEST_UI_MAX_BRI
-        CREATE_BACKUP
     fi
+    ENSURE_DEFAULTS
+    CREATE_BACKUP
     END
 }
 

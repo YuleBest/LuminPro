@@ -5,6 +5,7 @@ const CONFIG_DIR = '/data/adb/modules/LuminPro/config';
 const BACKUP_DIR = '/data/adb/modules/LuminPro/config/.backup';
 const PID_FILE = '/data/adb/modules/LuminPro/pid/inotifyd.pid';
 const FLAG_FILE = '/data/adb/modules/LuminPro/pid/up.flag';
+const STOP_FLAG_FILE = '/data/adb/modules/LuminPro/pid/stop.flag';
 const LOG_FILE = '/data/adb/modules/LuminPro/service.log';
 const NOW_BRI_FILE = '/sys/class/backlight/panel0-backlight/brightness';
 const SYS_MAX_BRI_FILE = '/sys/class/backlight/panel0-backlight/max_brightness';
@@ -229,29 +230,38 @@ async function handleReset() {
 
 // 3. 刷新实时状态
 async function loadStatus() {
-  const [curRes, sysRes, pidRes] = await Promise.all([
+  const [curRes, sysRes, pidRes, stopRes] = await Promise.all([
     runCmd(`cat "${NOW_BRI_FILE}"`),
     runCmd(`cat "${SYS_MAX_BRI_FILE}"`),
-    runCmd(`cat "${PID_FILE}"`)
+    runCmd(`cat "${PID_FILE}"`),
+    runCmd(`[ -f "${STOP_FLAG_FILE}" ] && echo "1" || echo "0"`)
   ]);
 
-  document.getElementById('status-current-bri').textContent = curRes.errno === 0 ? curRes.stdout.trim() : 'N/A';
-  document.getElementById('status-sys-max-bri').textContent = sysRes.errno === 0 ? sysRes.stdout.trim() : 'N/A';
+  const isPaused = stopRes.stdout.trim() === '1';
+  const running = pidRes.errno === 0 && pidRes.stdout.trim();
   
-  const pid = pidRes.errno === 0 ? pidRes.stdout.trim() : '';
-  const pidEl = document.getElementById('status-inotifyd-pid');
-  const dotEl = document.querySelector('.status-dot');
-  const statusText = document.querySelector('.status-text');
+  const statusDot = document.querySelector('.header-status .status-dot');
+  const statusText = document.querySelector('.header-status .status-text');
+  const toggleBtn = document.getElementById('btn-toggle-service');
 
-  if (pid) {
-    pidEl.textContent = pid;
-    dotEl.style.backgroundColor = '#4caf50'; // 绿色
+  if (isPaused) {
+    statusDot.style.backgroundColor = 'var(--md-sys-color-error)';
+    statusText.textContent = '已暂停';
+    toggleBtn.textContent = '启用';
+  } else if (running) {
+    statusDot.style.backgroundColor = '#4caf50';
     statusText.textContent = '运行中';
+    toggleBtn.textContent = '暂停';
   } else {
-    pidEl.textContent = '未运行';
-    dotEl.style.backgroundColor = 'var(--md-sys-color-error)';
-    statusText.textContent = '已停止';
+    statusDot.style.backgroundColor = 'var(--md-sys-color-error)';
+    statusText.textContent = '未运行';
+    toggleBtn.textContent = '暂停';
   }
+
+  // 填入数值
+  document.getElementById('status-current-bri').textContent = curRes.errno === 0 ? curRes.stdout.trim() : '—';
+  document.getElementById('status-sys-max-bri').textContent = sysRes.errno === 0 ? sysRes.stdout.trim() : '—';
+  document.getElementById('status-inotifyd-pid').textContent = running ? pidRes.stdout.trim() : '离线';
 
   // 简易判断当前休眠状态 (只为了前端展示，不影响后端核心)
   const isEnabled = document.getElementById('input-sleep-mode').checked;
@@ -275,7 +285,16 @@ async function loadStatus() {
   document.getElementById('status-sleep').textContent = isSleep ? '休眠中' : '非休眠';
 }
 
-// 5. 重启服务
+// 6. 暂停/启用服务
+async function toggleService() {
+  const res = await runCmd(`sh /data/adb/modules/LuminPro/action.sh`);
+  if (res.errno === 0) {
+    showToast(res.stdout.trim() || '状态已切换');
+  } else {
+    showToast('操作失败: ' + res.stderr);
+  }
+  await loadStatus();
+}
 async function restartService() {
   const btn = document.getElementById('btn-restart-service');
   
@@ -301,13 +320,20 @@ async function loadLogs() {
   const logEl = document.getElementById('log-output');
   // 读取最后 50 行日志
   const res = await runCmd(`tail -n 50 "${LOG_FILE}"`);
-  if (res.errno === 0 && res.stdout) {
-    logEl.textContent = res.stdout;
-  } else {
-    logEl.textContent = '暂无日志或读取失败';
+  if (res.errno === 0) {
+    const freshLog = res.stdout.trim() || '暂无日志';
+    // 只有当日志内容变化时才更新 DOM, 减少闪烁
+    if(logEl.textContent !== freshLog) {
+        logEl.textContent = freshLog;
+        logEl.scrollTop = logEl.scrollHeight;
+    }
   }
-  // 滚动到底部
-  logEl.scrollTop = logEl.scrollHeight;
+}
+
+// 自动刷新循环
+async function startAutoRefresh() {
+  await Promise.all([loadStatus(), loadLogs()]);
+  setTimeout(startAutoRefresh, 500); // 0.5s 周期
 }
 
 // ==========================
@@ -330,9 +356,8 @@ async function init() {
   // 绑定事件
   document.getElementById('btn-save').addEventListener('click', saveConfig);
   document.getElementById('btn-reset').addEventListener('click', handleReset);
+  document.getElementById('btn-toggle-service').addEventListener('click', toggleService);
   document.getElementById('btn-restart-service').addEventListener('click', restartService);
-  document.getElementById('btn-refresh-status').addEventListener('click', loadStatus);
-  document.getElementById('btn-refresh-log').addEventListener('click', loadLogs);
 
   // 定时休眠折叠逻辑
   document.getElementById('input-sleep-mode').addEventListener('change', (e) => {
@@ -344,10 +369,10 @@ async function init() {
     }
   });
 
-  // 初次加载数据
+  // 初次加载配置
   await loadConfig();
-  await loadStatus();
-  await loadLogs();
+  // 开启自动刷新状态和日志 (内置了已包含 loadStatus 和 loadLogs)
+  startAutoRefresh();
 }
 
 // DOM 加载完成后运行
