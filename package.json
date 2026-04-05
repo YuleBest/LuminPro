@@ -4,9 +4,9 @@
   "version": "2.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build && node build-module.js",
-    "preview": "vite preview"
+    "dev": "cd webui && vite",
+    "build": "cd webui && vite build && cd .. && node build-module.js",
+    "preview": "cd webui && vite preview"
   },
   "devDependencies": {
     "archiver": "^7.0.1",

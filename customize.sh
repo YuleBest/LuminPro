@@ -239,11 +239,10 @@ IMPORT_OLD_CONFIG() {
             echo "- 已沿用旧配置"
             cp -f "$old_config/ui_max_bri.txt" "$mod_config/"
             cp -f "$old_config/max_bri.txt" "$mod_config/"
-            [ -s "$old_config/sleep_time.txt" ] && cp -f "$old_config/sleep_time.txt" "$mod_config/"
+            [ -e "$old_config/sleep_time.txt" ] && cp -f "$old_config/sleep_time.txt" "$mod_config/" || echo "1900-0600" >"$mod_config/sleep_time.txt"
             [ -s "$old_config/auto_bri_sleep.txt" ] && cp -f "$old_config/auto_bri_sleep.txt" "$mod_config/"
             [ -s "$old_config/steps_num.txt" ] && cp -f "$old_config/steps_num.txt" "$mod_config/"
             [ -s "$old_config/log_max_size.txt" ] && cp -f "$old_config/log_max_size.txt" "$mod_config/"
-            [ -s "$old_config/sleep_time.txt" ] && cp -f "$old_config/sleep_time.txt" "$mod_config/"
 
             # 迁移旧的路径配置（如果存在）
             mkdir -p "$mod_path_config"
@@ -281,8 +280,14 @@ IMPORT_OLD_CONFIG() {
 INIT_CONFIG() {
     mkdir -p "$mod_config"
     mkdir -p "$mod_path_config"
-    touch "$mod_config/ui_max_bri.txt"
-    touch "$mod_config/max_bri.txt"
+
+    # 仅在文件不存在时才创建，保留任何已存在的配置
+    [ ! -f "$mod_config/ui_max_bri.txt" ] && touch "$mod_config/ui_max_bri.txt"
+    [ ! -f "$mod_config/max_bri.txt" ] && touch "$mod_config/max_bri.txt"
+    [ ! -f "$mod_config/sleep_time.txt" ] && touch "$mod_config/sleep_time.txt"
+    [ ! -f "$mod_config/auto_bri_sleep.txt" ] && touch "$mod_config/auto_bri_sleep.txt"
+    [ ! -f "$mod_config/steps_num.txt" ] && touch "$mod_config/steps_num.txt"
+    [ ! -f "$mod_config/log_max_size.txt" ] && touch "$mod_config/log_max_size.txt"
 
     # 初始化设备路径配置 (仅在文件不存在时使用默认值，保留用户自定义配置)
     [ ! -f "$mod_path_config/now_bri_file.txt" ] && echo -n "$DEFAULT_NOW_BRI_FILE" >"$mod_path_config/now_bri_file.txt"

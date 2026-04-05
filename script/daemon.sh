@@ -37,11 +37,14 @@ get_config_hash() {
 
 # 日志函数
 _log() {
-    printf '[%s] [daemon] %s\n' "$(date '+%d %H:%M:%S.%3N')" "$1" >>"$log_file"
+    local level="${2:-INFO}"
+    printf '[%s] [%-8s] [%-8s] %s\n' "$(date '+%m-%d %H:%M:%S')" "daemon" "$level" "$1" >>"$log_file"
 }
 
 # 确保环境就绪
 mkdir -p "$PID_DIR"
+
+_log "守护进程启动，开始监控配置文件..." "INFO"
 
 while true; do
     # 检查是否需要手动停止或暂时挂起
@@ -49,6 +52,7 @@ while true; do
         # 全局停止，杀掉现有并等待
         [ -f "$pid_file" ] && kill -9 "$(cat "$pid_file")" 2>/dev/null
         rm -f "$pid_file"
+        _log "检测到停止信号，已暂停" "WARN"
         sleep 5
         continue
     fi
@@ -68,7 +72,7 @@ while true; do
     if [ -f "$config_cache_file" ]; then
         cached_config="$(cat "$config_cache_file")"
         if [ "$current_config" != "$cached_config" ]; then
-            _log "检测到配置文件改变，将重启 inotifyd..."
+            _log "✓ 配置文件已更新，重启监听进程..." "WARN"
             [ -f "$pid_file" ] && kill -9 "$(cat "$pid_file")" 2>/dev/null
             rm -f "$pid_file"
             echo "$current_config" >"$config_cache_file"
@@ -81,7 +85,7 @@ while true; do
     fi
 
     # 正常启动并监听
-    _log "启动 inotifyd 监听任务..."
+    _log "→ 启动 inotifyd 监听..." "INFO"
     now_bri_file="$current_config"
 
     # 更新缓存，让 up.sh 知道当前监听的是哪个文件
@@ -92,11 +96,12 @@ while true; do
 
     inotify_pid=$!
     echo "$inotify_pid" >"$pid_file"
-    _log "inotifyd 启动，PID: $inotify_pid，监听文件: $now_bri_file"
+    _log "✓ inotifyd 已启动 (PID: $inotify_pid)" "SUCCESS"
+    _log "  监听文件: $now_bri_file" "INFO"
 
     # 3. 通过 wait 阻塞，实时感知进程死亡 (兼容所有 BusyBox 环境)
     wait "$inotify_pid"
-    _log "监听进程 ($inotify_pid) 已退出 (Code: $?)"
+    _log "⚠ 监听进程 ($inotify_pid) 已退出，将在 1 秒后重启..." "WARN"
 
     sleep 0.5
 done

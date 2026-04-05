@@ -2,7 +2,7 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
   build: {
-    outDir: 'webroot',
+    outDir: '../webroot',
     emptyOutDir: true,
   },
 });

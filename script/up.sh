@@ -32,6 +32,8 @@ max_bri_file="$(get_config "$PATH_CONFIG_DIR/max_bri_file.txt" "$DEFAULT_MAX_BRI
 
 # 日志函数
 _log() {
+    local level="${2:-INFO}"
+
     case "$1" in
     "日志过大"*) ;;
     *) if [ -f "$stop_file" ]; then return; fi ;;
@@ -46,22 +48,28 @@ _log() {
         local cur_size
         cur_size=$(du -k "$log_file" | cut -f1)
         if [ "$cur_size" -ge "$max_size" ]; then
-            echo "[$(date '+%d %H:%M:%S.%3N')] [up] 日志过大 ($cur_size KB), 自动重置" >"$log_file"
+            printf '[%s] [%-8s] [%-8s] %s\n' "$(date '+%m-%d %H:%M:%S')" "up" "WARN" "日志过大 ($cur_size KB), 自动重置" >"$log_file"
         fi
     fi
 
-    printf '[%s] [up] %s\n' "$(date '+%d %H:%M:%S.%3N')" "$1" >>"$log_file"
+    printf '[%s] [%-8s] [%-8s] %s\n' "$(date '+%m-%d %H:%M:%S')" "up" "$level" "$1" >>"$log_file"
 }
 
-_log "[$$] 收到 inotifyd 通知..."
+_log "→ 收到 inotifyd 通知 (PID: $$)" "INFO"
+_log "⚠ 正在抢占：清理其他 inotifyd 进程..." "WAIT"
+touch "$pause_file"
+killall -9 inotifyd 2>/dev/null
+for p in $(pgrep -f "up.sh"); do
+    [ "$p" != "$$" ] && kill -9 "$p" 2>/dev/null
+done
 
 if [ -f "$stop_file" ]; then
-    _log "[$$] [拦截] 检测到 stop.flag, 服务已处于手动暂停状态"
+    _log "✗ 服务已处于手动暂停状态，本次操作被取消" "WARN"
     exit 0
 fi
 
 if [ -f "$flag_file" ]; then
-    _log "[$$] [拦截] 已经有一个 up.sh (${flag_file}) 在运行, 本进程退出"
+    _log "✗ 另一个 up.sh 进程正在运行，本进程退出" "WARN"
     exit 1
 fi
 touch "$flag_file"
@@ -111,11 +119,11 @@ update_all() {
 
     # 如果步长为 0 (差值太小), 直接设置目标亮度
     if [ "$step_value" -eq 0 ]; then
-        _log "[$$] 步长为 0, 直接设置目标亮度: $target_bri"
+        _log "✓ 直接设定亮度为: $target_bri" "INFO"
         echo -n "$target_bri" >"$now_bri_file" && return 0 || return 1
     fi
 
-    _log "[$$] 开始调整亮度: $start_bri -> $target_bri, 共 $steps_num 步, 每步 $step_value"
+    _log "→ 开始调整亮度: $start_bri → $target_bri (共 $steps_num 步)" "INFO"
     for step in $(seq 1 "$steps_num"); do
         echo -n $((start_bri + step * step_value)) >"$now_bri_file"
         sleep 0.02
@@ -130,44 +138,34 @@ CHECK_BRI() {
     local cycle_num
     local now_bri
 
-    # 循环 10 次 (检查 5s)
+    # 循环 10 次 (检查 3s)
     # shellcheck disable=SC2034
     for cycle_num in $(seq 1 10); do
         now_bri="$(cat "$now_bri_file")"
         if [ "$now_bri" -ge "$ui_max_bri" ] && [ "$now_bri" -lt "$target_bri" ]; then
-            _log "[$$] [满足提升条件] 当前亮度: $now_bri (>= $ui_max_bri), 目标提升至: $target_bri"
-            _log "[$$] [抢占] 正在清理 inotifyd 和其它上报进程..."
-            touch "$pause_file"
-            killall -9 inotifyd 2>/dev/null
-            for p in $(pgrep -f "up.sh"); do
-                [ "$p" != "$$" ] && kill -9 "$p" 2>/dev/null
-            done
-            rm -f "$flag_file"
+            _log "⚡ 满足提升条件: $now_bri ≥ $ui_max_bri，目标 ↑ $target_bri" "SUCCESS"
 
             if update_all; then
-                _log "[$$] [成功] 亮度提升任务已完成 (已设为: $target_bri)"
-                _log "--------------------"
+                _log "✓ 亮度提升已完成 (当前: $target_bri)" "SUCCESS"
+                _log "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" "INFO"
                 return 0
             else
-                _log "[$$] [失败] 亮度提升过程中遇到异常"
-                _log "--------------------"
+                _log "✗ 亮度提升失败：无法写入节点文件" "ERROR"
+                _log "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" "ERROR"
                 return 1
             fi
         fi
-        sleep 0.5
+        sleep 0.3
     done
-    _log "[$$] [取消] 循环检测结束, 未持续触发有效提升阈值"
+    _log "─ 检测超时：未持续触发有效提升阈值" "WARN"
     return 1
 }
 
 MAIN() {
-    # 0.5 秒等待以避免 inotifyd 刚启动时的误触
-    sleep 0.5
-
     # 解析并判断休眠
     if IS_SLEEP_TIME; then
-        _log "[$$] 当前处于休眠时段 ($sleep_start-$sleep_end), 跳过本次调整"
-        _log "--------------------"
+        _log "⏸ 休眠时段 ($sleep_start-$sleep_end)，本次调整已跳过" "INFO"
+        _log "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" "INFO"
         rm -f "$flag_file"
         return
     fi
@@ -175,15 +173,15 @@ MAIN() {
     if [ "$auto_bri_sleep" = "1" ]; then
         mode="$(settings get system screen_brightness_mode 2>/dev/null)"
         if [ "$mode" = "1" ]; then
-            _log "[$$] 当前为自动亮度模式, 根据设置跳过本次调整"
-            _log "--------------------"
+            _log "🔄 自动亮度模式已启用，本次调整已跳过" "INFO"
+            _log "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" "INFO"
             rm -f "$flag_file"
             return
         fi
     fi
 
-    _log "[$$] 亮度被调整, 将在 0.5s 后检测是否符合条件"
-    sleep 0.5
+    _log "📊 检测亮度变化..." "INFO"
+    # sleep 0.5
     CHECK_BRI
     rm -f "$flag_file"  # 删除成果锁
     rm -f "$pause_file" # 解锁守护进程，让它自动拉起 inotifyd
@@ -193,7 +191,7 @@ MAIN() {
     local cached_now_bri="$(cat "$PATH_CONFIG_DIR/.cached_path" 2>/dev/null || echo "$DEFAULT_NOW_BRI_FILE")"
 
     if [ "$current_now_bri" != "$cached_now_bri" ]; then
-        _log "[$$] 检测到设备路径配置已改变，重启 inotifyd..."
+        _log "⚙ 配置已更新，重启 inotifyd..." "WARN"
         killall -9 inotifyd 2>/dev/null
     fi
 }

@@ -14,6 +14,12 @@ const DEFAULT_SYS_MAX_BRI_FILE = '/sys/class/backlight/panel0-backlight/max_brig
 let NOW_BRI_FILE = DEFAULT_NOW_BRI_FILE;
 let SYS_MAX_BRI_FILE = DEFAULT_SYS_MAX_BRI_FILE;
 
+// Web UI 配置
+let statusLogRefreshInterval = 1000; // 状态/日志刷新间隔（默认1秒）
+let configRefreshInterval = 5000; // 配置卡片刷新间隔（默认5秒）
+let autoRefreshStatusLogTimer = null; // 状态/日志刷新定时器
+let autoRefreshConfigTimer = null; // 配置刷新定时器
+
 // ==========================
 // 工具函数
 // ==========================
@@ -114,6 +120,20 @@ async function loadConfig() {
   } else {
      document.getElementById('input-log-max-size').value = '500';
   }
+
+  // 加载 Web UI 配置（从 localStorage）
+  const savedStatusRefresh = localStorage.getItem('statusLogRefreshInterval');
+  const savedConfigRefresh = localStorage.getItem('configRefreshInterval');
+  
+  if (savedStatusRefresh && !isNaN(parseInt(savedStatusRefresh, 10))) {
+    statusLogRefreshInterval = Math.max(100, parseInt(savedStatusRefresh, 10));
+  }
+  if (savedConfigRefresh && !isNaN(parseInt(savedConfigRefresh, 10))) {
+    configRefreshInterval = Math.max(1000, parseInt(savedConfigRefresh, 10));
+  }
+  
+  document.getElementById('input-status-refresh-interval').value = statusLogRefreshInterval;
+  document.getElementById('input-config-refresh-interval').value = configRefreshInterval;
 }
 
 // 2. 保存配置并重启服务
@@ -184,6 +204,38 @@ async function saveAdvancedConfig() {
   } else {
     showToast('设置已保存');
   }
+}
+
+// 2.3 保存 Web UI 配置
+function saveWebUIConfig() {
+  const statusRefresh = parseInt(document.getElementById('input-status-refresh-interval').value, 10) || 1000;
+  const configRefresh = parseInt(document.getElementById('input-config-refresh-interval').value, 10) || 5000;
+  
+  // 验证最小值
+  if (statusRefresh < 100) {
+    showToast('状态/日志刷新间隔最小为100ms');
+    document.getElementById('input-status-refresh-interval').value = 100;
+    return;
+  }
+  if (configRefresh < 1000) {
+    showToast('配置刷新间隔最小为1000ms');
+    document.getElementById('input-config-refresh-interval').value = 1000;
+    return;
+  }
+  
+  // 保存到 localStorage
+  localStorage.setItem('statusLogRefreshInterval', statusRefresh);
+  localStorage.setItem('configRefreshInterval', configRefresh);
+  
+  // 更新全局变量
+  statusLogRefreshInterval = statusRefresh;
+  configRefreshInterval = configRefresh;
+  
+  // 重启刷新循环
+  stopAutoRefresh();
+  startAutoRefresh();
+  
+  showToast('Web UI 配置已保存，刷新间隔已更新');
 }
 
 // 2.5 恢复默认
@@ -267,11 +319,12 @@ async function handleReset() {
 
 // 3. 刷新实时状态
 async function loadStatus() {
-  const [curRes, sysRes, pidRes, stopRes] = await Promise.all([
+  const [curRes, sysRes, pidRes, stopRes, autoBriRes] = await Promise.all([
     runCmd(`cat "${NOW_BRI_FILE}"`),
     runCmd(`cat "${SYS_MAX_BRI_FILE}"`),
     runCmd(`cat "${PID_FILE}"`),
-    runCmd(`[ -f "${STOP_FLAG_FILE}" ] && echo "1" || echo "0"`)
+    runCmd(`[ -f "${STOP_FLAG_FILE}" ] && echo "1" || echo "0"`),
+    runCmd(`settings get system screen_brightness_mode`)
   ]);
 
   const isPaused = stopRes.stdout.trim() === '1';
@@ -296,9 +349,26 @@ async function loadStatus() {
   }
 
   // 填入数值
-  document.getElementById('status-current-bri').textContent = curRes.errno === 0 ? curRes.stdout.trim() : '—';
+  const currentBri = curRes.errno === 0 ? curRes.stdout.trim() : '0';
+  document.getElementById('status-current-bri').textContent = currentBri;
   document.getElementById('status-sys-max-bri').textContent = sysRes.errno === 0 ? sysRes.stdout.trim() : '—';
   document.getElementById('status-inotifyd-pid').textContent = running ? pidRes.stdout.trim() : '离线';
+
+  // 更新亮度滑条
+  const brightnessSlider = document.getElementById('brightness-slider');
+  const sysMaxBri = sysRes.errno === 0 ? parseInt(sysRes.stdout.trim(), 10) : 255;
+  brightnessSlider.max = sysMaxBri;
+  const currentBriValue = parseInt(currentBri, 10) || 0;
+  brightnessSlider.value = currentBriValue;
+  
+  // 显示为百分比
+  const percentage = Math.round((currentBriValue / sysMaxBri) * 100);
+  document.getElementById('brightness-display').textContent = percentage + '%';
+
+  // 更新自动亮度开关
+  const autoBriMode = autoBriRes.errno === 0 ? parseInt(autoBriRes.stdout.trim(), 10) : 0;
+  const autoBriToggle = document.getElementById('auto-brightness-toggle');
+  autoBriToggle.checked = autoBriMode === 1;
 
   // 简易判断当前休眠状态 (只为了前端展示，不影响后端核心)
   const isEnabled = document.getElementById('input-sleep-mode').checked;
@@ -353,29 +423,239 @@ async function restartService() {
     btn.disabled = false;
   }, 1000);
 }
+
+let brightnessChangeTimer = null;
+
+async function handleBrightnessChange(e) {
+  try {
+    const newBri = parseInt(e.target.value, 10);
+    const percentage = Math.round((newBri / 255) * 100);
+    
+    // 立即更新 UI（不等待文件 IO）
+    document.getElementById('brightness-display').textContent = percentage + '%';
+    
+    // 清除之前的定时器
+    if (brightnessChangeTimer) {
+      clearTimeout(brightnessChangeTimer);
+    }
+    
+    // 防抖：300ms 后才真正写入文件
+    brightnessChangeTimer = setTimeout(async () => {
+      const cmd = `echo -n '${newBri}' > '${NOW_BRI_FILE}' 2>/dev/null && echo 'OK'`;
+      const res = await runCmd(cmd);
+      
+      if (!(res.errno === 0 && res.stdout.includes('OK'))) {
+        showToast('亮度设置失败，已恢复');
+        await loadStatus(); // 恢复旧值
+      }
+    }, 300);
+  } catch (error) {
+    showToast('设置亮度出错: ' + error.message);
+    await loadStatus();
+  }
+}
+
+async function handleAutoBrightnessToggle(e) {
+  try {
+    const mode = e.target.checked ? 1 : 0;
+    const cmd = `settings put system screen_brightness_mode ${mode}`;
+    const res = await runCmd(cmd);
+    
+    if (res.errno === 0) {
+      const msg = mode === 1 ? '自动亮度已启用' : '手动亮度已启用';
+      showToast(msg);
+    } else {
+      showToast('设置失败: ' + (res.stderr || '未知错误'));
+      e.target.checked = !e.target.checked; // 恢复旧值
+    }
+  } catch (error) {
+    showToast('设置自动亮度出错: ' + error.message);
+    e.target.checked = !e.target.checked;
+  }
+}
+
+// 保存所有原始日志内容
+let fullLogContent = '';
+
+async function applyLogFilter() {
+  // 快速应用日志筛选，不重新读取文件
+  const logEl = document.getElementById('log-output');
+  const filterLevel = document.getElementById('log-level-filter').value;
+
+  if (!fullLogContent) {
+    logEl.textContent = '暂无日志';
+    return;
+  }
+
+  let displayLog = fullLogContent;
+  if (filterLevel) {
+    const lines = fullLogContent.split('\n');
+    const filteredLines = lines.filter(line => line.includes(`[${filterLevel}]`));
+    displayLog = filteredLines.length > 0 ? filteredLines.join('\n') : `暂无 [${filterLevel}] 等级的日志`;
+  }
+
+  if (logEl.textContent !== displayLog) {
+    logEl.textContent = displayLog;
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+}
+
 async function loadLogs() {
   const logEl = document.getElementById('log-output');
+  const filterLevel = document.getElementById('log-level-filter').value;
+
   // 读取最后 50 行日志
   const res = await runCmd(`tail -n 50 "${LOG_FILE}"`);
   if (res.errno === 0) {
-    const freshLog = res.stdout.trim() || '暂无日志';
-    // 只有当日志内容变化时才更新 DOM, 减少闪烁
-    if(logEl.textContent !== freshLog) {
-        logEl.textContent = freshLog;
-        logEl.scrollTop = logEl.scrollHeight;
-    }
+    const rawLog = res.stdout.trim() || '暂无日志';
+    fullLogContent = rawLog;
+
+    // 应用筛选
+    await applyLogFilter();
+  }
+}
+
+let clearLogsConfirming = false;
+let clearLogsTimer = null;
+
+async function handleClearLogs() {
+  const btn = document.getElementById('btn-clear-logs');
+  
+  if (!clearLogsConfirming) {
+    // 进入确认状态
+    clearLogsConfirming = true;
+    btn.textContent = '确认清空';
+    btn.classList.add('btn-danger');
+    
+    // 5秒后自动重置回原来状态
+    clearLogsTimer = setTimeout(() => {
+      clearLogsConfirming = false;
+      btn.textContent = '清空日志';
+      btn.classList.remove('btn-danger');
+    }, 5000);
+    return;
+  }
+
+  // 执行清空动作
+  clearLogsConfirming = false;
+  btn.textContent = '清空日志';
+  btn.classList.remove('btn-danger');
+  clearTimeout(clearLogsTimer);
+
+  showToast('正在清空日志...');
+  const res = await runCmd(`> "${LOG_FILE}"`);
+  
+  if (res.errno === 0) {
+    fullLogContent = '';
+    showToast('日志已清空');
+    await loadLogs(); // 刷新显示
+  } else {
+    showToast('清空失败: ' + (res.stderr || '未知错误'));
   }
 }
 
 // 自动刷新循环
+function stopAutoRefresh() {
+  if (autoRefreshStatusLogTimer) {
+    clearTimeout(autoRefreshStatusLogTimer);
+    autoRefreshStatusLogTimer = null;
+  }
+  if (autoRefreshConfigTimer) {
+    clearTimeout(autoRefreshConfigTimer);
+    autoRefreshConfigTimer = null;
+  }
+}
+
+async function startAutoRefreshStatusLog() {
+  try {
+    await Promise.all([loadStatus(), loadLogs()]);
+  } catch (error) {
+    console.error('Error refreshing status/logs:', error);
+  }
+  autoRefreshStatusLogTimer = setTimeout(startAutoRefreshStatusLog, statusLogRefreshInterval);
+}
+
+async function startAutoRefreshConfig() {
+  try {
+    // 刷新配置相关卡片 (这里可以添加配置相关的刷新逻辑)
+    // 目前配置不需要定时读取，但保留这个函数以便后续扩展
+  } catch (error) {
+    console.error('Error refreshing config:', error);
+  }
+  autoRefreshConfigTimer = setTimeout(startAutoRefreshConfig, configRefreshInterval);
+}
+
 async function startAutoRefresh() {
+  // 立即执行一次状态/日志刷新
   await Promise.all([loadStatus(), loadLogs()]);
-  setTimeout(startAutoRefresh, 500); // 0.5s 周期
+  
+  // 启动定时刷新
+  autoRefreshStatusLogTimer = setTimeout(startAutoRefreshStatusLog, statusLogRefreshInterval);
+  autoRefreshConfigTimer = setTimeout(startAutoRefreshConfig, configRefreshInterval);
 }
 
 // ==========================
 // 初始化
 // ==========================
+
+// 底栏导航逻辑
+function setupNavbar() {
+  const navbarBtns = document.querySelectorAll('.navbar-btn');
+  const sections = document.querySelectorAll('.card');
+  const navbarSlider = document.querySelector('.navbar-slider');
+
+  // 更新滑块位置
+  function updateSliderPosition(activeBtn) {
+    if (!navbarSlider || !activeBtn) return;
+    
+    const navbarRect = activeBtn.closest('.floating-navbar').getBoundingClientRect();
+    const btnRect = activeBtn.getBoundingClientRect();
+    
+    const sliderLeft = btnRect.left - navbarRect.left;
+    const sliderWidth = btnRect.width;
+    
+    navbarSlider.style.left = sliderLeft + 'px';
+    navbarSlider.style.width = sliderWidth + 'px';
+  }
+
+  // 根据分组显示卡片
+  function showGroup(groupName) {
+    sections.forEach(section => {
+      const sectionGroup = section.getAttribute('data-nav-group');
+      section.style.display = sectionGroup === groupName ? 'block' : 'none';
+    });
+  }
+
+  // 设置按钮状态
+  function setActiveBtn(btn) {
+    navbarBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    updateSliderPosition(btn);
+  }
+
+  // 为每个按钮添加点击监听
+  navbarBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const groupName = btn.getAttribute('data-section');
+      showGroup(groupName);
+      setActiveBtn(btn);
+    });
+  });
+
+  // 初始化：显示第一个分组
+  if (navbarBtns.length > 0) {
+    const firstGroup = navbarBtns[0].getAttribute('data-section');
+    showGroup(firstGroup);
+    updateSliderPosition(navbarBtns[0]);
+  }
+
+  // 监听窗口大小变化以更新滑块位置
+  window.addEventListener('resize', () => {
+    const activeBtn = document.querySelector('.navbar-btn.active');
+    if (activeBtn) updateSliderPosition(activeBtn);
+  });
+}
+
 async function init() {
 
   // 初始化 Lucide 图标
@@ -390,12 +670,42 @@ async function init() {
     }
   });
 
+  // 初始化底栏导航
+  setupNavbar();
+
   // 绑定事件
   document.getElementById('btn-save').addEventListener('click', saveConfig);
   document.getElementById('btn-save-advanced').addEventListener('click', saveAdvancedConfig);
+  document.getElementById('btn-save-webui-config').addEventListener('click', saveWebUIConfig);
   document.getElementById('btn-reset').addEventListener('click', handleReset);
   document.getElementById('btn-toggle-service').addEventListener('click', toggleService);
   document.getElementById('btn-restart-service').addEventListener('click', restartService);
+
+  // 绑定亮度和自动亮度控件事件
+  const brightnessSlider = document.getElementById('brightness-slider');
+  const autoBrightnessToggle = document.getElementById('auto-brightness-toggle');
+  
+  if (brightnessSlider) {
+    brightnessSlider.addEventListener('input', handleBrightnessChange);
+  }
+  
+  if (autoBrightnessToggle) {
+    autoBrightnessToggle.addEventListener('change', handleAutoBrightnessToggle);
+  }
+
+  // 绑定日志控件事件
+  const logLevelFilter = document.getElementById('log-level-filter');
+  const btnClearLogs = document.getElementById('btn-clear-logs');
+  
+  if (logLevelFilter) {
+    logLevelFilter.addEventListener('change', async () => {
+      await applyLogFilter(); // 改变筛选等级时应用筛选
+    });
+  }
+  
+  if (btnClearLogs) {
+    btnClearLogs.addEventListener('click', handleClearLogs);
+  }
 
   // 定时休眠折叠逻辑
   document.getElementById('input-sleep-mode').addEventListener('change', (e) => {

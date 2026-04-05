@@ -1,5 +1,6 @@
 import fs from 'fs';
 import archiver from 'archiver';
+import { spawn } from 'child_process';
 
 // 读取版本信息用以命名
 const propContent = fs.readFileSync('module.prop', 'utf-8');
@@ -37,15 +38,12 @@ const excludes = [
   'package-lock.json',
   'package.json',
   'pnpm-lock.yaml',
-  'vite.config.js',
-  'src',
-  'public',
   '.vscode',
   '.git',
   '.gitignore',
   'build.ps1',
   'build-module.js',
-  'index.html', // 根目录的 html 已构建至 webroot
+  'webui', // webui 目录已经构建到 webroot
   zipName
 ];
 

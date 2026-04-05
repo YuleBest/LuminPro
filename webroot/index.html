@@ -6,8 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
   <title>LuminPro</title>
   <link rel="stylesheet" type="text/css" href="/internal/insets.css" />
-  <script type="module" crossorigin src="/assets/index-BjK9R0FR.js"></script>
-  <link rel="stylesheet" crossorigin href="/assets/index-DpSbbGTK.css">
+  <script type="module" crossorigin src="/assets/index-CUDfuwAt.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-Berty6Q2.css">
 </head>
 
 <body>
@@ -15,7 +15,6 @@
     <!-- 顶部头 -->
     <header class="app-header">
       <div class="header-content">
-        <div class="header-icon"><i data-lucide="sun"></i></div>
         <div class="header-text">
           <h1>LuminPro</h1>
           <p class="header-subtitle" id="module-version">日用屏幕亮度强化</p>
@@ -28,9 +27,8 @@
     </header>
 
     <!-- 实时状态 -->
-    <section class="card" id="status-section">
+    <section class="card" id="status-section" data-nav-group="status">
       <div class="card-header">
-        <span class="card-icon"><i data-lucide="activity"></i></span>
         <h2>实时状态</h2>
         <div class="header-actions">
            <button class="btn-text-s" id="btn-toggle-service">暂停</button>
@@ -56,12 +54,31 @@
           <span class="status-value" id="status-sleep">—</span>
         </div>
       </div>
+
+      <!-- 亮度控制区 -->
+      <div class="brightness-section">
+        <div class="brightness-header">
+          <span class="brightness-title">亮度</span>
+          <span class="brightness-percent" id="brightness-display">—%</span>
+        </div>
+        <div class="brightness-container">
+          <span class="brightness-label">0%</span>
+          <input type="range" id="brightness-slider" class="brightness-slider" min="0" max="255" />
+          <span class="brightness-label">100%</span>
+        </div>
+        <div class="auto-brightness-row">
+          <span class="auto-brightness-label">自动亮度调节</span>
+          <label class="switch">
+            <input type="checkbox" id="auto-brightness-toggle">
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
     </section>
 
     <!-- 配置卡片 -->
-    <section class="card" id="config-section">
+    <section class="card" id="config-section" data-nav-group="config">
       <div class="card-header">
-        <span class="card-icon"><i data-lucide="settings"></i></span>
         <h2>亮度配置</h2>
       </div>
 
@@ -166,9 +183,8 @@
     </section>
 
     <!-- 高级设置卡片 -->
-    <section class="card" id="advanced-section">
+    <section class="card" id="advanced-section" data-nav-group="config">
       <div class="card-header">
-        <span class="card-icon"><i data-lucide="sliders"></i></span>
         <h2>高级设置</h2>
       </div>
 
@@ -200,17 +216,77 @@
       </div>
     </section>
 
-    <!-- 日志 -->
-    <section class="card" id="log-section">
+    <!-- Web UI 配置卡片 -->
+    <section class="card" id="webui-config-section" data-nav-group="config">
       <div class="card-header">
-        <span class="card-icon"><i data-lucide="file-text"></i></span>
+        <h2>Web UI 配置</h2>
+      </div>
+
+      <div class="config-group">
+        <div class="config-item">
+          <div class="config-label">
+            <span class="config-name">状态/日志刷新间隔</span>
+            <span class="config-desc">单位: 毫秒 (最小100ms)</span>
+          </div>
+          <div class="config-value">
+            <input type="number" id="input-status-refresh-interval" class="config-input" min="100" value="1000" />
+          </div>
+        </div>
+        <div class="config-item">
+          <div class="config-label">
+            <span class="config-name">配置卡片刷新间隔</span>
+            <span class="config-desc">单位: 毫秒 (最小1000ms)</span>
+          </div>
+          <div class="config-value">
+            <input type="number" id="input-config-refresh-interval" class="config-input" min="1000" value="5000" />
+          </div>
+        </div>
+      </div>
+
+      <div class="card-actions">
+        <button class="btn btn-primary" id="btn-save-webui-config">
+          <span class="btn-icon"><i data-lucide="save"></i></span> 保存配置
+        </button>
+      </div>
+    </section>
+
+    <!-- 日志 -->
+    <section class="card" id="log-section" data-nav-group="log">
+      <div class="card-header">
         <h2>运行日志</h2>
+        <div class="header-actions">
+          <select id="log-level-filter" class="log-filter-select">
+            <option value="">全部等级</option>
+            <option value="INFO">INFO</option>
+            <option value="WARN">WARN</option>
+            <option value="ERROR">ERROR</option>
+            <option value="SUCCESS">SUCCESS</option>
+          </select>
+          <button class="btn-text-s" id="btn-clear-logs">清空日志</button>
+        </div>
       </div>
       <pre class="log-output" id="log-output">加载中...</pre>
     </section>
 
     <!-- Toast -->
     <div class="toast" id="toast"></div>
+
+    <!-- 浮动底栏 -->
+    <div class="floating-navbar">
+      <div class="navbar-slider"></div>
+      <button class="navbar-btn active" data-section="status">
+        <i data-lucide="activity"></i>
+        <span>状态</span>
+      </button>
+      <button class="navbar-btn" data-section="config">
+        <i data-lucide="settings"></i>
+        <span>配置</span>
+      </button>
+      <button class="navbar-btn" data-section="log">
+        <i data-lucide="file-text"></i>
+        <span>日志</span>
+      </button>
+    </div>
   </div>
 
 </body>
