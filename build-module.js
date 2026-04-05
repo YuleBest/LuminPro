@@ -1,6 +1,5 @@
 import fs from 'fs';
 import archiver from 'archiver';
-import { spawn } from 'child_process';
 
 // 读取版本信息用以命名
 const propContent = fs.readFileSync('module.prop', 'utf-8');

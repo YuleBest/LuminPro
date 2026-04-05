@@ -15,6 +15,9 @@ let NOW_BRI_FILE = DEFAULT_NOW_BRI_FILE;
 let SYS_MAX_BRI_FILE = DEFAULT_SYS_MAX_BRI_FILE;
 let INOTIFY_EVENTS = 'c';
 
+let cachedCurrentBri = null;
+let cachedSysMaxBri = null;
+
 // Web UI 配置
 let statusLogRefreshInterval = 1000; // 状态/日志刷新间隔（默认1秒）
 let configRefreshInterval = 5000; // 配置卡片刷新间隔（默认5秒）
@@ -328,10 +331,17 @@ async function handleReset() {
 }
 
 // 3. 刷新实时状态
-async function loadStatus() {
-  const [curRes, sysRes, pidRes, stopRes, autoBriRes] = await Promise.all([
-    runCmd(`cat "${NOW_BRI_FILE}"`),
-    runCmd(`cat "${SYS_MAX_BRI_FILE}"`),
+async function loadStatus(forceFull = false) {
+  if (forceFull || cachedCurrentBri === null || cachedSysMaxBri === null) {
+    const [cRes, sRes] = await Promise.all([
+      runCmd(`cat "${NOW_BRI_FILE}"`),
+      runCmd(`cat "${SYS_MAX_BRI_FILE}"`)
+    ]);
+    if (cRes.errno === 0) cachedCurrentBri = cRes.stdout.trim();
+    if (sRes.errno === 0) cachedSysMaxBri = sRes.stdout.trim();
+  }
+
+  const [pidRes, stopRes, autoBriRes] = await Promise.all([
     runCmd(`cat "${PID_FILE}"`),
     runCmd(`[ -f "${STOP_FLAG_FILE}" ] && echo "1" || echo "0"`),
     runCmd(`settings get system screen_brightness_mode`)
@@ -369,14 +379,14 @@ async function loadStatus() {
   }
 
   // 填入数值
-  const currentBri = curRes.errno === 0 ? curRes.stdout.trim() : '0';
+  const currentBri = cachedCurrentBri || '0';
   document.getElementById('status-current-bri').textContent = currentBri;
-  document.getElementById('status-sys-max-bri').textContent = sysRes.errno === 0 ? sysRes.stdout.trim() : '—';
+  document.getElementById('status-sys-max-bri').textContent = cachedSysMaxBri || '—';
   document.getElementById('status-inotifyd-pid').textContent = running ? pidRes.stdout.trim() : '离线';
 
   // 更新亮度滑条
   const brightnessSlider = document.getElementById('brightness-slider');
-  const sysMaxBri = sysRes.errno === 0 ? parseInt(sysRes.stdout.trim(), 10) : 255;
+  const sysMaxBri = cachedSysMaxBri ? parseInt(cachedSysMaxBri, 10) : 255;
   brightnessSlider.max = sysMaxBri;
   const currentBriValue = parseInt(currentBri, 10) || 0;
   brightnessSlider.value = currentBriValue;
@@ -420,7 +430,7 @@ async function toggleService() {
   } else {
     showToast('操作失败: ' + res.stderr);
   }
-  await loadStatus();
+  await loadStatus(true);
 }
 async function restartService() {
   const btn = document.getElementById('btn-restart-service');
@@ -439,7 +449,7 @@ async function restartService() {
 
   // 延迟刷新状态以确保 PID 文件已写入
   setTimeout(async () => {
-    await loadStatus();
+    await loadStatus(true);
     btn.disabled = false;
   }, 1000);
 }
@@ -453,6 +463,7 @@ async function handleBrightnessChange(e) {
     
     // 立即更新 UI（不等待文件 IO）
     document.getElementById('brightness-display').textContent = percentage + '%';
+    cachedCurrentBri = String(newBri);
     
     // 直接写入文件，无防抖
     const cmd = `echo -n '${newBri}' > '${NOW_BRI_FILE}' 2>/dev/null && echo 'OK'`;
@@ -460,11 +471,11 @@ async function handleBrightnessChange(e) {
     
     if (!(res.errno === 0 && res.stdout.includes('OK'))) {
       showToast('亮度设置失败，已恢复');
-      await loadStatus(); // 恢复旧值
+      await loadStatus(true); // 恢复旧值
     }
   } catch (error) {
     showToast('设置亮度出错: ' + error.message);
-    await loadStatus();
+    await loadStatus(true);
   }
 }
 
@@ -598,7 +609,7 @@ async function startAutoRefreshConfig() {
 
 async function startAutoRefresh() {
   // 立即执行一次状态/日志刷新
-  await Promise.all([loadStatus(), loadLogs()]);
+  await Promise.all([loadStatus(true), loadLogs()]);
   
   // 启动定时刷新
   autoRefreshStatusLogTimer = setTimeout(startAutoRefreshStatusLog, statusLogRefreshInterval);
@@ -690,6 +701,10 @@ async function init() {
   setupNavbar();
 
   // 绑定事件
+  document.getElementById('btn-refresh-status').addEventListener('click', async () => {
+    showToast('刷新状态...');
+    await loadStatus(true);
+  });
   document.getElementById('btn-save').addEventListener('click', saveConfig);
   document.getElementById('btn-save-advanced').addEventListener('click', saveAdvancedConfig);
   document.getElementById('btn-save-webui-config').addEventListener('click', saveWebUIConfig);

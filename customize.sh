@@ -349,6 +349,26 @@ ENSURE_DEFAULTS() {
     [ ! -s "$mod_config/log_max_size.txt" ] && echo "500" >"$mod_config/log_max_size.txt"
 }
 
+# 机型兼容性校验
+CHECK_DEVICE_COMPATIBILITY() {
+    local model prefix
+    model="$(getprop ro.product.model)"
+    prefix="$(echo "$model" | cut -c 1-9)"
+
+    if [ "$prefix" = "25128PNA1" ] || [ "$prefix" = "2512BPNDA" ]; then
+        echo ""
+        echo "[!] 您可能是 Xiaomi 17 Ultra 用户，建议您使用 '0' 事件作为监测对象，否则模块可能不生效"
+        echo "[?] 是否将 inotifyd 监测事件修改为 '0'? (按音量 + 确认，按音量 - 跳过)"
+        if [ "$(button_listener)" = "0" ]; then
+            echo -n "0" >"$mod_config/inotify_events.txt"
+            echo "[OK] 已设置为 0 事件监测"
+        else
+            echo "[*] 已跳过配置更改"
+        fi
+        sleep 1
+    fi
+}
+
 # 创建备份 (用于 WebUI 恢复默认)
 CREATE_BACKUP() {
     mkdir -p "$mod_config/.backup"
@@ -370,6 +390,7 @@ MAIN() {
         TEST_UI_MAX_BRI
     fi
     ENSURE_DEFAULTS
+    CHECK_DEVICE_COMPATIBILITY
     CREATE_BACKUP
     END
 }
