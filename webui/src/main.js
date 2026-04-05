@@ -332,20 +332,30 @@ async function loadStatus() {
   
   const statusDot = document.querySelector('.header-status .status-dot');
   const statusText = document.querySelector('.header-status .status-text');
+  const statusContainer = document.getElementById('module-status');
   const toggleBtn = document.getElementById('btn-toggle-service');
 
   if (isPaused) {
     statusDot.style.backgroundColor = 'var(--md-sys-color-error)';
+    statusDot.style.boxShadow = '0 0 8px rgba(244, 67, 54, 0.5)';
     statusText.textContent = '已暂停';
     toggleBtn.textContent = '启用';
+    statusContainer.classList.remove('status-running', 'status-loading');
+    statusContainer.classList.add('status-paused');
   } else if (running) {
     statusDot.style.backgroundColor = '#4caf50';
+    statusDot.style.boxShadow = '0 0 8px rgba(76, 175, 80, 0.6)';
     statusText.textContent = '运行中';
     toggleBtn.textContent = '暂停';
+    statusContainer.classList.remove('status-paused', 'status-loading');
+    statusContainer.classList.add('status-running');
   } else {
     statusDot.style.backgroundColor = 'var(--md-sys-color-error)';
+    statusDot.style.boxShadow = '0 0 8px rgba(244, 67, 54, 0.5)';
     statusText.textContent = '未运行';
     toggleBtn.textContent = '暂停';
+    statusContainer.classList.remove('status-running', 'status-paused');
+    statusContainer.classList.add('status-loading');
   }
 
   // 填入数值
@@ -424,31 +434,24 @@ async function restartService() {
   }, 1000);
 }
 
-let brightnessChangeTimer = null;
-
 async function handleBrightnessChange(e) {
   try {
     const newBri = parseInt(e.target.value, 10);
-    const percentage = Math.round((newBri / 255) * 100);
+    const brightnessSlider = document.getElementById('brightness-slider');
+    const sysMaxBri = parseInt(brightnessSlider.max, 10);
+    const percentage = Math.round((newBri / sysMaxBri) * 100);
     
     // 立即更新 UI（不等待文件 IO）
     document.getElementById('brightness-display').textContent = percentage + '%';
     
-    // 清除之前的定时器
-    if (brightnessChangeTimer) {
-      clearTimeout(brightnessChangeTimer);
-    }
+    // 直接写入文件，无防抖
+    const cmd = `echo -n '${newBri}' > '${NOW_BRI_FILE}' 2>/dev/null && echo 'OK'`;
+    const res = await runCmd(cmd);
     
-    // 防抖：300ms 后才真正写入文件
-    brightnessChangeTimer = setTimeout(async () => {
-      const cmd = `echo -n '${newBri}' > '${NOW_BRI_FILE}' 2>/dev/null && echo 'OK'`;
-      const res = await runCmd(cmd);
-      
-      if (!(res.errno === 0 && res.stdout.includes('OK'))) {
-        showToast('亮度设置失败，已恢复');
-        await loadStatus(); // 恢复旧值
-      }
-    }, 300);
+    if (!(res.errno === 0 && res.stdout.includes('OK'))) {
+      showToast('亮度设置失败，已恢复');
+      await loadStatus(); // 恢复旧值
+    }
   } catch (error) {
     showToast('设置亮度出错: ' + error.message);
     await loadStatus();
@@ -603,6 +606,7 @@ function setupNavbar() {
   const navbarBtns = document.querySelectorAll('.navbar-btn');
   const sections = document.querySelectorAll('.card');
   const navbarSlider = document.querySelector('.navbar-slider');
+  let sliderFixedWidth = 0; // 固定滑块宽度
 
   // 更新滑块位置
   function updateSliderPosition(activeBtn) {
@@ -612,10 +616,14 @@ function setupNavbar() {
     const btnRect = activeBtn.getBoundingClientRect();
     
     const sliderLeft = btnRect.left - navbarRect.left;
-    const sliderWidth = btnRect.width;
+    
+    // 首次设置固定宽度
+    if (sliderFixedWidth === 0) {
+      sliderFixedWidth = btnRect.width;
+      navbarSlider.style.width = sliderFixedWidth + 'px';
+    }
     
     navbarSlider.style.left = sliderLeft + 'px';
-    navbarSlider.style.width = sliderWidth + 'px';
   }
 
   // 根据分组显示卡片
@@ -715,6 +723,18 @@ async function init() {
     } else {
       expandArea.classList.remove('show');
     }
+  });
+
+  // Textarea 自适应高度
+  document.querySelectorAll('.config-textarea').forEach(textarea => {
+    const autoResize = () => {
+      textarea.style.height = 'auto';
+      textarea.style.height = Math.min(textarea.scrollHeight, 300) + 'px';
+    };
+    textarea.addEventListener('input', autoResize);
+    textarea.addEventListener('change', autoResize);
+    // 初始加载时调整高度
+    setTimeout(autoResize, 0);
   });
 
   // 初次加载配置

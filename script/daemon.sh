@@ -101,7 +101,7 @@ while true; do
 
     # 3. 通过 wait 阻塞，实时感知进程死亡 (兼容所有 BusyBox 环境)
     wait "$inotify_pid"
-    _log "⚠ 监听进程 ($inotify_pid) 已退出，将在 1 秒后重启..." "WARN"
+    _log "[-] 监听进程 ($inotify_pid) 已退出，将在 1 秒后重启..." "WARN"
 
     sleep 0.5
 done
