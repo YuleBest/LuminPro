@@ -13,7 +13,6 @@ pause_file="$PID_DIR/daemon.pause"
 
 # 默认设备路径
 DEFAULT_NOW_BRI_FILE="/sys/class/backlight/panel0-backlight/brightness"
-DEFAULT_MAX_BRI_FILE="/sys/class/backlight/panel0-backlight/max_brightness"
 
 # 读取配置函数
 get_config() {
@@ -28,7 +27,6 @@ get_config() {
 
 # 获取亮度文件路径
 now_bri_file="$(get_config "$PATH_CONFIG_DIR/now_bri_file.txt" "$DEFAULT_NOW_BRI_FILE")"
-max_bri_file="$(get_config "$PATH_CONFIG_DIR/max_bri_file.txt" "$DEFAULT_MAX_BRI_FILE")"
 
 # 日志函数
 _log() {
@@ -48,11 +46,11 @@ _log() {
         local cur_size
         cur_size=$(du -k "$log_file" | cut -f1)
         if [ "$cur_size" -ge "$max_size" ]; then
-            printf '[%s] [%-8s] [%-8s] %s\n' "$(date '+%m-%d %H:%M:%S')" "up" "WARN" "日志过大 ($cur_size KB), 自动重置" >"$log_file"
+            printf '[%s] [%s] [%s] %s\n' "$(date '+%m-%d %H:%M:%S')" "up" "WARN" "日志过大 ($cur_size KB), 自动重置" >"$log_file"
         fi
     fi
 
-    printf '[%s] [%-8s] [%-8s] %s\n' "$(date '+%m-%d %H:%M:%S')" "up" "$level" "$1" >>"$log_file"
+    printf '[%s] [%s] [%s] %s\n' "$(date '+%m-%d %H:%M:%S')" "up" "$level" "$1" >>"$log_file"
 }
 
 _log "[*] 收到 inotifyd 通知 (PID: $$)" "INFO"
@@ -187,8 +185,9 @@ MAIN() {
     rm -f "$pause_file" # 解锁守护进程，让它自动拉起 inotifyd
 
     # 如果配置文件被修改了，杀掉 inotifyd 让 daemon 重启并重新读取配置
-    local current_now_bri="$(cat "$PATH_CONFIG_DIR/now_bri_file.txt" 2>/dev/null || echo "$DEFAULT_NOW_BRI_FILE")"
-    local cached_now_bri="$(cat "$PATH_CONFIG_DIR/.cached_path" 2>/dev/null || echo "$DEFAULT_NOW_BRI_FILE")"
+    local current_now_bri cached_now_bri
+    current_now_bri="$(cat "$PATH_CONFIG_DIR/now_bri_file.txt" 2>/dev/null || echo "$DEFAULT_NOW_BRI_FILE")"
+    cached_now_bri="$(cat "$PATH_CONFIG_DIR/.cached_path" 2>/dev/null || echo "$DEFAULT_NOW_BRI_FILE")"
 
     if [ "$current_now_bri" != "$cached_now_bri" ]; then
         _log "[*] 配置已更新，重启 inotifyd..." "WARN"

@@ -8,7 +8,7 @@ flag_file="$PID_DIR/up.flag"
 log_file="$MODDIR/service.log"
 
 _log() {
-    printf '[%s] [service.restart] %s\n' "$(date '+%d %H:%M:%S.%3N')" "$1" >>"$log_file"
+    printf '[%s] [restart] %s\n' "$(date '+%d %H:%M:%S.%3N')" "$1" >>"$log_file"
 }
 
 _log "正在手动重启服务..."

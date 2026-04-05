@@ -26,7 +26,8 @@ get_config_value() {
 
     # 1. 检查旧配置是否存在且非空
     if [ -f "$old_file" ]; then
-        local old_val="$(cat "$old_file" 2>/dev/null | tr -d ' \n')"
+        local old_val
+        old_val="$(cat "$old_file" 2>/dev/null | tr -d ' \n')"
         if [ -n "$old_val" ]; then
             echo "$old_val"
             return
@@ -35,7 +36,8 @@ get_config_value() {
 
     # 2. 检查默认配置是否存在且非空
     if [ -f "$new_file" ]; then
-        local new_val="$(cat "$new_file" 2>/dev/null | tr -d ' \n')"
+        local new_val
+        new_val="$(cat "$new_file" 2>/dev/null | tr -d ' \n')"
         if [ -n "$new_val" ]; then
             echo "$new_val"
             return
@@ -199,8 +201,10 @@ END() {
     sleep 1
 
     # 读取最终配置
-    local final_max_bri="$(get_config_value "max_bri.txt" "")"
-    local final_ui_max_bri="$(get_config_value "ui_max_bri.txt" "")"
+    local final_max_bri
+    local final_ui_max_bri
+    final_max_bri="$(get_config_value "max_bri.txt" "")"
+    final_ui_max_bri="$(get_config_value "ui_max_bri.txt" "")"
 
     # 检查是否需要重新测试
     if [ -z "$final_max_bri" ] || [ -z "$final_ui_max_bri" ]; then
@@ -278,7 +282,11 @@ IMPORT_OLD_CONFIG() {
             echo "[OK] 已沿用旧配置"
             cp -f "$old_config/ui_max_bri.txt" "$mod_config/"
             cp -f "$old_config/max_bri.txt" "$mod_config/"
-            [ -e "$old_config/sleep_time.txt" ] && cp -f "$old_config/sleep_time.txt" "$mod_config/" || touch "$mod_config/sleep_time.txt"
+            if [ -e "$old_config/sleep_time.txt" ]; then
+                cp -f "$old_config/sleep_time.txt" "$mod_config/"
+            else
+                touch "$mod_config/sleep_time.txt"
+            fi
             [ -s "$old_config/auto_bri_sleep.txt" ] && cp -f "$old_config/auto_bri_sleep.txt" "$mod_config/"
             [ -s "$old_config/steps_num.txt" ] && cp -f "$old_config/steps_num.txt" "$mod_config/"
             [ -s "$old_config/log_max_size.txt" ] && cp -f "$old_config/log_max_size.txt" "$mod_config/"

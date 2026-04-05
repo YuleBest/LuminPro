@@ -13,6 +13,7 @@ const DEFAULT_SYS_MAX_BRI_FILE = '/sys/class/backlight/panel0-backlight/max_brig
 
 let NOW_BRI_FILE = DEFAULT_NOW_BRI_FILE;
 let SYS_MAX_BRI_FILE = DEFAULT_SYS_MAX_BRI_FILE;
+let INOTIFY_EVENTS = 'c';
 
 // Web UI 配置
 let statusLogRefreshInterval = 1000; // 状态/日志刷新间隔（默认1秒）
@@ -54,13 +55,19 @@ async function writeFile(path, content) {
 // 1. 加载配置
 async function loadConfig() {
   // 首先加载设备路径配置
-  const [pathNowRes, pathMaxRes] = await Promise.all([
+  const [pathNowRes, pathMaxRes, eventsRes] = await Promise.all([
     runCmd(`cat "${PATH_CONFIG_DIR}/now_bri_file.txt"`),
-    runCmd(`cat "${PATH_CONFIG_DIR}/max_bri_file.txt"`)
+    runCmd(`cat "${PATH_CONFIG_DIR}/max_bri_file.txt"`),
+    runCmd(`cat "${CONFIG_DIR}/inotify_events.txt"`)
   ]);
 
   if (pathNowRes.errno === 0) NOW_BRI_FILE = pathNowRes.stdout.trim();
   if (pathMaxRes.errno === 0) SYS_MAX_BRI_FILE = pathMaxRes.stdout.trim();
+  if (eventsRes.errno === 0 && eventsRes.stdout.trim()) INOTIFY_EVENTS = eventsRes.stdout.trim();
+  else INOTIFY_EVENTS = 'c';
+  
+  document.getElementById('input-inotify-events').value = INOTIFY_EVENTS;
+
 
   // 然后加载其他配置
   const [uiRes, maxRes, sleepRes, autoRes, stepsRes, logSizeRes] = await Promise.all([
@@ -187,20 +194,23 @@ async function saveConfig() {
   }
 }
 
-// 2.2 保存高级设置（设备路径）
+// 2.2 保存高级设置（设备路径及事件监听）
 async function saveAdvancedConfig() {
   const nowBriFile = document.getElementById('input-now-bri-file').value || DEFAULT_NOW_BRI_FILE;
   const sysMaxBriFile = document.getElementById('input-sys-max-bri-file').value || DEFAULT_SYS_MAX_BRI_FILE;
+  const eventsVal = document.getElementById('input-inotify-events').value || 'c';
 
   showToast('保存中...');
   
   // 保存设备路径配置
-  const pathChanged = (NOW_BRI_FILE !== nowBriFile) || (SYS_MAX_BRI_FILE !== sysMaxBriFile);
+  const configChanged = (NOW_BRI_FILE !== nowBriFile) || (SYS_MAX_BRI_FILE !== sysMaxBriFile) || (INOTIFY_EVENTS !== eventsVal);
   await writeFile(`${PATH_CONFIG_DIR}/now_bri_file.txt`, nowBriFile);
   await writeFile(`${PATH_CONFIG_DIR}/max_bri_file.txt`, sysMaxBriFile);
+  await writeFile(`${CONFIG_DIR}/inotify_events.txt`, eventsVal);
   
-  if (pathChanged) {
-    showToast('设备路径已修改，需要重启服务生效');
+  if (configChanged) {
+    INOTIFY_EVENTS = eventsVal;
+    showToast('高级设置已修改，需要重启服务生效');
   } else {
     showToast('设置已保存');
   }
@@ -504,8 +514,6 @@ async function applyLogFilter() {
 }
 
 async function loadLogs() {
-  const logEl = document.getElementById('log-output');
-  const filterLevel = document.getElementById('log-level-filter').value;
 
   // 读取最后 50 行日志
   const res = await runCmd(`tail -n 50 "${LOG_FILE}"`);
@@ -713,6 +721,21 @@ async function init() {
   
   if (btnClearLogs) {
     btnClearLogs.addEventListener('click', handleClearLogs);
+  }
+
+  // 绑定查看支持事件按钮
+  const btnInotifyHelp = document.getElementById('btn-view-inotifyd-help');
+  if (btnInotifyHelp) {
+    btnInotifyHelp.addEventListener('click', async () => {
+      showToast('获取中...');
+      const res = await runCmd('inotifyd --help');
+      const output = (res.stderr || '') + (res.stdout || '');
+      if (output) {
+        alert(output.trim());
+      } else {
+        alert('无法获取该命令的帮助信息。');
+      }
+    });
   }
 
   // 定时休眠折叠逻辑
