@@ -10,6 +10,9 @@
 </head>
 
 <body>
+  <!-- 顶部状态栏渐变模糊 -->
+  <div class="top-blur"></div>
+
   <div id="app">
     <!-- 顶部头 -->
     <header class="app-header">
@@ -17,12 +20,19 @@
         <div class="header-text">
           <h1>LuminPro</h1>
           <p class="header-subtitle">日用屏幕亮度强化</p>
-          <p class="header-version" id="module-version">V2.2-2203</p>
+          <p class="header-version" id="module-version">V2.2-2204</p>
         </div>
       </div>
-      <div class="header-status" id="module-status">
-        <span class="status-dot"></span>
-        <span class="status-text">运行中</span>
+      <div class="header-status-container">
+        <div class="header-status" id="module-status">
+          <span class="status-dot"></span>
+          <span class="status-text">运行中</span>
+        </div>
+        <div class="header-status-actions">
+           <button class="btn-status-action" id="btn-refresh-status">刷新</button>
+           <button class="btn-status-action" id="btn-toggle-service">暂停</button>
+           <button class="btn-status-action" id="btn-restart-service">重启</button>
+        </div>
       </div>
     </header>
 
@@ -30,28 +40,35 @@
     <section class="card" id="status-section" data-nav-group="status">
       <div class="card-header">
         <h2>实时状态</h2>
-        <div class="header-actions">
-           <button class="btn-text-s" id="btn-refresh-status">刷新</button>
-           <button class="btn-text-s" id="btn-toggle-service">暂停</button>
-           <button class="btn-text-s" id="btn-restart-service">重启</button>
-        </div>
       </div>
 
       <div class="status-grid">
         <div class="status-item">
-          <span class="status-label">当前亮度</span>
+          <div class="status-item-header">
+            <i data-lucide="sun"></i>
+            <span class="status-label">当前亮度</span>
+          </div>
           <span class="status-value" id="status-current-bri">—</span>
         </div>
         <div class="status-item">
-          <span class="status-label">系统最大亮度</span>
+          <div class="status-item-header">
+            <i data-lucide="smartphone"></i>
+            <span class="status-label">系统最大亮度</span>
+          </div>
           <span class="status-value" id="status-sys-max-bri">—</span>
         </div>
         <div class="status-item">
-          <span class="status-label">inotifyd PID</span>
+          <div class="status-item-header">
+            <i data-lucide="activity"></i>
+            <span class="status-label">inotifyd PID</span>
+          </div>
           <span class="status-value" id="status-inotifyd-pid">—</span>
         </div>
         <div class="status-item">
-          <span class="status-label">休眠状态</span>
+          <div class="status-item-header">
+            <i data-lucide="moon"></i>
+            <span class="status-label">休眠状态</span>
+          </div>
           <span class="status-value" id="status-sleep">—</span>
         </div>
       </div>
@@ -85,7 +102,7 @@
 
       <!-- 分类: 亮度调节 -->
       <div class="config-group">
-        <h3 class="group-title">亮度调节</h3>
+        <h3 class="group-title"><i data-lucide="settings-2"></i> 亮度调节</h3>
         <div class="config-item">
           <div class="config-label">
             <span class="config-name">前台最大亮度</span>
@@ -117,7 +134,7 @@
 
       <!-- 分类: 执行策略 -->
       <div class="config-group">
-        <h3 class="group-title">执行策略</h3>
+        <h3 class="group-title"><i data-lucide="shield-check"></i> 执行策略</h3>
         <div class="config-item">
           <div class="config-label">
             <span class="config-name">自动亮度时休眠</span>
@@ -161,7 +178,7 @@
 
       <!-- 分类: 系统管理 -->
       <div class="config-group">
-        <h3 class="group-title">系统管理</h3>
+        <h3 class="group-title"><i data-lucide="file-text"></i> 系统管理</h3>
         <div class="config-item">
           <div class="config-label">
             <span class="config-name">日志大小限制</span>
@@ -190,6 +207,7 @@
       </div>
 
       <div class="config-group">
+        <h3 class="group-title"><i data-lucide="settings"></i> 运行环境</h3>
         <div class="config-item">
           <div class="config-label">
             <span class="config-name">inotifyd 监听事件</span>
@@ -234,6 +252,7 @@
       </div>
 
       <div class="config-group">
+        <h3 class="group-title"><i data-lucide="monitor"></i> 界面设置</h3>
         <div class="config-item">
           <div class="config-label">
             <span class="config-name">状态/日志刷新间隔</span>
@@ -261,6 +280,65 @@
       </div>
     </section>
 
+    <!-- 黑名单页卡片 -->
+    <section class="card" id="apps-section" data-nav-group="apps" style="display: none;">
+      <div class="card-header" style="margin-bottom: 8px;">
+        <h2>黑名单</h2>
+        <div class="header-actions dropdown-container">
+           <button class="btn-icon-only" id="btn-apps-refresh">
+             <i data-lucide="refresh-cw"></i>
+           </button>
+           <button class="btn-icon-only" id="btn-apps-menu">
+             <i data-lucide="more-vertical"></i>
+           </button>
+           <div class="dropdown-menu" id="apps-dropdown-menu">
+             <div class="dropdown-item" id="btn-toggle-sys-apps">
+                <i data-lucide="eye-off" id="sys-apps-icon"></i>
+                <span id="sys-apps-text">隐藏系统应用</span>
+             </div>
+             <div class="dropdown-item" id="btn-smart-select">
+                <i data-lucide="sparkles"></i>
+                <span>智能选择</span>
+             </div>
+             <div class="dropdown-item" id="btn-manual-add">
+                <i data-lucide="plus"></i>
+                <span>手动添加包名</span>
+             </div>
+             <div class="dropdown-item" id="btn-select-all">
+                <i data-lucide="check-check"></i>
+                <span>全选</span>
+             </div>
+             <div class="dropdown-item" id="btn-select-none">
+                 <i data-lucide="square"></i>
+                 <span>全不选</span>
+             </div>
+             <div class="dropdown-item" id="btn-invert-selection">
+                <i data-lucide="check-square"></i>
+                <span>反选</span>
+             </div>
+           </div>
+        </div>
+      </div>
+      <p class="app-list-hint">
+        被选中的应用将不生效本模块</br>
+        推荐选择视频类、相册等需展示 HDR 内容的应用
+      </p>
+      
+      <!-- 搜索栏 -->
+      <div style="display: flex; gap: 8px; align-items: stretch; margin-bottom: var(--spacing-m);">
+        <div class="app-search-container" style="flex: 1; margin-bottom: 0;">
+          <i data-lucide="search" class="search-icon"></i>
+          <input type="text" id="input-app-search" class="app-search-input" placeholder="应用名称或包名" autocomplete="off" spellcheck="false" />
+          <span id="app-count-badge" class="count-badge">0</span>
+        </div>
+        <button class="btn btn-primary" id="btn-save-blacklist" style="padding: 0 16px; border-radius: var(--border-radius-m); font-size: 0.8125rem; white-space: nowrap; flex-shrink: 0;">保存</button>
+      </div>
+
+      <div class="app-list-container" id="app-list-container">
+        <!-- 动态渲染应用项 -->
+      </div>
+    </section>
+
     <!-- 日志 -->
     <section class="card" id="log-section" data-nav-group="log">
       <div class="card-header">
@@ -279,6 +357,67 @@
       <pre class="log-output" id="log-output">加载中...</pre>
     </section>
 
+    <!-- 关于 -->
+    <section class="card" id="about-section" data-nav-group="about">
+      <div class="card-header">
+        <h2>关于项目</h2>
+      </div>
+
+      <div class="about-links">
+        <a href="https://github.com/YuleBest/LuminPro" target="_blank" class="about-link-item">
+          <i data-lucide="code"></i>
+          <div class="link-info">
+            <span class="link-label">项目 GitHub</span>
+            <span class="link-url">YuleBest/LuminPro</span>
+          </div>
+        </a>
+        <a href="https://github.com/YuleBest" target="_blank" class="about-link-item">
+          <i data-lucide="user"></i>
+          <div class="link-info">
+            <span class="link-label">作者</span>
+            <span class="link-url">于乐 Yule</span>
+          </div>
+        </a>
+      </div>
+
+      <div class="config-group" style="margin-top: var(--spacing-l);">
+        <h3 class="group-title"><i data-lucide="book-open"></i> 相关文档</h3>
+        <div class="about-doc-list">
+          <div class="about-doc-item" data-doc="README.md">
+             <i data-lucide="file-text"></i>
+             <span>README</span>
+          </div>
+          <div class="about-doc-item" data-doc="README_en.md">
+             <i data-lucide="globe"></i>
+             <span>README (English)</span>
+          </div>
+          <div class="about-doc-item" data-doc="changelog.md">
+             <i data-lucide="sparkles"></i>
+             <span>更新日志</span>
+          </div>
+          <div class="about-doc-item" data-doc="NOTE.txt">
+             <i data-lucide="file-text"></i>
+             <span>声明与注意事项</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 文档查看抽屉 (Bottom Sheet) -->
+    <div class="drawer-backdrop" id="doc-drawer-backdrop"></div>
+    <div class="doc-drawer" id="doc-drawer">
+      <div class="drawer-handle"></div>
+      <header class="drawer-header">
+         <h2 id="drawer-title">文档查看</h2>
+         <button class="btn-icon-only-s" id="btn-close-drawer">
+           <i data-lucide="x"></i>
+         </button>
+      </header>
+      <div class="drawer-content" id="drawer-content">
+         <!-- 内容将动态渲染 -->
+      </div>
+    </div>
+
     <!-- Toast -->
     <div class="toast" id="toast"></div>
 
@@ -293,9 +432,17 @@
         <i data-lucide="settings"></i>
         <span>配置</span>
       </button>
+      <button class="navbar-btn" data-section="apps">
+        <i data-lucide="smartphone"></i>
+        <span>黑名单</span>
+      </button>
       <button class="navbar-btn" data-section="log">
         <i data-lucide="file-text"></i>
         <span>日志</span>
+      </button>
+      <button class="navbar-btn" data-section="about">
+        <i data-lucide="info"></i>
+        <span>关于</span>
       </button>
     </div>
   </div>
