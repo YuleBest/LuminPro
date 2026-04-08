@@ -73,8 +73,8 @@ body::-webkit-scrollbar {
 }
 
 #app {
-  padding: 20px;
-  padding-bottom: calc(20px + 80px);
+  padding: 12px;
+  padding-bottom: calc(12px + 80px);
   max-width: 600px;
   margin: 0 auto;
   display: flex;

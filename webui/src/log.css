@@ -117,15 +117,15 @@
   position: fixed;
   bottom: calc(18px + var(--safe-area-inset-bottom, 0px));
   left: 50%;
-  transform: translateX(-50%) translateZ(0); /* 居中并开启硬件加速 */
+  transform: translateX(-50%) translateZ(0);
   display: flex;
   justify-content: center;
   align-items: center;
   gap: 8px;
-  background: rgba(var(--md-sys-color-surface-container-high-rgb, 43, 41, 48), 0.6);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  backdrop-filter: blur(20px) saturate(180%);
-  will-change: backdrop-filter;
+  background: rgba(var(--md-sys-color-surface-container-high-rgb, 43, 41, 48), 0.75);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  will-change: transform;
   padding: 8px 16px;
   border-radius: 28px;
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -136,7 +136,7 @@
   user-select: none;
   -webkit-user-select: none;
   -webkit-tap-highlight-color: transparent;
-  touch-action: none; /* Prevents browser scroll during drag */
+  touch-action: none;
 }
 
 .navbar-slider {
@@ -145,16 +145,11 @@
   top: 8px;
   bottom: 8px;
   height: auto;
-  background: rgba(var(--md-sys-color-primary-rgb, 168, 199, 250), 0.35);
-  -webkit-backdrop-filter: blur(8px) saturate(120%);
-  backdrop-filter: blur(8px) saturate(120%);
-  transform: translateZ(0);
+  background: var(--md-sys-color-primary-container);
   border-radius: 20px;
   transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1), width 0.3s ease;
   pointer-events: none;
   z-index: 0;
-  border: 1px solid rgba(var(--md-sys-color-primary-rgb, 168, 199, 250), 0.4);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .navbar-btn {

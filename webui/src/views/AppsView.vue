@@ -108,7 +108,7 @@ function startPolling() {
   pollingTimer = setInterval(async () => {
     try {
       const res = await runCmd(
-        `dumpsys window 2>/dev/null | grep mCurrentFocus | sed 's/.*u0 \\(.*\\)}/\\1/'`
+        `dumpsys window 2>/dev/null | grep mCurrentFocus | sed 's/.*u[0-9][0-9]* //' | sed 's/}.*//'`
       );
       if (res.errno !== 0) return;
       const activity = res.stdout.trim();
@@ -327,7 +327,7 @@ function confirmPicker() {
           <div class="picker-step-icon"><Clock :size="52" stroke-width="1.5" /></div>
           <h3 class="picker-step-title">切换到目标界面</h3>
           <p class="picker-step-desc">
-            点击「开始获取」后，切换到需要屏蔽的应用界面。<br /><br />
+            切换到需要屏蔽的应用界面，并点击 「开始获取」<br /><br />
             检测到非 Web UI 界面后将<strong>自动停止</strong>。<br /><br />
             <span class="picker-status-text" :class="{ polling: pickerPolling }">{{
               pickerStatusText

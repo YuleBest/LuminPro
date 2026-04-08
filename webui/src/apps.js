@@ -1,3 +1,4 @@
+// oxlint-disable no-unused-expressions
 import { listPackages, getPackagesInfo } from 'kernelsu';
 import { createIcons, Eye, EyeOff } from 'lucide';
 import PinyinMatch from 'pinyin-match';
@@ -107,7 +108,7 @@ export async function loadApps() {
       } else {
         throw new Error('No packages found');
       }
-    } catch (_) {
+    } catch {
       // 模拟 150 个应用包数据用于调试
       console.log("[DEBUG] 使用模拟应用列表数据");
       infoList = Array.from({ length: 150 }, (_, i) => ({
@@ -599,7 +600,7 @@ function setupActivityPicker() {
     stopPolling();
     pollingTimer = setInterval(async () => {
       try {
-        const res = await runCmd(`dumpsys window 2>/dev/null | grep mCurrentFocus | sed 's/.*u0 \\(.*\\)}/\\1/'`);
+        const res = await runCmd(`dumpsys window 2>/dev/null | grep mCurrentFocus | sed 's/.*u[0-9][0-9]* //' | sed 's/}.*//'`);
         if (res.errno !== 0) return;
         const activity = res.stdout.trim();
         // 空值或仍在 WebUI 内则继续等待
