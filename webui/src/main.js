@@ -43,7 +43,33 @@ async function runCmd(cmd) {
     const res = await exec(cmd);
     return res;
   } catch (e) {
-    console.error(e);
+    // 调试模式数据模拟
+    console.warn(`[DEBUG] 执行命令失败 (可能是非 KSU 环境): ${cmd}`);
+    
+    // 基础配置模拟
+    if (cmd.includes('cat') && cmd.includes('ui_max_bri.txt')) return { errno: 0, stdout: '4095', stderr: '' };
+    if (cmd.includes('cat') && cmd.includes('max_bri.txt')) return { errno: 0, stdout: '3500', stderr: '' };
+    if (cmd.includes('cat') && (cmd.includes('now_bri_file.txt') || cmd.includes('max_bri_file.txt'))) return { errno: 0, stdout: '/sys/mock/brightness', stderr: '' };
+    if (cmd.includes('cat') && cmd.includes('inotify_events.txt')) return { errno: 0, stdout: 'c', stderr: '' };
+    if (cmd.includes('cat') && cmd.includes('log_max_size.txt')) return { errno: 0, stdout: '1024', stderr: '' };
+    if (cmd.includes('cat') && cmd.includes('steps_num.txt')) return { errno: 0, stdout: '100', stderr: '' };
+    
+    // 状态模拟
+    if (cmd.includes('cat') && (cmd.includes('brightness') || cmd.includes('now_bri_file.txt'))) return { errno: 0, stdout: '1200', stderr: '' };
+    if (cmd.includes('cat') && (cmd.includes('max_brightness') || cmd.includes('max_bri_file.txt'))) return { errno: 0, stdout: '4095', stderr: '' };
+    if (cmd.includes('cat') && cmd.includes('inotifyd.pid')) return { errno: 0, stdout: '12345', stderr: '' };
+    if (cmd.includes('settings get system screen_brightness_mode')) return { errno: 0, stdout: '1', stderr: '' };
+    if (cmd.includes('[ -f') && cmd.includes('stop.flag')) return { errno: 0, stdout: '0', stderr: '' };
+    
+    // 日志模拟
+    if (cmd.includes('tail') && cmd.includes('service.log')) {
+      return { errno: 0, stdout: '[2026-04-07 15:40:01] [INFO] 服务启动成功\n[2026-04-07 15:41:05] [DEBUG] 亮度调整: 1200 -> 1250\n[2026-04-07 15:42:10] [INFO] 切换至峰值亮度模式\n[2026-04-07 15:43:22] [WARN] 检测到极低亮度设定', stderr: '' };
+    }
+    
+    // 文档模拟
+    if (cmd.includes('cat') && cmd.includes('.md')) return { errno: 0, stdout: '# 调试模式说明\n\n当前处于 **Web 调试模式**，显示的是模拟出的测试数据。\n\n- 状态卡片：全部固定为运行中。\n- 应用列表：预设了 150 个常用模拟应用。\n- 按钮：所有变更仅在当前页面生效，不会写入手机文件系统。', stderr: '' };
+    if (cmd.includes('cat') && cmd.includes('.txt')) return { errno: 0, stdout: '这是 NOTE.txt 的模拟内容，用于测试纯文本渲染。', stderr: '' };
+
     return { errno: -1, stdout: '', stderr: String(e) };
   }
 }
@@ -148,14 +174,8 @@ async function loadConfig() {
   document.getElementById('input-status-refresh-interval').value = statusLogRefreshInterval;
   document.getElementById('input-config-refresh-interval').value = configRefreshInterval;
 
-  const savedUIZoom = localStorage.getItem('uiZoom');
-  if (savedUIZoom && !isNaN(parseInt(savedUIZoom, 10))) {
-    uiZoom = Math.min(150, Math.max(50, parseInt(savedUIZoom, 10)));
-  }
   const uiZoomInput = document.getElementById('input-ui-zoom');
-  const uiZoomDisplay = document.getElementById('ui-zoom-display');
   if (uiZoomInput) uiZoomInput.value = uiZoom;
-  if (uiZoomDisplay) uiZoomDisplay.textContent = uiZoom + '%';
   applyUIZoom(uiZoom);
 }
 
@@ -269,9 +289,11 @@ function saveWebUIConfig() {
 }
 
 function applyUIZoom(zoom) {
-  const scale = zoom / 100;
-  // 使用 zoom 属性，它是最直接且不破坏 fixed 定位的方式 (Blink 支持很好)
-  document.body.style.zoom = scale;
+  const z = parseInt(zoom, 10);
+  if (isNaN(z) || z < 1) return;
+  const scale = z / 100;
+  // 仅在根元素 html 上设置 zoom 以免叠加，zoom 对 fixed 布局支持最佳
+  document.documentElement.style.zoom = scale;
 }
 
 // 2.5 恢复默认
@@ -353,6 +375,42 @@ async function handleReset() {
   await saveConfig();
 }
 
+function updateSliderProgress(slider) {
+  if (!slider) return;
+  const sysMax = parseInt(slider.max, 10) || 255;
+  const currVal = parseInt(slider.value, 10) || 0;
+  
+  // 获取前台最大亮度，用于划分危险区间
+  const uiMaxInput = document.getElementById('input-ui-max-bri');
+  const uiMax = uiMaxInput ? (parseInt(uiMaxInput.value, 10) || sysMax) : sysMax;
+  
+  const currPercent = (currVal / sysMax) * 100;
+  const uiPercent = (uiMax / sysMax) * 100;
+  
+  // 颜色定义
+  const primaryColor = '#a8c7fa'; // var(--md-sys-color-primary)
+  const boostColor = '#fb8c00';   // 显眼的琥珀色 (Warning Color)
+  const normalTrack = 'var(--md-sys-color-surface-container-high)';
+  const boostTrack = 'rgba(251, 140, 0, 0.15)'; // 浅色的危险区背景
+  
+  let gradient = 'linear-gradient(to right, ';
+  
+  if (currPercent <= uiPercent) {
+    // 进度在正常区间内
+    gradient += `${primaryColor} 0%, ${primaryColor} ${currPercent}%, `;
+    gradient += `${normalTrack} ${currPercent}%, ${normalTrack} ${uiPercent}%, `;
+    gradient += `${boostTrack} ${uiPercent}%, ${boostTrack} 100%`;
+  } else {
+    // 进度进入了峰值/危险区间
+    gradient += `${primaryColor} 0%, ${primaryColor} ${uiPercent}%, `;
+    gradient += `${boostColor} ${uiPercent}%, ${boostColor} ${currPercent}%, `;
+    gradient += `${boostTrack} ${currPercent}%, ${boostTrack} 100%`;
+  }
+  
+  gradient += ')';
+  slider.style.background = gradient;
+}
+
 // 3. 刷新实时状态
 async function loadStatus(forceFull = false) {
   if (forceFull || cachedCurrentBri === null || cachedSysMaxBri === null) {
@@ -361,7 +419,10 @@ async function loadStatus(forceFull = false) {
       runCmd(`cat "${SYS_MAX_BRI_FILE}"`)
     ]);
     if (cRes.errno === 0) cachedCurrentBri = cRes.stdout.trim();
+    else cachedCurrentBri = '0'; // 即使失败也不要让它保持 null 导致下次继续递归
+    
     if (sRes.errno === 0) cachedSysMaxBri = sRes.stdout.trim();
+    else cachedSysMaxBri = '255';
   }
 
   const [pidRes, stopRes, autoBriRes] = await Promise.all([
@@ -370,7 +431,7 @@ async function loadStatus(forceFull = false) {
     runCmd(`settings get system screen_brightness_mode`)
   ]);
 
-  const isPaused = stopRes.stdout.trim() === '1';
+  const isPaused = stopRes.errno === 0 && stopRes.stdout.trim() === '1';
   const running = pidRes.errno === 0 && pidRes.stdout.trim();
   
   const statusDot = document.querySelector('.header-status .status-dot');
@@ -413,6 +474,7 @@ async function loadStatus(forceFull = false) {
   brightnessSlider.max = sysMaxBri;
   const currentBriValue = parseInt(currentBri, 10) || 0;
   brightnessSlider.value = currentBriValue;
+  updateSliderProgress(brightnessSlider);
   
   // 显示为百分比
   const percentage = Math.round((currentBriValue / sysMaxBri) * 100);
@@ -508,6 +570,7 @@ async function handleBrightnessChange(e) {
     // 立即更新 UI（不等待文件 IO）
     document.getElementById('brightness-display').textContent = percentage + '%';
     cachedCurrentBri = String(newBri);
+    updateSliderProgress(brightnessSlider);
     
     // 直接写入文件，无防抖
     const cmd = `echo -n '${newBri}' > '${NOW_BRI_FILE}' 2>/dev/null && echo 'OK'`;
@@ -569,16 +632,17 @@ async function applyLogFilter() {
 }
 
 async function loadLogs() {
+  const logEl = document.getElementById('log-output');
+  if (!logEl) return;
 
-  // 读取最后 50 行日志
-  const res = await runCmd(`tail -n 50 "${LOG_FILE}"`);
+  // 读取最后 100 行日志
+  const res = await runCmd(`tail -n 100 "${LOG_FILE}"`);
   if (res.errno === 0) {
-    const rawLog = res.stdout.trim() || '暂无日志';
-    fullLogContent = rawLog;
-
-    // 应用筛选
-    await applyLogFilter();
+    fullLogContent = res.stdout.trim() || '暂无日志';
+  } else {
+    fullLogContent = '无法读取日志 (可能模块尚未产生日志文件)';
   }
+  await applyLogFilter();
 }
 
 let clearLogsConfirming = false;
@@ -884,9 +948,29 @@ async function loadApps() {
       savedBlacklist = new Set();
     }
 
-    const type = showingSystemApps ? "all" : "user";
-    const pkgs = await listPackages(type);
-    let infoList = await getPackagesInfo(pkgs);
+    let infoList = [];
+    try {
+      const pkgs = await listPackages();
+      if (pkgs && pkgs.length > 0) {
+        infoList = await getPackagesInfo(pkgs);
+      } else {
+        throw new Error('No packages found');
+      }
+    } catch (_) {
+      // 模拟 150 个应用包数据用于调试
+      console.log("[DEBUG] 使用模拟应用列表数据");
+      infoList = Array.from({ length: 150 }, (_, i) => ({
+        packageName: `com.mock.app${i}`,
+        appLabel: i % 10 === 0 ? `测试应用 ${i} (含抖音关键字)` : `模拟应用 ${i}`,
+        isSystem: i % 5 === 0,
+        uid: 10000 + i
+      }));
+    }
+    
+    // 过滤对应示例展示的系统应用状态
+    if (!showingSystemApps) {
+      infoList = infoList.filter(app => !app.isSystem);
+    }
 
     container.innerHTML = '';
     
@@ -1010,6 +1094,17 @@ async function loadApps() {
 }
 
 async function init() {
+  // 优先应用保存在本地的缩放设置，避免初次加载时闪动
+  try {
+    const savedUIZoom = localStorage.getItem('uiZoom');
+    if (savedUIZoom) {
+      const z = parseInt(savedUIZoom, 10);
+      if (!isNaN(z)) {
+        uiZoom = Math.min(150, Math.max(50, z));
+        applyUIZoom(uiZoom);
+      }
+    }
+  } catch(e) {}
 
   // 初始化 Lucide 图标
   createIcons({
@@ -1496,9 +1591,22 @@ async function init() {
     }
   }
 
-  // 初次加载配置
-  await loadConfig();
-  // 开启自动刷新状态和日志 (内置了已包含 loadStatus 和 loadLogs)
+  // 初始化导航
+  setupNavbar();
+  
+  // 按照优先级顺序加载
+  try {
+    // 1. 先尝试快速刷新一下状态卡片
+    await loadStatus(true);
+    // 2. 然后加载配置详情
+    await loadConfig();
+    // 3. 最后读日志
+    await loadLogs();
+  } catch (e) {
+    console.error('Core loading failed:', e);
+  }
+
+  // 开启自动刷新定时器
   startAutoRefresh();
   
   // 页面滚动监听：动态显示顶部模糊

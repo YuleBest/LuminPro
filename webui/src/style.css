@@ -586,45 +586,44 @@ input:checked + .slider:before {
   font-weight: 500;
 }
 
-/* Brightness Slider */
+/* Brightness Slider (Progress Bar Style) */
 .brightness-slider {
   flex: 1;
-  height: 8px;
-  border-radius: 4px;
-  background: var(--md-sys-color-surface-container);
+  height: 24px;
+  border-radius: 12px;
+  /* 背景将由 JS 通过 linear-gradient 动态更新实现进度条效果 */
+  background: var(--md-sys-color-surface-container-high); 
   outline: none;
   -webkit-appearance: none;
   appearance: none;
   cursor: grab;
-  transition: all 0.2s;
+  transition: height 0.2s, box-shadow 0.2s;
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.2);
+  overflow: hidden; /* 确保进度条颜色不溢出圆角 */
 }
 
 .brightness-slider:hover {
-  height: 10px;
-  box-shadow: 0 0 8px rgba(168, 199, 250, 0.3);
+  height: 28px;
 }
 
 .brightness-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: var(--md-sys-color-primary);
+  width: 24px; /* 仍然保持一个可抓取的宽度，但不着色 */
+  height: 24px;
+  background: transparent;
   cursor: grab;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4), inset 0 1px 2px rgba(255, 255, 255, 0.3);
-  transition: all 0.2s;
-  border: 2px solid var(--md-sys-color-surface);
+  border: none;
+  border-radius: 0;
 }
 
-.brightness-slider::-webkit-slider-thumb:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), inset 0 1px 2px rgba(255, 255, 255, 0.3);
-  transform: scale(1.1);
+.brightness-slider:hover::-webkit-slider-thumb {
+  height: 28px;
 }
 
 .brightness-slider::-webkit-slider-thumb:active {
   cursor: grabbing;
-  box-shadow: 0 0 0 10px rgba(168, 199, 250, 0.2);
 }
 
 .brightness-slider::-moz-range-thumb {
