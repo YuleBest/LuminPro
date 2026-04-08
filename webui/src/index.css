@@ -1,0 +1,174 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --font-sans: Geist, system-ui, -apple-system, sans-serif;
+  --font-mono: 'Google Sans Code', 'Roboto Mono', monospace;
+}
+
+/* ===============================
+   Shadcn 主题 Token (暗色, MD3 调色板)
+   =============================== */
+:root, :root.dark {
+  --radius: 0.75rem;
+
+  /* Shadcn tokens */
+  --background: #111318;
+  --foreground: #e2e2e9;
+  --card: #1e1f25;
+  --card-foreground: #e2e2e9;
+  --popover: #2b2930;
+  --popover-foreground: #e2e2e9;
+  --primary: #a8c7fa;
+  --primary-foreground: #062e6f;
+  --secondary: #2b2930;
+  --secondary-foreground: #e2e2e9;
+  --muted: #212429;
+  --muted-foreground: #c4c6d0;
+  --accent: #1b4b9b;
+  --accent-foreground: #d3e3fd;
+  --destructive: #ffb4ab;
+  --border: #44474f;
+  --input: #44474f;
+  --ring: rgba(168, 199, 250, 0.5);
+
+  /* MD3 tokens (保留，legacy CSS 仍在使用) */
+  --md-sys-color-background: #111318;
+  --md-sys-color-background-rgb: 17, 19, 24;
+  --md-sys-color-on-background: #e2e2e9;
+  --md-sys-color-surface: #1e1f25;
+  --md-sys-color-surface-container: #212429;
+  --md-sys-color-surface-container-high: #2b2930;
+  --md-sys-color-surface-container-high-rgb: 43, 41, 48;
+  --md-sys-color-on-surface: #e2e2e9;
+  --md-sys-color-on-surface-variant: #c4c6d0;
+  --md-sys-color-primary: #a8c7fa;
+  --md-sys-color-primary-rgb: 168, 199, 250;
+  --md-sys-color-on-primary: #062e6f;
+  --md-sys-color-primary-container: #1b4b9b;
+  --md-sys-color-on-primary-container: #d3e3fd;
+  --md-sys-color-outline: #8e9099;
+  --md-sys-color-outline-variant: #44474f;
+  --md-sys-color-error: #ffb4ab;
+  --md-sys-color-on-error: #690005;
+  --md-sys-color-error-container: #93000a;
+  --border-radius-m: 16px;
+  --border-radius-s: 8px;
+  --spacing-s: 8px;
+  --spacing-m: 16px;
+  --spacing-l: 24px;
+  --color-warning: #f59e0b;
+}
+
+/* ===============================
+   浅色主题 Token
+   =============================== */
+@media (prefers-color-scheme: light) {
+  :root:not(.dark) {
+    --background: #f8f9fc;
+    --foreground: #191c20;
+    --card: #ffffff;
+    --card-foreground: #191c20;
+    --popover: #ffffff;
+    --popover-foreground: #191c20;
+    --primary: #0b57d0;
+    --primary-foreground: #ffffff;
+    --secondary: #e8eaf0;
+    --secondary-foreground: #191c20;
+    --muted: #eff1f6;
+    --muted-foreground: #44474f;
+    --accent: #d3e3fd;
+    --accent-foreground: #062e6f;
+    --destructive: #b3261e;
+    --border: #c4c7d0;
+    --input: #c4c7d0;
+    --ring: rgba(11, 87, 208, 0.3);
+    /* MD3 */
+    --md-sys-color-background: #f8f9fc;
+    --md-sys-color-background-rgb: 248, 249, 252;
+    --md-sys-color-on-background: #191c20;
+    --md-sys-color-surface: #ffffff;
+    --md-sys-color-surface-container: #eff1f6;
+    --md-sys-color-surface-container-high: #e8eaf0;
+    --md-sys-color-surface-container-high-rgb: 232, 234, 240;
+    --md-sys-color-on-surface: #191c20;
+    --md-sys-color-on-surface-variant: #44474f;
+    --md-sys-color-primary: #0b57d0;
+    --md-sys-color-primary-rgb: 11, 87, 208;
+    --md-sys-color-on-primary: #ffffff;
+    --md-sys-color-primary-container: #d3e3fd;
+    --md-sys-color-on-primary-container: #062e6f;
+    --md-sys-color-outline: #74777f;
+    --md-sys-color-outline-variant: #c4c7d0;
+    --md-sys-color-error: #b3261e;
+    --md-sys-color-on-error: #ffffff;
+    --md-sys-color-error-container: #f9dedc;
+    --color-warning: #b45309;
+  }
+}
+
+:root.light {
+  --background: #f8f9fc;
+  --foreground: #191c20;
+  --card: #ffffff;
+  --card-foreground: #191c20;
+  --popover: #ffffff;
+  --popover-foreground: #191c20;
+  --primary: #0b57d0;
+  --primary-foreground: #ffffff;
+  --secondary: #e8eaf0;
+  --secondary-foreground: #191c20;
+  --muted: #eff1f6;
+  --muted-foreground: #44474f;
+  --accent: #d3e3fd;
+  --accent-foreground: #062e6f;
+  --destructive: #b3261e;
+  --border: #c4c7d0;
+  --input: #c4c7d0;
+  --ring: rgba(11, 87, 208, 0.3);
+  /* MD3 */
+  --md-sys-color-background: #f8f9fc;
+  --md-sys-color-background-rgb: 248, 249, 252;
+  --md-sys-color-on-background: #191c20;
+  --md-sys-color-surface: #ffffff;
+  --md-sys-color-surface-container: #eff1f6;
+  --md-sys-color-surface-container-high: #e8eaf0;
+  --md-sys-color-surface-container-high-rgb: 232, 234, 240;
+  --md-sys-color-on-surface: #191c20;
+  --md-sys-color-on-surface-variant: #44474f;
+  --md-sys-color-primary: #0b57d0;
+  --md-sys-color-primary-rgb: 11, 87, 208;
+  --md-sys-color-on-primary: #ffffff;
+  --md-sys-color-primary-container: #d3e3fd;
+  --md-sys-color-on-primary-container: #062e6f;
+  --md-sys-color-outline: #74777f;
+  --md-sys-color-outline-variant: #c4c7d0;
+  --md-sys-color-error: #b3261e;
+  --md-sys-color-on-error: #ffffff;
+  --md-sys-color-error-container: #f9dedc;
+  --color-warning: #b45309;
+}
