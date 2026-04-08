@@ -7,6 +7,8 @@
   <title>LuminPro</title>
   <link rel="stylesheet" type="text/css" href="/internal/insets.css" />
   <link rel="stylesheet" href="/src/style.css" />
+  <link rel="stylesheet" href="/src/log.css" />
+  <link rel="stylesheet" href="/src/apps.css" />
 </head>
 
 <body>
@@ -363,7 +365,13 @@
       
       <!-- 按活动屏蔽 -->
       <div class="activity-block-card">
-        <span class="activity-block-label">按活动屏蔽</span>
+        <div class="activity-block-header">
+          <span class="activity-block-label">按活动屏蔽</span>
+          <button class="btn-picker-trigger" id="btn-pick-activity">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            扫描获取
+          </button>
+        </div>
         <div class="activity-block-row">
           <input type="text" id="input-activity-entry" class="activity-block-input" placeholder="com.pkg/com.pkg.ActivityClass" autocomplete="off" spellcheck="false" />
           <button class="btn btn-primary" id="btn-add-activity" style="padding: 0 14px; border-radius: var(--border-radius-m); font-size: 0.8125rem; white-space: nowrap; flex-shrink: 0;">确认</button>
@@ -477,6 +485,61 @@
       </header>
       <div class="drawer-content" id="drawer-content">
          <!-- 内容将动态渲染 -->
+      </div>
+    </div>
+
+    <!-- 获取活动名向导 -->
+    <div class="activity-picker-overlay" id="activity-picker-overlay">
+      <div class="activity-picker-header">
+        <button class="picker-back-btn" id="btn-picker-back">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+        </button>
+        <span class="picker-title">获取活动名</span>
+      </div>
+      <div class="picker-steps-indicator">
+        <div class="picker-step-dot" id="picker-dot-1"></div>
+        <div class="picker-step-dot" id="picker-dot-2"></div>
+        <div class="picker-step-dot" id="picker-dot-3"></div>
+      </div>
+      <div class="activity-picker-body">
+        <!-- 步骤 1: 挂小窗 -->
+        <div class="picker-step" id="picker-step-1">
+          <div class="picker-step-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="14" x="3" y="5" rx="2"/><path d="M8 19h8"/><path d="M12 15v4"/><path d="M3 9h18"/></svg>
+          </div>
+          <h3 class="picker-step-title">将 Web UI 挂小窗</h3>
+          <p class="picker-step-desc">
+            在开始获取前，请先将当前 Web UI 调整为<strong>小窗模式</strong>。<br><br>
+            这样在后续步骤中，你可以同时操作目标应用并看到 Web UI 的反馈。
+          </p>
+          <button class="btn btn-primary picker-action-btn" id="btn-picker-step1-next">已挂小窗，下一步</button>
+        </div>
+        <!-- 步骤 2: 获取活动 -->
+        <div class="picker-step" id="picker-step-2">
+          <div class="picker-step-icon" id="picker-step2-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 18 0 9 9 0 0 0-18 0"/><path d="M12 8v4l2 2"/></svg>
+          </div>
+          <h3 class="picker-step-title">切换到目标界面</h3>
+          <p class="picker-step-desc">
+            点击「开始获取」后，切换到需要屏蔽的应用界面。<br><br>
+            检测到非 Web UI 界面后将<strong>自动停止</strong>。<br><br>
+            <span id="picker-status-text" class="picker-status-text">等待中...</span>
+          </p>
+          <button class="btn btn-primary picker-action-btn" id="btn-picker-start">开始获取</button>
+        </div>
+        <!-- 步骤 3: 确认结果 -->
+        <div class="picker-step" id="picker-step-3">
+          <div class="picker-step-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+          </div>
+          <h3 class="picker-step-title">检测到活动</h3>
+          <p class="picker-step-desc">以下活动将被添加到按活动屏蔽列表：</p>
+          <div class="picker-result-box" id="picker-result-text"></div>
+          <div class="picker-result-actions">
+            <button class="btn btn-secondary" id="btn-picker-retry">重试</button>
+            <button class="btn btn-primary" id="btn-picker-confirm">确认添加</button>
+          </div>
+        </div>
       </div>
     </div>
 

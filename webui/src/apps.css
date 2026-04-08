@@ -1,0 +1,530 @@
+.app-list-hint {
+  font-size: 0.8125rem;
+  color: var(--md-sys-color-on-surface-variant);
+  margin-top: 0;
+  margin-bottom: var(--spacing-m);
+}
+
+/* App Search */
+.app-search-container {
+  display: flex;
+  align-items: center;
+  background-color: var(--md-sys-color-surface-container-high);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--border-radius-m);
+  padding: 8px 12px;
+  margin-bottom: var(--spacing-m);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.app-search-container:focus-within {
+  border-color: var(--md-sys-color-primary);
+  box-shadow: 0 0 0 2px rgba(168, 199, 250, 0.3);
+}
+
+.search-icon {
+  width: 18px;
+  height: 18px;
+  color: var(--md-sys-color-on-surface-variant);
+  margin-right: 8px;
+}
+
+.app-search-input {
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  color: var(--md-sys-color-on-surface);
+  font-size: 0.875rem;
+  outline: none;
+  font-family: inherit;
+}
+
+.app-search-input::placeholder {
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.count-badge {
+  background-color: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 20px;
+  margin-left: 8px;
+  white-space: nowrap;
+  opacity: 0.85;
+}
+
+/* App List */
+.app-list-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-s);
+  max-height: 60vh;
+  overflow-y: auto;
+  border-radius: var(--border-radius-m);
+  padding: 0;
+}
+
+.app-list-container::-webkit-scrollbar {
+  display: none;
+}
+
+.app-list-item {
+  display: flex;
+  flex-direction: column;
+  background-color: var(--md-sys-color-surface-container-high);
+  border-radius: var(--border-radius-s);
+  transition: background-color 0.2s;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.app-item-main-row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-m);
+  padding: var(--spacing-s) var(--spacing-m);
+}
+
+.app-item-main-row:active {
+  background-color: var(--md-sys-color-surface-container);
+}
+
+.app-checkbox-label {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  position: relative;
+}
+
+.app-checkbox {
+  opacity: 0;
+  position: absolute;
+  width: 0;
+  height: 0;
+}
+
+.app-checkbox-custom {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--md-sys-color-outline);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.app-checkbox:checked + .app-checkbox-custom {
+  background-color: var(--md-sys-color-primary);
+  border-color: var(--md-sys-color-primary);
+}
+
+.app-checkbox.unsaved:checked + .app-checkbox-custom {
+  background-color: #4caf50;
+  border-color: #4caf50;
+}
+
+.app-checkbox:checked + .app-checkbox-custom::after {
+  content: '';
+  width: 5px;
+  height: 10px;
+  border: solid var(--md-sys-color-on-primary);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+  margin-bottom: 2px;
+}
+
+.app-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
+
+.app-name {
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--md-sys-color-on-surface);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.app-pkg {
+  font-size: 0.8125rem;
+  color: var(--md-sys-color-on-surface-variant);
+  font-family: 'Google Sans Code', monospace;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  word-break: break-all;
+  line-height: 1.4;
+}
+
+.app-badge {
+  background-color: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+  padding: 0 4px;
+  border-radius: 4px;
+  font-size: 0.65rem;
+  font-weight: bold;
+}
+
+.app-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  object-fit: cover;
+  flex-shrink: 0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.app-icon-fallback {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--md-sys-color-primary-container), rgba(168, 199, 250, 0.5));
+  color: var(--md-sys-color-on-primary-container);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  font-weight: bold;
+  flex-shrink: 0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.app-uid {
+  font-size: 0.65rem;
+  color: var(--md-sys-color-on-surface-variant);
+  background-color: var(--md-sys-color-surface-container-high);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  padding: 0 4px;
+  border-radius: 4px;
+  font-family: 'Google Sans Code', monospace;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+/* 部分选中状态（有活动条目但包未完全选中）*/
+.app-checkbox-custom.partial {
+  background-color: var(--md-sys-color-primary-container);
+  border-color: var(--md-sys-color-primary);
+}
+
+.app-checkbox-custom.partial::after {
+  content: '';
+  display: block;
+  width: 8px;
+  height: 8px;
+  background-color: var(--md-sys-color-primary);
+  border-radius: 1px;
+}
+
+/* 活动列表展开箭头 */
+.app-activities-chevron {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: none;
+  border: none;
+  border-radius: var(--border-radius-s);
+  color: var(--md-sys-color-on-surface-variant);
+  cursor: pointer;
+  transition: transform 0.2s, background-color 0.2s;
+  padding: 0;
+}
+
+.app-activities-chevron:hover {
+  background-color: var(--md-sys-color-surface-container);
+}
+
+.app-activities-chevron.expanded {
+  transform: rotate(180deg);
+}
+
+/* 活动列表容器 */
+.app-activities-list {
+  display: none;
+  flex-direction: column;
+  padding: 0 var(--spacing-m) var(--spacing-s);
+  border-top: 1px solid var(--md-sys-color-outline-variant);
+  gap: 2px;
+}
+
+.app-activities-list.show {
+  display: flex;
+}
+
+/* 单条活动条目 */
+.activity-entry-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 4px;
+  border-radius: var(--border-radius-s);
+}
+
+.activity-entry-path {
+  flex: 1;
+  font-family: 'Google Sans Code', 'Roboto Mono', monospace;
+  font-size: 0.75rem;
+  color: var(--md-sys-color-on-surface-variant);
+  word-break: break-all;
+  line-height: 1.4;
+}
+
+.activity-entry-delete {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: none;
+  border: none;
+  border-radius: 50%;
+  color: var(--md-sys-color-error);
+  cursor: pointer;
+  padding: 0;
+  transition: background-color 0.2s;
+}
+
+.activity-entry-delete:hover {
+  background-color: var(--md-sys-color-error-container);
+}
+
+/* 按活动屏蔽输入卡片 */
+.activity-block-card {
+  background-color: var(--md-sys-color-surface-container-high);
+  border-radius: var(--border-radius-m);
+  padding: var(--spacing-s) var(--spacing-m);
+  margin-bottom: var(--spacing-m);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.activity-block-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.activity-block-label {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--md-sys-color-on-surface);
+}
+
+.btn-picker-trigger {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--border-radius-s);
+  color: var(--md-sys-color-primary);
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 3px 8px;
+  cursor: pointer;
+  transition: background-color 0.2s, border-color 0.2s;
+  white-space: nowrap;
+  font-family: inherit;
+}
+
+.btn-picker-trigger:hover {
+  background-color: var(--md-sys-color-primary-container);
+  border-color: var(--md-sys-color-primary);
+}
+
+.activity-block-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.activity-block-input {
+  flex: 1;
+  background: var(--md-sys-color-surface-container);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--border-radius-s);
+  padding: 7px 10px;
+  font-family: 'Google Sans Code', 'Roboto Mono', monospace;
+  font-size: 0.8125rem;
+  color: var(--md-sys-color-on-surface);
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.activity-block-input:focus {
+  border-color: var(--md-sys-color-primary);
+  box-shadow: 0 0 0 2px rgba(168, 199, 250, 0.3);
+}
+
+/* ========================
+   获取活动名向导覆盖层
+   ======================== */
+.activity-picker-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--md-sys-color-background);
+  z-index: 950;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform 0.35s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.activity-picker-overlay.show {
+  transform: translateX(0);
+}
+
+.activity-picker-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: calc(var(--safe-area-inset-top, 0px) + 16px) 16px 12px;
+  border-bottom: 1px solid var(--md-sys-color-outline-variant);
+  flex-shrink: 0;
+}
+
+.picker-back-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: none;
+  border: none;
+  border-radius: 50%;
+  color: var(--md-sys-color-on-surface);
+  cursor: pointer;
+  transition: background-color 0.2s;
+  flex-shrink: 0;
+}
+
+.picker-back-btn:hover {
+  background-color: var(--md-sys-color-surface-container);
+}
+
+.picker-title {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  color: var(--md-sys-color-on-surface);
+}
+
+.picker-steps-indicator {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 0 0;
+  flex-shrink: 0;
+}
+
+.picker-step-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--md-sys-color-outline-variant);
+  transition: background-color 0.3s, transform 0.3s, width 0.3s;
+}
+
+.picker-step-dot.active {
+  background-color: var(--md-sys-color-primary);
+  transform: scale(1.2);
+  width: 18px;
+  border-radius: 4px;
+}
+
+.activity-picker-body {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.picker-step {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 32px calc(var(--safe-area-inset-bottom, 0px) + 48px);
+  text-align: center;
+  gap: 14px;
+}
+
+.picker-step-icon {
+  color: var(--md-sys-color-primary);
+  opacity: 0.9;
+  margin-bottom: 4px;
+}
+
+.picker-step-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--md-sys-color-on-background);
+  margin: 0;
+}
+
+.picker-step-desc {
+  font-size: 0.9375rem;
+  color: var(--md-sys-color-on-surface-variant);
+  line-height: 1.65;
+  max-width: 300px;
+  margin: 0;
+}
+
+.picker-action-btn {
+  margin-top: 12px;
+  padding: 12px 32px;
+  border-radius: 24px;
+  font-size: 0.9375rem;
+}
+
+.picker-status-text {
+  display: inline-block;
+  font-weight: 500;
+  color: var(--md-sys-color-primary);
+}
+
+.picker-status-text.polling {
+  animation: picker-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes picker-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+.picker-result-box {
+  background: var(--md-sys-color-surface-container-high);
+  border: 1.5px solid var(--md-sys-color-primary);
+  border-radius: var(--border-radius-m);
+  padding: 14px 18px;
+  font-family: 'Google Sans Code', 'Roboto Mono', monospace;
+  font-size: 0.875rem;
+  color: var(--md-sys-color-on-surface);
+  word-break: break-all;
+  line-height: 1.55;
+  max-width: 320px;
+  width: 100%;
+  text-align: left;
+}
+
+.picker-result-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 4px;
+}

@@ -1,0 +1,264 @@
+/* Logs */
+.log-output {
+  font-family: 'Google Sans Code', 'JetBrains Mono', 'Consolas', monospace;
+  font-size: 0.6875rem;
+  padding: var(--spacing-m);
+  background-color: #0d0e12;
+  color: #e3e3e3;
+  border-radius: var(--border-radius-m);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  flex: 1;
+  max-height: 60vh;
+  overflow-y: auto;
+  margin: 0;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  line-height: 1.5;
+  scrollbar-width: thin;
+  scrollbar-color: var(--md-sys-color-outline-variant) transparent;
+}
+
+.log-output::-webkit-scrollbar {
+  width: 4px;
+}
+
+.log-output::-webkit-scrollbar-thumb {
+  background-color: var(--md-sys-color-outline-variant);
+  border-radius: 4px;
+}
+
+.log-filter-select {
+  padding: 0 12px;
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: 8px;
+  background-color: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface);
+  font-family: inherit;
+  font-size: 0.8125rem;
+  height: 32px;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.22s ease;
+}
+
+.log-filter-select:focus {
+  border-color: var(--md-sys-color-primary);
+  box-shadow: 0 0 0 2px rgba(var(--md-sys-color-primary-rgb), 0.2);
+}
+
+.log-output::-webkit-scrollbar {
+  display: none; /* Chrome, Safari */
+}
+
+/* Simple Toast */
+.top-blur {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: calc(85px + var(--safe-area-inset-top, 0px));
+  z-index: 998;
+  pointer-events: none;
+  /* 基础暗色背景，增强状态栏文字可读性 */
+  background: linear-gradient(to bottom, 
+    rgba(var(--md-sys-color-background-rgb, 17, 19, 24), 0.85) 0%, 
+    rgba(var(--md-sys-color-background-rgb, 17, 19, 24), 0.4) 40%,
+    rgba(var(--md-sys-color-background-rgb, 17, 19, 24), 0) 100%
+  );
+  /* 核心：毛玻璃滤镜 */
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  /* 梯度蒙版：越往上越模糊的核心逻辑 */
+  -webkit-mask-image: linear-gradient(to bottom, 
+    rgba(0,0,0,1) 0%, 
+    rgba(0,0,0,1) 30%,
+    rgba(0,0,0,0.7) 60%,
+    rgba(0,0,0,0) 100%
+  );
+  mask-image: linear-gradient(to bottom, 
+    rgba(0,0,0,1) 0%, 
+    rgba(0,0,0,1) 30%,
+    rgba(0,0,0,0.7) 60%,
+    rgba(0,0,0,0) 100%
+  );
+  transform: translateZ(0); /* 开启 GPU 加速 */
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.top-blur.scrolled {
+  opacity: 1;
+}
+
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(100px);
+  background-color: var(--md-sys-color-on-surface);
+  color: var(--md-sys-color-surface);
+  padding: 12px 24px;
+  border-radius: var(--border-radius-s);
+  font-size: 0.875rem;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4);
+  transition: transform 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+  z-index: 1000;
+  width: max-content;
+  max-width: 90vw;
+  text-align: center;
+}
+
+.toast.show {
+  transform: translateX(-50%) translateY(0);
+}
+
+/* Floating Navigation Bar */
+.floating-navbar {
+  position: fixed;
+  bottom: calc(18px + var(--safe-area-inset-bottom, 0px));
+  left: 50%;
+  transform: translateX(-50%) translateZ(0); /* 居中并开启硬件加速 */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  background: rgba(var(--md-sys-color-surface-container-high-rgb, 43, 41, 48), 0.6);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
+  will-change: backdrop-filter;
+  padding: 8px 16px;
+  border-radius: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 8px 32px rgba(0, 0, 0, 0.3);
+  z-index: 999;
+  width: fit-content;
+  max-width: calc(100% - 32px);
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: none; /* Prevents browser scroll during drag */
+}
+
+.navbar-slider {
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  height: auto;
+  background: rgba(var(--md-sys-color-primary-rgb, 168, 199, 250), 0.35);
+  -webkit-backdrop-filter: blur(8px) saturate(120%);
+  backdrop-filter: blur(8px) saturate(120%);
+  transform: translateZ(0);
+  border-radius: 20px;
+  transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1), width 0.3s ease;
+  pointer-events: none;
+  z-index: 0;
+  border: 1px solid rgba(var(--md-sys-color-primary-rgb, 168, 199, 250), 0.4);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.navbar-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 6px 12px;
+  background-color: transparent;
+  border: none;
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: 0.75rem;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  flex: 1;
+  max-width: 90px;
+  white-space: nowrap;
+  position: relative;
+  z-index: 1;
+}
+
+.navbar-btn i, .navbar-btn svg {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.navbar-btn span {
+  font-size: 0.75rem;
+}
+
+.navbar-btn:active {
+  /* No scaling here, we rely on the slider feedback */
+}
+
+.navbar-btn.active {
+  color: var(--md-sys-color-on-primary-container);
+}
+
+/* Dropdown Menu */
+.dropdown-container {
+  position: relative;
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 8px;
+  background-color: var(--md-sys-color-surface-container-high);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--border-radius-s);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  min-width: 160px;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-8px);
+  transition: all 0.2s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  padding: 4px;
+}
+
+.dropdown-menu.show {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--md-sys-color-on-surface);
+  font-size: 0.875rem;
+  transition: background-color 0.2s;
+}
+
+.dropdown-item:hover {
+  background-color: var(--md-sys-color-surface-container);
+}
+
+.dropdown-item:active {
+  background-color: var(--md-sys-color-surface);
+}
+
+.dropdown-item svg {
+  color: var(--md-sys-color-primary);
+  width: 18px;
+  height: 18px;
+}
+
+.dropdown-item-danger {
+  color: var(--md-sys-color-error, #cf6679);
+}
+
+.dropdown-item-danger svg {
+  color: var(--md-sys-color-error, #cf6679);
+}
