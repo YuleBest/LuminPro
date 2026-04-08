@@ -1,5 +1,5 @@
 import { exec, listPackages, getPackagesInfo } from 'kernelsu';
-import { createIcons, Sun, Settings, Settings2, Save, Activity, RefreshCw, FileText, Smartphone, MoreVertical, Eye, EyeOff, CheckSquare, CheckCheck, Square, Search, Sparkles, Plus, ShieldCheck, Moon, Play, RotateCcw, Monitor, Info, Code, User, BookOpen, X, Globe, Minus } from 'lucide';
+import { createIcons, Sun, Settings, Settings2, Save, Activity, RefreshCw, FileText, Smartphone, MoreVertical, Eye, EyeOff, CheckSquare, CheckCheck, Square, Search, Sparkles, Plus, ShieldCheck, Moon, Play, RotateCcw, Monitor, Info, Code, User, BookOpen, X, Globe, Minus, Copy, Download } from 'lucide';
 import MarkdownIt from 'markdown-it';
 import PinyinMatch from 'pinyin-match';
 
@@ -650,37 +650,65 @@ let clearLogsTimer = null;
 
 async function handleClearLogs() {
   const btn = document.getElementById('btn-clear-logs');
-  
+  const btnSpan = btn ? btn.querySelector('span') : null;
+
   if (!clearLogsConfirming) {
-    // 进入确认状态
     clearLogsConfirming = true;
-    btn.textContent = '确认清空';
-    btn.classList.add('btn-danger');
-    
-    // 5秒后自动重置回原来状态
+    if (btnSpan) btnSpan.textContent = '确认清空？';
+    if (btn) btn.classList.add('dropdown-item-danger');
     clearLogsTimer = setTimeout(() => {
       clearLogsConfirming = false;
-      btn.textContent = '清空日志';
-      btn.classList.remove('btn-danger');
+      if (btnSpan) btnSpan.textContent = '清空日志';
+      if (btn) btn.classList.remove('dropdown-item-danger');
     }, 5000);
     return;
   }
 
-  // 执行清空动作
   clearLogsConfirming = false;
-  btn.textContent = '清空日志';
-  btn.classList.remove('btn-danger');
+  if (btnSpan) btnSpan.textContent = '清空日志';
+  if (btn) btn.classList.remove('dropdown-item-danger');
   clearTimeout(clearLogsTimer);
 
   showToast('正在清空日志...');
   const res = await runCmd(`> "${LOG_FILE}"`);
-  
   if (res.errno === 0) {
     fullLogContent = '';
     showToast('日志已清空');
-    await loadLogs(); // 刷新显示
+    await loadLogs();
   } else {
     showToast('清空失败: ' + (res.stderr || '未知错误'));
+  }
+}
+
+async function handleCopyLog() {
+  const res = await runCmd(`tail -n 50 "${LOG_FILE}"`);
+  if (res.errno !== 0 || !res.stdout.trim()) {
+    showToast('暂无日志内容');
+    return;
+  }
+  const text = res.stdout.trim();
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast('已复制最新 50 条日志');
+  } catch {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.cssText = 'position:fixed;opacity:0;pointer-events:none';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast('已复制最新 50 条日志');
+  }
+}
+
+async function handleExportLog() {
+  showToast('正在导出...');
+  const res = await runCmd(`cp "${LOG_FILE}" "/sdcard/LuminPro_$(date '+%Y%m%d_%H%M%S').log"`);
+  if (res.errno === 0) {
+    showToast('日志已导出到 /sdcard');
+  } else {
+    showToast('导出失败: ' + (res.stderr || '未知错误'));
   }
 }
 
@@ -1166,15 +1194,48 @@ async function init() {
   // 绑定日志控件事件
   const logLevelFilter = document.getElementById('log-level-filter');
   const btnClearLogs = document.getElementById('btn-clear-logs');
-  
+  const btnLogMenu = document.getElementById('btn-log-menu');
+  const logDropdownMenu = document.getElementById('log-dropdown-menu');
+  const btnCopyLog = document.getElementById('btn-copy-log');
+  const btnExportLog = document.getElementById('btn-export-log');
+
   if (logLevelFilter) {
     logLevelFilter.addEventListener('change', async () => {
-      await applyLogFilter(); // 改变筛选等级时应用筛选
+      await applyLogFilter();
     });
   }
-  
+
+  if (btnLogMenu && logDropdownMenu) {
+    btnLogMenu.addEventListener('click', (e) => {
+      e.stopPropagation();
+      logDropdownMenu.classList.toggle('show');
+    });
+    document.addEventListener('click', (e) => {
+      if (!btnLogMenu.contains(e.target) && !logDropdownMenu.contains(e.target)) {
+        logDropdownMenu.classList.remove('show');
+      }
+    });
+  }
+
   if (btnClearLogs) {
-    btnClearLogs.addEventListener('click', handleClearLogs);
+    btnClearLogs.addEventListener('click', (e) => {
+      e.stopPropagation();
+      handleClearLogs();
+    });
+  }
+
+  if (btnCopyLog) {
+    btnCopyLog.addEventListener('click', () => {
+      logDropdownMenu && logDropdownMenu.classList.remove('show');
+      handleCopyLog();
+    });
+  }
+
+  if (btnExportLog) {
+    btnExportLog.addEventListener('click', () => {
+      logDropdownMenu && logDropdownMenu.classList.remove('show');
+      handleExportLog();
+    });
   }
 
   // 绑定查看支持事件按钮

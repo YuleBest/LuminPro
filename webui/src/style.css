@@ -1004,7 +1004,7 @@ input:checked + .slider:before {
 /* Logs */
 .log-output {
   font-family: 'Google Sans Code', 'JetBrains Mono', 'Consolas', monospace;
-  font-size: 0.8125rem;
+  font-size: 0.6875rem;
   padding: var(--spacing-m);
   background-color: #0d0e12;
   color: #e3e3e3;
@@ -1256,6 +1256,14 @@ input:checked + .slider:before {
   color: var(--md-sys-color-primary);
   width: 18px;
   height: 18px;
+}
+
+.dropdown-item-danger {
+  color: var(--md-sys-color-error, #cf6679);
+}
+
+.dropdown-item-danger svg {
+  color: var(--md-sys-color-error, #cf6679);
 }
 
 .app-list-hint {
