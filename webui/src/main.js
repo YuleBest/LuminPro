@@ -26,6 +26,7 @@ let configRefreshInterval = 5000; // 配置卡片刷新间隔（默认5秒）
 let autoRefreshStatusLogTimer = null; // 状态/日志刷新定时器
 let autoRefreshConfigTimer = null; // 配置刷新定时器
 let uiZoom = 100; // 界面缩放百分比 (50-150)
+let autoRefresh = true; // 自动刷新开关（默认开启）
 
 // ==========================
 // 工具函数
@@ -102,13 +103,14 @@ async function loadConfig() {
 
 
   // 然后加载其他配置
-  const [uiRes, maxRes, sleepRes, autoRes, stepsRes, logSizeRes] = await Promise.all([
+  const [uiRes, maxRes, sleepRes, autoRes, stepsRes, logSizeRes, hdrSleepRes] = await Promise.all([
     runCmd(`cat "${CONFIG_DIR}/ui_max_bri.txt"`),
     runCmd(`cat "${CONFIG_DIR}/max_bri.txt"`),
     runCmd(`cat "${CONFIG_DIR}/sleep_time.txt"`),
     runCmd(`cat "${CONFIG_DIR}/auto_bri_sleep.txt"`),
     runCmd(`cat "${CONFIG_DIR}/steps_num.txt"`),
-    runCmd(`cat "${CONFIG_DIR}/log_max_size.txt"`)
+    runCmd(`cat "${CONFIG_DIR}/log_max_size.txt"`),
+    runCmd(`cat "${CONFIG_DIR}/display_hdr_sleep.txt"`)
   ]);
 
   if (uiRes.errno === 0) document.getElementById('input-ui-max-bri').value = uiRes.stdout.trim();
@@ -147,6 +149,7 @@ async function loadConfig() {
   }
 
   if (autoRes.errno === 0) document.getElementById('input-auto-bri-sleep').checked = autoRes.stdout.trim() === '1';
+  if (hdrSleepRes.errno === 0) document.getElementById('input-display-hdr-sleep').checked = hdrSleepRes.stdout.trim() === '1';
   if (stepsRes.errno === 0) {
      const v = stepsRes.stdout.trim();
      document.getElementById('input-steps-num').value = v ? v : '50';
@@ -174,6 +177,14 @@ async function loadConfig() {
   document.getElementById('input-status-refresh-interval').value = statusLogRefreshInterval;
   document.getElementById('input-config-refresh-interval').value = configRefreshInterval;
 
+  const savedAutoRefresh = localStorage.getItem('autoRefresh');
+  if (savedAutoRefresh !== null) autoRefresh = savedAutoRefresh !== 'false';
+  const autoRefreshToggle = document.getElementById('input-auto-refresh');
+  if (autoRefreshToggle) {
+    autoRefreshToggle.checked = autoRefresh;
+    document.getElementById('item-status-refresh-interval').style.display = autoRefresh ? '' : 'none';
+  }
+
   const uiZoomInput = document.getElementById('input-ui-zoom');
   if (uiZoomInput) uiZoomInput.value = uiZoom;
   applyUIZoom(uiZoom);
@@ -197,6 +208,7 @@ async function saveConfig() {
   }
   
   const autoBriSleep = document.getElementById('input-auto-bri-sleep').checked ? '1' : '0';
+  const displayHdrSleep = document.getElementById('input-display-hdr-sleep').checked ? '1' : '0';
   const stepsNum = document.getElementById('input-steps-num').value || '50';
   const logMaxSize = document.getElementById('input-log-max-size').value || '500';
 
@@ -212,6 +224,7 @@ async function saveConfig() {
   await writeFile(`${CONFIG_DIR}/max_bri.txt`, maxBri);
   await writeFile(`${CONFIG_DIR}/sleep_time.txt`, sleepTime);
   await writeFile(`${CONFIG_DIR}/auto_bri_sleep.txt`, autoBriSleep);
+  await writeFile(`${CONFIG_DIR}/display_hdr_sleep.txt`, displayHdrSleep);
   await writeFile(`${CONFIG_DIR}/steps_num.txt`, stepsNum);
   await writeFile(`${CONFIG_DIR}/log_max_size.txt`, logMaxSize);
 
@@ -254,12 +267,13 @@ async function saveAdvancedConfig() {
 
 // 2.3 保存 Web UI 配置
 function saveWebUIConfig() {
+  const newAutoRefresh = document.getElementById('input-auto-refresh').checked;
   const statusRefresh = parseInt(document.getElementById('input-status-refresh-interval').value, 10) || 1000;
   const configRefresh = parseInt(document.getElementById('input-config-refresh-interval').value, 10) || 5000;
   const zoom = parseInt(document.getElementById('input-ui-zoom').value, 10) || 100;
   
   // 验证最小值
-  if (statusRefresh < 100) {
+  if (newAutoRefresh && statusRefresh < 100) {
     showToast('状态/日志刷新间隔最小为100ms');
     document.getElementById('input-status-refresh-interval').value = 100;
     return;
@@ -271,18 +285,20 @@ function saveWebUIConfig() {
   }
   
   // 保存到 localStorage
+  localStorage.setItem('autoRefresh', newAutoRefresh);
   localStorage.setItem('statusLogRefreshInterval', statusRefresh);
   localStorage.setItem('configRefreshInterval', configRefresh);
   localStorage.setItem('uiZoom', zoom);
   
   // 更新全局变量
+  autoRefresh = newAutoRefresh;
   statusLogRefreshInterval = statusRefresh;
   configRefreshInterval = configRefresh;
   uiZoom = zoom;
   
   // 重启刷新循环
   stopAutoRefresh();
-  startAutoRefresh();
+  if (autoRefresh) startAutoRefresh();
   
   applyUIZoom(zoom);
   showToast('Web UI 配置已保存');
@@ -425,14 +441,29 @@ async function loadStatus(forceFull = false) {
     else cachedSysMaxBri = '255';
   }
 
-  const [pidRes, stopRes, autoBriRes] = await Promise.all([
+  const [pidRes, stopRes, autoBriRes, hdrRes] = await Promise.all([
     runCmd(`cat "${PID_FILE}"`),
     runCmd(`[ -f "${STOP_FLAG_FILE}" ] && echo "1" || echo "0"`),
-    runCmd(`settings get system screen_brightness_mode`)
+    runCmd(`settings get system screen_brightness_mode`),
+    runCmd(`dumpsys display 2>/dev/null | sed -n 's/.*hdrSdrRatio \\([0-9.]*\\).*/\\1/p' | head -n 1`)
   ]);
 
   const isPaused = stopRes.errno === 0 && stopRes.stdout.trim() === '1';
   const running = pidRes.errno === 0 && pidRes.stdout.trim();
+
+  // 获取 inotifyd 进程状态
+  let inotifydState = '—';
+  if (running) {
+    const pid = pidRes.stdout.trim();
+    const stateRes = await runCmd(`cat /proc/${pid}/status 2>/dev/null | grep "State:" | sed 's/.*(\(.*\))/\\1/'`);
+    if (stateRes.errno === 0 && stateRes.stdout.trim()) {
+      inotifydState = stateRes.stdout.trim();
+    } else {
+      inotifydState = '已退出';
+    }
+  } else {
+    inotifydState = '离线';
+  }
   
   const statusDot = document.querySelector('.header-status .status-dot');
   const statusText = document.querySelector('.header-status .status-text');
@@ -467,6 +498,16 @@ async function loadStatus(forceFull = false) {
   document.getElementById('status-current-bri').textContent = currentBri;
   document.getElementById('status-sys-max-bri').textContent = cachedSysMaxBri || '—';
   document.getElementById('status-inotifyd-pid').textContent = running ? pidRes.stdout.trim() : '离线';
+  document.getElementById('status-inotifyd-state').textContent = inotifydState;
+
+  // HDR/SDR 比率
+  const hdrRaw = hdrRes.errno === 0 ? hdrRes.stdout.trim() : '';
+  const hdrEl = document.getElementById('status-hdr-ratio');
+  if (hdrRaw && /^\d+(\.\d+)?$/.test(hdrRaw)) {
+    hdrEl.textContent = parseFloat(hdrRaw).toFixed(2);
+  } else {
+    hdrEl.textContent = '-';
+  }
 
   // 更新亮度滑条
   const brightnessSlider = document.getElementById('brightness-slider');
@@ -747,6 +788,8 @@ async function startAutoRefresh() {
   // 立即执行一次状态/日志刷新
   await Promise.all([loadStatus(true), loadLogs()]);
   
+  if (!autoRefresh) return;
+  
   // 启动定时刷新
   autoRefreshStatusLogTimer = setTimeout(startAutoRefreshStatusLog, statusLogRefreshInterval);
   autoRefreshConfigTimer = setTimeout(startAutoRefreshConfig, configRefreshInterval);
@@ -934,14 +977,36 @@ function setupNavbar() {
 
 let showingSystemApps = true;
 let savedBlacklist = new Set();
+let activityEntries = new Set(); // 活动级黑名单条目（格式：pkg/ActivityClass）
 
 function updateUnsavedStyling() {
-  const checkboxes = document.querySelectorAll('.app-checkbox');
-  checkboxes.forEach(cb => {
-    if (cb.checked && !savedBlacklist.has(cb.dataset.pkg)) {
+  const items = document.querySelectorAll('.app-list-item');
+  items.forEach(item => {
+    const cb = item.querySelector('.app-checkbox');
+    const custom = item.querySelector('.app-checkbox-custom');
+    if (!cb || !custom) return;
+    const pkg = cb.dataset.pkg;
+    const hasActivities = pkg && [...activityEntries].some(e => e.startsWith(pkg + '/'));
+    // 部分选中：有活动条目但包名未完全选中
+    if (!cb.checked && hasActivities) {
+      custom.classList.add('partial');
+    } else {
+      custom.classList.remove('partial');
+    }
+    // 未保存高亮
+    if (cb.checked && !savedBlacklist.has(pkg)) {
       cb.classList.add('unsaved');
     } else {
       cb.classList.remove('unsaved');
+    }
+    // 箭头可见性
+    const chevron = item.querySelector('.app-activities-chevron');
+    if (chevron) {
+      chevron.style.display = hasActivities ? '' : 'none';
+      if (!hasActivities) {
+        const actList = item.querySelector('.app-activities-list');
+        if (actList) { actList.classList.remove('show'); chevron.classList.remove('expanded'); }
+      }
     }
   });
 }
@@ -950,16 +1015,47 @@ function reorderDOMApps() {
   const container = document.getElementById('app-list-container');
   if (!container) return;
   const items = Array.from(container.children);
-  
-  items.sort((a, b) => {
-    const aChecked = a.querySelector('.app-checkbox')?.checked || false;
-    const bChecked = b.querySelector('.app-checkbox')?.checked || false;
-    if (aChecked && !bChecked) return -1;
-    if (!aChecked && bChecked) return 1;
+  const getState = (item) => {
+    const cb = item.querySelector('.app-checkbox');
+    if (cb?.checked) return 2; // 完全选中
+    const pkg = cb?.dataset.pkg;
+    if (pkg && [...activityEntries].some(e => e.startsWith(pkg + '/'))) return 1; // 部分选中
     return 0;
-  });
-  
+  };
+  items.sort((a, b) => getState(b) - getState(a));
   items.forEach(item => container.appendChild(item));
+}
+
+function renderActivityList(pkg, container) {
+  const entries = [...activityEntries].filter(e => e.startsWith(pkg + '/'));
+  container.innerHTML = '';
+  entries.forEach(entry => {
+    const entryDiv = document.createElement('div');
+    entryDiv.className = 'activity-entry-item';
+    const actPath = document.createElement('span');
+    actPath.className = 'activity-entry-path';
+    actPath.textContent = entry.slice(pkg.length + 1);
+    const delBtn = document.createElement('button');
+    delBtn.className = 'activity-entry-delete';
+    delBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>';
+    delBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      activityEntries.delete(entry);
+      renderActivityList(pkg, container);
+      const actItem = container.closest('.app-list-item');
+      if (actItem) {
+        const chevron = actItem.querySelector('.app-activities-chevron');
+        const remaining = [...activityEntries].filter(e => e.startsWith(pkg + '/'));
+        if (chevron) chevron.style.display = remaining.length > 0 ? '' : 'none';
+        if (remaining.length === 0) { container.classList.remove('show'); if (chevron) chevron.classList.remove('expanded'); }
+      }
+      updateUnsavedStyling();
+      reorderDOMApps();
+    });
+    entryDiv.appendChild(actPath);
+    entryDiv.appendChild(delBtn);
+    container.appendChild(entryDiv);
+  });
 }
 
 async function loadApps() {
@@ -968,13 +1064,12 @@ async function loadApps() {
   container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--md-sys-color-on-surface-variant);">加载中...</div>';
   
   try {
-    // 读取已保存的黑名单
+    // 读取已保存的黑名单（包名条目 + 活动条目分开存储）
     const blRes = await runCmd(`cat "${CONFIG_DIR}/blacklist_apps.txt"`);
-    if (blRes.errno === 0) {
-      savedBlacklist = new Set(blRes.stdout.trim().split('\n').filter(Boolean));
-    } else {
-      savedBlacklist = new Set();
-    }
+    const allSaved = blRes.errno === 0 ? blRes.stdout.trim().split('\n').filter(Boolean) : [];
+    savedBlacklist = new Set(allSaved);
+    const savedPkgEntries = new Set(allSaved.filter(e => !e.includes('/')));
+    activityEntries = new Set(allSaved.filter(e => e.includes('/')));
 
     let infoList = [];
     try {
@@ -1044,30 +1139,18 @@ async function loadApps() {
       checkbox.className = 'app-checkbox';
       checkbox.dataset.pkg = app.packageName;
       
-      // 初始渲染时依据已保存状态勾选
-      checkbox.checked = savedBlacklist.has(app.packageName);
-      
+      // 依据已保存包名条目勾选（不含活动条目）
+      checkbox.checked = savedPkgEntries.has(app.packageName);
       checkbox.addEventListener('change', () => {
-         updateUnsavedStyling();
+        updateUnsavedStyling();
+        reorderDOMApps();
       });
-      
+
       const customCheckbox = document.createElement('span');
       customCheckbox.className = 'app-checkbox-custom';
-      
       checkboxLabel.appendChild(checkbox);
       checkboxLabel.appendChild(customCheckbox);
-      
-      const iconImg = document.createElement('img');
-      iconImg.className = 'app-icon';
-      iconImg.src = `ksu://icon/${app.packageName}`;
-      iconImg.loading = 'lazy'; // 性能优化
-      iconImg.onerror = () => {
-         const fallback = document.createElement('div');
-         fallback.className = 'app-icon-fallback';
-         fallback.textContent = (app.appLabel || app.packageName || '?').charAt(0).toUpperCase();
-         iconImg.replaceWith(fallback);
-      };
-      
+
       const infoDiv = document.createElement('div');
       infoDiv.className = 'app-info';
       
@@ -1097,14 +1180,37 @@ async function loadApps() {
       
       infoDiv.appendChild(nameSpan);
       infoDiv.appendChild(pkgSpan);
-      
-      item.appendChild(checkboxLabel);
-      item.appendChild(iconImg);
-      item.appendChild(infoDiv);
-      
+
+      // 活动展开箭头
+      const chevronBtn = document.createElement('button');
+      chevronBtn.className = 'app-activities-chevron';
+      chevronBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>';
+      const pkgActivities = [...activityEntries].filter(e => e.startsWith(app.packageName + '/'));
+      chevronBtn.style.display = pkgActivities.length > 0 ? '' : 'none';
+
+      const mainRow = document.createElement('div');
+      mainRow.className = 'app-item-main-row';
+      mainRow.appendChild(checkboxLabel);
+      mainRow.appendChild(infoDiv);
+      mainRow.appendChild(chevronBtn);
+
+      // 活动列表（初始折叠）
+      const actListDiv = document.createElement('div');
+      actListDiv.className = 'app-activities-list';
+      actListDiv.dataset.pkg = app.packageName;
+      renderActivityList(app.packageName, actListDiv);
+
+      chevronBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        actListDiv.classList.toggle('show');
+        chevronBtn.classList.toggle('expanded');
+      });
+
+      item.appendChild(mainRow);
+      item.appendChild(actListDiv);
       container.appendChild(item);
     });
-    
+
     // 渲染完毕后初始展示排版与状态
     updateUnsavedStyling();
     reorderDOMApps();
@@ -1175,6 +1281,9 @@ async function init() {
   document.getElementById('btn-save').addEventListener('click', saveConfig);
   document.getElementById('btn-save-advanced').addEventListener('click', saveAdvancedConfig);
   document.getElementById('btn-save-webui-config').addEventListener('click', saveWebUIConfig);
+  document.getElementById('input-auto-refresh').addEventListener('change', (e) => {
+    document.getElementById('item-status-refresh-interval').style.display = e.target.checked ? '' : 'none';
+  });
   document.getElementById('btn-reset').addEventListener('click', handleReset);
   document.getElementById('btn-toggle-service').addEventListener('click', toggleService);
   document.getElementById('btn-restart-service').addEventListener('click', restartService);
@@ -1392,70 +1501,75 @@ async function init() {
       const container = document.getElementById('app-list-container');
       const item = document.createElement('div');
       item.className = 'app-list-item';
-      
+
       const checkboxLabel = document.createElement('label');
       checkboxLabel.className = 'app-checkbox-label';
-      
+
       const checkbox = document.createElement('input');
       checkbox.type = 'checkbox';
       checkbox.className = 'app-checkbox';
       checkbox.dataset.pkg = realPkg;
       checkbox.checked = true;
-      checkbox.addEventListener('change', updateUnsavedStyling);
-      
+      checkbox.addEventListener('change', () => { updateUnsavedStyling(); reorderDOMApps(); });
+
       const customCheckbox = document.createElement('span');
       customCheckbox.className = 'app-checkbox-custom';
-      
       checkboxLabel.appendChild(checkbox);
       checkboxLabel.appendChild(customCheckbox);
-      
-      const iconImg = document.createElement('img');
-      iconImg.className = 'app-icon';
-      iconImg.src = `ksu://icon/${realPkg}`;
-      iconImg.loading = 'lazy';
-      iconImg.onerror = () => {
-         const fallback = document.createElement('div');
-         fallback.className = 'app-icon-fallback';
-         fallback.textContent = (appData.appLabel || appData.packageName || '?').charAt(0).toUpperCase();
-         iconImg.replaceWith(fallback);
-      };
-      
+
       const infoDiv = document.createElement('div');
       infoDiv.className = 'app-info';
-      
+
       const nameSpan = document.createElement('span');
       nameSpan.className = 'app-name';
-      
-      const nameNode = document.createTextNode(appData.appLabel || 'Unknown');
-      nameSpan.appendChild(nameNode);
-      
+      nameSpan.appendChild(document.createTextNode(appData.appLabel || 'Unknown'));
+
       if (appData.uid !== undefined) {
          const uidBadge = document.createElement('span');
          uidBadge.className = 'app-uid';
          uidBadge.textContent = String(appData.uid);
          nameSpan.appendChild(uidBadge);
       }
-      
+
       const pkgSpan = document.createElement('span');
       pkgSpan.className = 'app-pkg';
       pkgSpan.textContent = realPkg;
-      
+
       if (appData.isSystem) {
          const sysBadge = document.createElement('span');
          sysBadge.className = 'app-badge';
          sysBadge.textContent = '系统';
          pkgSpan.appendChild(sysBadge);
       }
-      
+
       infoDiv.appendChild(nameSpan);
       infoDiv.appendChild(pkgSpan);
-      
-      item.appendChild(checkboxLabel);
-      item.appendChild(iconImg);
-      item.appendChild(infoDiv);
-      
+
+      const chevronBtn = document.createElement('button');
+      chevronBtn.className = 'app-activities-chevron';
+      chevronBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>';
+      chevronBtn.style.display = 'none';
+
+      const mainRow = document.createElement('div');
+      mainRow.className = 'app-item-main-row';
+      mainRow.appendChild(checkboxLabel);
+      mainRow.appendChild(infoDiv);
+      mainRow.appendChild(chevronBtn);
+
+      const actListDiv = document.createElement('div');
+      actListDiv.className = 'app-activities-list';
+      actListDiv.dataset.pkg = realPkg;
+
+      chevronBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        actListDiv.classList.toggle('show');
+        chevronBtn.classList.toggle('expanded');
+      });
+
+      item.appendChild(mainRow);
+      item.appendChild(actListDiv);
       container.appendChild(item);
-      
+
       updateUnsavedStyling();
       reorderDOMApps();
       showToast('已成功添加并勾选');
@@ -1516,25 +1630,52 @@ async function init() {
       showToast('保存中...');
       const checkboxes = document.querySelectorAll('.app-checkbox');
       const selectedPkgs = [];
-      
-      checkboxes.forEach(cb => {
-        if (cb.checked) {
-          selectedPkgs.push(cb.dataset.pkg);
-        }
-      });
-      
-      const content = selectedPkgs.join('\n');
+      checkboxes.forEach(cb => { if (cb.checked) selectedPkgs.push(cb.dataset.pkg); });
+      // 合并包名条目 + 活动条目
+      const allEntries = [...selectedPkgs, ...activityEntries];
+      const content = allEntries.join('\n');
       const res = await writeFile(`${CONFIG_DIR}/blacklist_apps.txt`, content);
-      
       if (res.errno === 0 || res.stdout.includes('OK')) {
-         showToast('黑名单保存成功');
-         savedBlacklist = new Set(selectedPkgs);
-         updateUnsavedStyling();
-         reorderDOMApps();
+        showToast('黑名单保存成功');
+        savedBlacklist = new Set(allEntries);
+        updateUnsavedStyling();
+        reorderDOMApps();
       } else {
-         showToast('保存失败: ' + res.stderr);
+        showToast('保存失败: ' + res.stderr);
       }
     });
+  }
+
+  // 按活动屏蔽
+  const btnAddActivity = document.getElementById('btn-add-activity');
+  const inputActivityEntry = document.getElementById('input-activity-entry');
+  if (btnAddActivity && inputActivityEntry) {
+    const doAddActivity = () => {
+      const val = inputActivityEntry.value.trim();
+      if (!val) return;
+      const parts = val.split('/');
+      if (parts.length !== 2 || !parts[0] || !parts[1]) {
+        showToast('格式错误，请输入 包名/完整活动类名');
+        return;
+      }
+      activityEntries.add(val);
+      inputActivityEntry.value = '';
+      const pkg = parts[0];
+      document.querySelectorAll('.app-list-item').forEach(appItem => {
+        const cb = appItem.querySelector('.app-checkbox');
+        if (cb && cb.dataset.pkg === pkg) {
+          const actList = appItem.querySelector('.app-activities-list');
+          const chevron = appItem.querySelector('.app-activities-chevron');
+          if (actList) { renderActivityList(pkg, actList); actList.classList.add('show'); }
+          if (chevron) { chevron.style.display = ''; chevron.classList.add('expanded'); }
+        }
+      });
+      updateUnsavedStyling();
+      reorderDOMApps();
+      showToast(`已添加: ${val}`);
+    };
+    btnAddActivity.addEventListener('click', doAddActivity);
+    inputActivityEntry.addEventListener('keydown', (e) => { if (e.key === 'Enter') doAddActivity(); });
   }
 
   // 搜索功能

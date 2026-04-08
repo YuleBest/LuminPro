@@ -29,6 +29,9 @@ _log() {
 # 等待系统就绪
 sleep 30
 
+# 清理上次遗留的标记文件
+rm -f "$MODDIR/pid/"*.flag "$MODDIR/pid/"*.pause "$MODDIR/pid/.hdr_ratio_cache"
+
 _log "LuminPro 服务启动" "INFO"
 _log "前台最大亮度: $(cat "$CONFIG_DIR/ui_max_bri.txt")" "INFO"
 _log "峰值最大亮度: $(cat "$CONFIG_DIR/max_bri.txt")" "INFO"

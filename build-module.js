@@ -10,7 +10,7 @@ const version = versionMatch ? versionMatch[1].trim() : 'Unknown';
 const versionCodeStr = versionCodeMatch ? versionCodeMatch[1].trim() : '0000';
 const versionCode = parseInt(versionCodeStr, 10);
 
-const zipName = `LuminPro_${version}-${versionCode}.zip`;
+const zipName = `LuminPro_${version}.zip`;
 
 // --- 新增: 自动同步 update.json ---
 const updateJsonPath = 'update.json';

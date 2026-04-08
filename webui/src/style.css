@@ -1342,15 +1342,21 @@ input:checked + .slider:before {
 
 .app-list-item {
   display: flex;
-  align-items: center;
-  gap: var(--spacing-m);
-  padding: var(--spacing-s) var(--spacing-m);
+  flex-direction: column;
   background-color: var(--md-sys-color-surface-container-high);
   border-radius: var(--border-radius-s);
   transition: background-color 0.2s;
+  overflow: hidden;
 }
 
-.app-list-item:active {
+.app-item-main-row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-m);
+  padding: var(--spacing-s) var(--spacing-m);
+}
+
+.app-item-main-row:active {
   background-color: var(--md-sys-color-surface-container);
 }
 
@@ -1470,4 +1476,136 @@ input:checked + .slider:before {
   font-family: 'Google Sans Code', monospace;
   margin-left: 6px;
   vertical-align: middle;
+}
+
+/* 部分选中状态（有活动条目但包未完全选中）🟥 */
+.app-checkbox-custom.partial {
+  background-color: var(--md-sys-color-primary-container);
+  border-color: var(--md-sys-color-primary);
+}
+
+.app-checkbox-custom.partial::after {
+  content: '';
+  display: block;
+  width: 8px;
+  height: 8px;
+  background-color: var(--md-sys-color-primary);
+  border-radius: 1px;
+}
+
+/* 活动列表展开箭头 */
+.app-activities-chevron {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: none;
+  border: none;
+  border-radius: var(--border-radius-s);
+  color: var(--md-sys-color-on-surface-variant);
+  cursor: pointer;
+  transition: transform 0.2s, background-color 0.2s;
+  padding: 0;
+}
+
+.app-activities-chevron:hover {
+  background-color: var(--md-sys-color-surface-container);
+}
+
+.app-activities-chevron.expanded {
+  transform: rotate(180deg);
+}
+
+/* 活动列表容器 */
+.app-activities-list {
+  display: none;
+  flex-direction: column;
+  padding: 0 var(--spacing-m) var(--spacing-s);
+  border-top: 1px solid var(--md-sys-color-outline-variant);
+  gap: 2px;
+}
+
+.app-activities-list.show {
+  display: flex;
+}
+
+/* 单条活动条目 */
+.activity-entry-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 4px;
+  border-radius: var(--border-radius-s);
+}
+
+.activity-entry-path {
+  flex: 1;
+  font-family: 'Google Sans Code', 'Roboto Mono', monospace;
+  font-size: 0.75rem;
+  color: var(--md-sys-color-on-surface-variant);
+  word-break: break-all;
+  line-height: 1.4;
+}
+
+.activity-entry-delete {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: none;
+  border: none;
+  border-radius: 50%;
+  color: var(--md-sys-color-error);
+  cursor: pointer;
+  padding: 0;
+  transition: background-color 0.2s;
+}
+
+.activity-entry-delete:hover {
+  background-color: var(--md-sys-color-error-container);
+}
+
+/* 按活动屏蔽输入卡片 */
+.activity-block-card {
+  background-color: var(--md-sys-color-surface-container-high);
+  border-radius: var(--border-radius-m);
+  padding: var(--spacing-s) var(--spacing-m);
+  margin-bottom: var(--spacing-m);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.activity-block-label {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--md-sys-color-on-surface);
+}
+
+.activity-block-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.activity-block-input {
+  flex: 1;
+  background: var(--md-sys-color-surface-container);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--border-radius-s);
+  padding: 7px 10px;
+  font-family: 'Google Sans Code', 'Roboto Mono', monospace;
+  font-size: 0.8125rem;
+  color: var(--md-sys-color-on-surface);
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.activity-block-input:focus {
+  border-color: var(--md-sys-color-primary);
+  box-shadow: 0 0 0 2px rgba(168, 199, 250, 0.3);
 }

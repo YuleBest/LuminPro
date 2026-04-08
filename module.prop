@@ -1,7 +1,7 @@
 id=LuminPro
 name=LuminPro丨日用屏幕亮度强化
-version=V2.2
-versionCode=2204
+version=V2.2-2208
+versionCode=2208
 author=酷安@Yule
 description=本模块旨在让你的 Android 设备随时可以使用高亮度显示屏幕内容。无论设备当前亮度如何，只要满足设定的前台触发亮度条件，模块便会自动且平滑地提升屏幕亮度至硬件支持的峰值状态，确保你在强光室外也能获得清晰的显示效果
 updateJson=https://share.yule.ink/magisk/mod/luminpro/update.json
