@@ -33,7 +33,7 @@ _log() {
     local level="${2:-INFO}"
 
     case "$1" in
-    "日志过大"*) ;;
+    "日志超限"*) ;;
     *) if [ -f "$stop_file" ]; then return; fi ;;
     esac
 
@@ -46,15 +46,15 @@ _log() {
         local cur_size
         cur_size=$(du -k "$log_file" | cut -f1)
         if [ "$cur_size" -ge "$max_size" ]; then
-            printf '[%s] [%s] [%s] %s\n' "$(date '+%m-%d %H:%M:%S')" "up" "WARN" "日志过大 ($cur_size KB), 自动重置" >"$log_file"
+            printf '[%s] [%s] [%s] %s\n' "$(date '+%m-%d %H:%M:%S')" "up" "WARN" "日志超限 (${cur_size}KB / ${max_size}KB)，已自动重置" >"$log_file"
         fi
     fi
 
     printf '[%s] [%s] [%s] %s\n' "$(date '+%m-%d %H:%M:%S')" "up" "$level" "$1" >>"$log_file"
 }
 
-_log "[*] 收到 inotifyd 通知 (PID: $$)" "INFO"
-_log "[!] 正在抢占：清理其他 inotifyd 进程..." "WAIT"
+_log "收到 inotifyd 事件通知 (PID: $$)" "INFO"
+_log "正在接管控制权，清理残余进程..." "INFO"
 touch "$pause_file"
 killall -9 inotifyd 2>/dev/null
 for p in $(pgrep -f "up.sh"); do
@@ -62,12 +62,12 @@ for p in $(pgrep -f "up.sh"); do
 done
 
 if [ -f "$stop_file" ]; then
-    _log "[X] 服务已处于手动暂停状态，本次操作被取消" "WARN"
+    _log "服务已暂停，跳过本次处理" "WARN"
     exit 0
 fi
 
 if [ -f "$flag_file" ]; then
-    _log "[X] 另一个 up.sh 进程正在运行，本进程退出" "WARN"
+    _log "检测到并发执行，当前进程退出" "WARN"
     exit 1
 fi
 touch "$flag_file"
@@ -117,11 +117,11 @@ update_all() {
 
     # 如果步长为 0 (差值太小), 直接设置目标亮度
     if [ "$step_value" -eq 0 ]; then
-        _log "[OK] 直接设定亮度为: $target_bri" "INFO"
+        _log "差值过小，直接设定亮度: $target_bri" "INFO"
         echo -n "$target_bri" >"$now_bri_file" && return 0 || return 1
     fi
 
-    _log "[*] 开始调整亮度: $start_bri -> $target_bri (共 $steps_num 步)" "INFO"
+    _log "开始渐变调整: $start_bri → $target_bri ($steps_num 步)" "INFO"
     for step in $(seq 1 "$steps_num"); do
         echo -n $((start_bri + step * step_value)) >"$now_bri_file"
         sleep 0.02
@@ -141,29 +141,26 @@ CHECK_BRI() {
     for cycle_num in $(seq 1 10); do
         now_bri="$(cat "$now_bri_file")"
         if [ "$now_bri" -ge "$ui_max_bri" ] && [ "$now_bri" -lt "$target_bri" ]; then
-            _log "[+] 满足提升条件: $now_bri >= $ui_max_bri，目标 ^ $target_bri" "SUCCESS"
+            _log "触发提升: 当前亮度 $now_bri ≥ 阈值 $ui_max_bri，目标 $target_bri" "INFO"
 
             if update_all; then
-                _log "[OK] 亮度提升已完成 (当前: $target_bri)" "SUCCESS"
-                _log "================================================" "INFO"
+                _log "亮度提升完成 ($target_bri)" "SUCCESS"
                 return 0
             else
-                _log "[X] 亮度提升失败：无法写入节点文件" "ERROR"
-                _log "================================================" "ERROR"
+                _log "亮度提升失败: 无法写入亮度节点" "ERROR"
                 return 1
             fi
         fi
         sleep 0.3
     done
-    _log "[-] 检测超时：未持续触发有效提升阈值" "WARN"
+    _log "检测超时: 亮度未持续达到提升阈值" "INFO"
     return 1
 }
 
 MAIN() {
     # 解析并判断休眠
     if IS_SLEEP_TIME; then
-        _log "[||] 休眠时段 ($sleep_start-$sleep_end)，本次调整已跳过" "INFO"
-        _log "================================================" "INFO"
+        _log "处于休眠时段 ($sleep_start-$sleep_end)，跳过提升" "INFO"
         rm -f "$flag_file"
         return
     fi
@@ -171,14 +168,25 @@ MAIN() {
     if [ "$auto_bri_sleep" = "1" ]; then
         mode="$(settings get system screen_brightness_mode 2>/dev/null)"
         if [ "$mode" = "1" ]; then
-            _log "[<>] 自动亮度模式已启用，本次调整已跳过" "INFO"
-            _log "================================================" "INFO"
+            _log "自动亮度已启用，跳过提升" "INFO"
             rm -f "$flag_file"
             return
         fi
     fi
 
-    _log "[*] 检测亮度变化..." "INFO"
+    # 黑名单应用检测
+    local blacklist_file="$CONFIG_DIR/blacklist_apps.txt"
+    if [ -f "$blacklist_file" ] && [ -s "$blacklist_file" ]; then
+        local current_app
+        current_app="$(dumpsys window | grep mCurrentFocus | sed 's/.*u0 \(.*\)\/.*/\1/')"
+        if [ -n "$current_app" ] && grep -qxF "$current_app" "$blacklist_file"; then
+            _log "当前前台应用 ($current_app) 在黑名单中，跳过提升" "INFO"
+            rm -f "$flag_file"
+            return
+        fi
+    fi
+
+    _log "正在检测亮度变化..." "INFO"
     # sleep 0.5
     CHECK_BRI
     rm -f "$flag_file"  # 删除成果锁
@@ -190,7 +198,7 @@ MAIN() {
     cached_now_bri="$(cat "$PATH_CONFIG_DIR/.cached_path" 2>/dev/null || echo "$DEFAULT_NOW_BRI_FILE")"
 
     if [ "$current_now_bri" != "$cached_now_bri" ]; then
-        _log "[*] 配置已更新，重启 inotifyd..." "WARN"
+        _log "检测到监听路径变更，重启 inotifyd" "INFO"
         killall -9 inotifyd 2>/dev/null
     fi
 }

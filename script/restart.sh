@@ -11,12 +11,12 @@ _log() {
     printf '[%s] [restart] %s\n' "$(date '+%d %H:%M:%S.%3N')" "$1" >>"$log_file"
 }
 
-_log "正在手动重启服务..."
+_log "收到手动重启请求"
 
 pause_file="$PID_DIR/daemon.pause"
 
 # 1. 强制通知守护进程并执行清理
-_log "通知守护进程执行全局重置..."
+_log "通知守护进程挂起，清理残余进程"
 touch "$pause_file"
 killall -9 inotifyd 2>/dev/null
 for p in $(pgrep -f "up.sh"); do
@@ -26,10 +26,10 @@ done
 # 2. 清理遗留标记
 rm -f "$pid_file"
 rm -f "$flag_file"
-_log "已清理 pid 和 flag 锁文件"
+_log "已清理锁文件"
 
 # 3. 恢复守护进程 (它会自动拉起新 inotifyd)
 rm -f "$pause_file"
-_log "服务正在由守护进程重新拉起..."
+_log "守护进程已恢复，等待自动拉起监听"
 
 exit 0

@@ -29,11 +29,10 @@ _log() {
 # 等待系统就绪
 sleep 30
 
-_log "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" "START"
-_log "LuminPro 模块已启动" "SUCCESS"
+_log "LuminPro 服务启动" "INFO"
 _log "前台最大亮度: $(cat "$CONFIG_DIR/ui_max_bri.txt")" "INFO"
 _log "峰值最大亮度: $(cat "$CONFIG_DIR/max_bri.txt")" "INFO"
-_log "休眠时间: $(cat "$CONFIG_DIR/sleep_time.txt")" "INFO"
+_log "休眠时段: $(cat "$CONFIG_DIR/sleep_time.txt")" "INFO"
 
 # 读取设备路径配置
 now_bri_file="$(get_config "$PATH_CONFIG_DIR/now_bri_file.txt" "$DEFAULT_NOW_BRI_FILE")"
@@ -41,13 +40,12 @@ max_bri_file="$(get_config "$PATH_CONFIG_DIR/max_bri_file.txt" "$DEFAULT_MAX_BRI
 _log "当前亮度节点: $now_bri_file" "INFO"
 _log "最大亮度节点: $max_bri_file" "INFO"
 
-_log "启动守护监控进程..." "WAIT"
+_log "正在启动守护进程" "INFO"
 chmod 755 "$MODDIR/script/up.sh"
 chmod 755 "$MODDIR/script/daemon.sh"
 
 # 启动守护进程
 sh "$MODDIR/script/daemon.sh" &
 _log "守护进程已启动 (PID: $!)" "SUCCESS"
-_log "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" "DONE"
 
 exit 0

@@ -275,6 +275,9 @@ IMPORT_OLD_CONFIG() {
         if [ -s "$old_config/log_max_size.txt" ]; then
             echo "    - 日志大小限制: $(cat "$old_config/log_max_size.txt") KB"
         fi
+        if [ -s "$old_config/blacklist_apps.txt" ]; then
+            echo "    - 黑名单应用: $(wc -l <"$old_config/blacklist_apps.txt" | tr -d ' ') 个"
+        fi
         echo ""
         echo "[?] 按音量 + 沿用旧配置, 按音量 - 重新测试"
 
@@ -290,6 +293,7 @@ IMPORT_OLD_CONFIG() {
             [ -s "$old_config/auto_bri_sleep.txt" ] && cp -f "$old_config/auto_bri_sleep.txt" "$mod_config/"
             [ -s "$old_config/steps_num.txt" ] && cp -f "$old_config/steps_num.txt" "$mod_config/"
             [ -s "$old_config/log_max_size.txt" ] && cp -f "$old_config/log_max_size.txt" "$mod_config/"
+            [ -s "$old_config/blacklist_apps.txt" ] && cp -f "$old_config/blacklist_apps.txt" "$mod_config/"
 
             # 迁移旧的路径配置（如果存在）
             mkdir -p "$mod_path_config"
@@ -335,6 +339,7 @@ INIT_CONFIG() {
     [ ! -f "$mod_config/auto_bri_sleep.txt" ] && touch "$mod_config/auto_bri_sleep.txt"
     [ ! -f "$mod_config/steps_num.txt" ] && touch "$mod_config/steps_num.txt"
     [ ! -f "$mod_config/log_max_size.txt" ] && touch "$mod_config/log_max_size.txt"
+    [ ! -f "$mod_config/blacklist_apps.txt" ] && touch "$mod_config/blacklist_apps.txt"
 
     # 初始化设备路径配置 (仅在文件不存在时使用默认值，保留用户自定义配置)
     [ ! -f "$mod_path_config/now_bri_file.txt" ] && echo -n "$DEFAULT_NOW_BRI_FILE" >"$mod_path_config/now_bri_file.txt"
@@ -378,6 +383,7 @@ CREATE_BACKUP() {
     cp -f "$mod_config/auto_bri_sleep.txt" "$mod_config/.backup/"
     cp -f "$mod_config/steps_num.txt" "$mod_config/.backup/"
     cp -f "$mod_config/log_max_size.txt" "$mod_config/.backup/"
+    cp -f "$mod_config/blacklist_apps.txt" "$mod_config/.backup/"
 }
 
 # 主函数

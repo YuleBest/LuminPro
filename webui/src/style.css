@@ -610,16 +610,11 @@ input:checked + .slider:before {
 .brightness-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 24px; /* 仍然保持一个可抓取的宽度，但不着色 */
-  height: 24px;
+  width: 0;
+  height: 0;
   background: transparent;
   cursor: grab;
   border: none;
-  border-radius: 0;
-}
-
-.brightness-slider:hover::-webkit-slider-thumb {
-  height: 28px;
 }
 
 .brightness-slider::-webkit-slider-thumb:active {

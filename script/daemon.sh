@@ -47,7 +47,7 @@ _log() {
 # 确保环境就绪
 mkdir -p "$PID_DIR"
 
-_log "守护进程启动，开始监控配置文件..." "INFO"
+_log "守护进程已启动" "INFO"
 
 while true; do
     # 检查是否需要手动停止或暂时挂起
@@ -55,7 +55,7 @@ while true; do
         # 全局停止，杀掉现有并等待
         [ -f "$pid_file" ] && kill -9 "$(cat "$pid_file")" 2>/dev/null
         rm -f "$pid_file"
-        _log "检测到停止信号，已暂停" "WARN"
+        _log "检测到停止信号，守护进程挂起" "WARN"
         sleep 5
         continue
     fi
@@ -75,7 +75,7 @@ while true; do
     if [ -f "$config_cache_file" ]; then
         cached_config="$(cat "$config_cache_file")"
         if [ "$current_config" != "$cached_config" ]; then
-            _log "✓ 配置文件已更新，重启监听进程..." "WARN"
+            _log "检测到配置变更，重启监听进程" "INFO"
             [ -f "$pid_file" ] && kill -9 "$(cat "$pid_file")" 2>/dev/null
             rm -f "$pid_file"
             echo "$current_config" >"$config_cache_file"
@@ -88,7 +88,7 @@ while true; do
     fi
 
     # 正常启动并监听
-    _log "→ 启动 inotifyd 监听..." "INFO"
+    _log "正在启动 inotifyd 监听" "INFO"
     now_bri_file="${current_config%|*}"
     inotify_events="${current_config#*|}"
 
@@ -100,12 +100,11 @@ while true; do
 
     inotify_pid=$!
     echo "$inotify_pid" >"$pid_file"
-    _log "✓ inotifyd 已启动 (PID: $inotify_pid)" "SUCCESS"
-    _log "  监听文件: $now_bri_file, 事件: $inotify_events" "INFO"
+    _log "inotifyd 已启动 (PID: $inotify_pid), 监听: $now_bri_file, 事件: $inotify_events" "SUCCESS"
 
     # 3. 通过 wait 阻塞，实时感知进程死亡 (兼容所有 BusyBox 环境)
     wait "$inotify_pid"
-    _log "[-] 监听进程 ($inotify_pid) 已退出，将在 1 秒后重启..." "WARN"
+    _log "监听进程 (PID: $inotify_pid) 已退出，即将重启" "WARN"
 
     sleep 0.5
 done
