@@ -6,10 +6,8 @@ MODDIR="${0%/*/*}"
 CONFIG_FILE="$MODDIR/config/config.json"
 JQ="$MODDIR/bin/jq"
 PID_DIR="$MODDIR/pid"
-flag_file="$PID_DIR/up.flag"
 stop_file="$PID_DIR/stop.flag"
 log_file="$MODDIR/service.log"
-pause_file="$PID_DIR/daemon.pause"
 
 DEFAULT_NOW_BRI_FILE="/sys/class/backlight/panel0-backlight/brightness"
 
@@ -51,8 +49,6 @@ if [ -f "$stop_file" ]; then
     _log "服务已暂停，跳过本次处理" "WARN"
     exit 0
 fi
-
-touch "$flag_file"
 
 # 读取配置
 ui_max_bri="$(get_cfg ui_max_bri 0)"
@@ -123,7 +119,6 @@ CHECK_BRI() {
 MAIN() {
     if IS_SLEEP_TIME; then
         _log "处于休眠时段 ($sleep_start-$sleep_end)，跳过提升" "INFO"
-        rm -f "$flag_file"
         return
     fi
 
@@ -132,7 +127,6 @@ MAIN() {
         mode="$(settings get system screen_brightness_mode 2>/dev/null)"
         if [ "$mode" = "1" ]; then
             _log "自动亮度已启用，跳过提升" "INFO"
-            rm -f "$flag_file"
             return
         fi
     fi
@@ -149,7 +143,6 @@ MAIN() {
                 '.blacklist_apps | map(. == $f or . == $a) | any' \
                 "$CONFIG_FILE" >/dev/null 2>&1; then
             _log "当前前台 ($current_focus) 在黑名单中，跳过提升" "INFO"
-            rm -f "$flag_file"
             return
         fi
     fi
@@ -163,7 +156,6 @@ MAIN() {
             now="$(date +%s)"
             if awk "BEGIN{exit !(($now - $flag_time) < 2)}" 2>/dev/null; then
                 _log "HDR 冷却期内，跳过提升" "INFO"
-                rm -f "$flag_file"
                 return
             else
                 rm -f "$hdr_flag_file"
@@ -184,7 +176,6 @@ MAIN() {
             if awk "BEGIN{exit !($hdr_ratio_rounded > 1.00)}" 2>/dev/null; then
                 _log "检测到 HDR 内容 (比率: $hdr_ratio_rounded)，跳过提升" "INFO"
                 date +%s >"$hdr_flag_file"
-                rm -f "$flag_file"
                 return
             fi
         fi
@@ -192,8 +183,6 @@ MAIN() {
 
     _log "正在检测亮度变化..." "INFO"
     CHECK_BRI
-    rm -f "$flag_file"
-
 }
 
 MAIN

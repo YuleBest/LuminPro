@@ -66,23 +66,22 @@ jobs:
       - name: Package module
         run: node build-module.js
 
-      # ── 4. 解压到暂存目录并命名 artifact ────────────────────────────────
-      # upload-artifact 会对上传路径再套一层 zip；通过解压到 staging/ 再上传，
-      # 让 upload-artifact 的 zip 本身就是可直接刷入的模块包，避免双重嵌套。
-      - name: Prepare staging directory
+      # ── 4. 重命名 zip 加入 commit 短哈希 ─────────────────────────────────
+      - name: Rename zip with commit hash
         id: names
         run: |
           VERSION=$(grep '^version=' module.prop | cut -d= -f2 | tr -d '[:space:]')
           SHORT_SHA=$(git rev-parse --short HEAD)
-          ARTIFACT="LuminPro_${VERSION}-${SHORT_SHA}.zip"
-          mkdir staging
-          cd staging && unzip "../LuminPro_${VERSION}.zip"
-          echo "artifact=$ARTIFACT" >> "$GITHUB_OUTPUT"
+          FINAL="LuminPro_${VERSION}-${SHORT_SHA}.zip"
+          mv "LuminPro_${VERSION}.zip" "$FINAL"
+          echo "zip=$FINAL" >> "$GITHUB_OUTPUT"
 
-      # ── 5. 上传 artifact ─────────────────────────────────────────────────
+      # ── 5. 上传 artifact（单个 zip 文件） ────────────────────────────────
+      # upload-artifact 上传单个文件时仍会套一层 zip；通过 gh run download 下载
+      # 后得到的即是模块 zip，直接可刷入，无需二次解压。
       - name: Upload module zip
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ steps.names.outputs.artifact }}
-          path: staging/
+          name: ${{ steps.names.outputs.zip }}
+          path: ${{ steps.names.outputs.zip }}
           if-no-files-found: error

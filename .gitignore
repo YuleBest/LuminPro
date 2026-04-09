@@ -3,6 +3,7 @@ dist/
 .vite/
 *.log
 *.zip
+.dist
 
 # 屏蔽 webroot 下的所有文件，但保留目录本身
 webroot/*
@@ -10,3 +11,6 @@ webroot/*
 
 # rust
 rust/target/
+
+# 本地脚本
+deploy.ps1
