@@ -37,7 +37,7 @@ mod linux {
                 'M' => WatchMask::MOVE_SELF,
                 'm' => WatchMask::MOVED_TO,        // toybox: moved in
                 'y' => WatchMask::MOVED_FROM,      // toybox: moved out
-                'u' => WatchMask::UNMOUNT,         // toybox: unmounted
+                'u' => WatchMask::empty(),         // toybox: unmounted — 内核产生，不设置 watch mask
                 '*' => WatchMask::ALL_EVENTS,
                 // 'o'=overflow 'x'=ignored 为内核产生，不设置 watch mask
                 _ => WatchMask::empty(),
