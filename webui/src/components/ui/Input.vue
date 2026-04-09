@@ -1,5 +1,5 @@
 <script setup>
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/utils'
 
 const props = defineProps({
   class: { type: String, default: '' },
@@ -11,9 +11,9 @@ const props = defineProps({
   max: { type: [String, Number], default: undefined },
   autocomplete: { type: String, default: 'off' },
   spellcheck: { type: Boolean, default: false },
-});
+})
 
-const emit = defineEmits(['update:modelValue']);
+const emit = defineEmits(['update:modelValue'])
 </script>
 
 <template>
@@ -27,10 +27,12 @@ const emit = defineEmits(['update:modelValue']);
     :max="max"
     :autocomplete="autocomplete"
     :spellcheck="spellcheck"
-    :class="cn(
-      'flex h-9 w-full rounded-md border border-input bg-muted px-3 py-1 text-sm text-foreground shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-primary disabled:cursor-not-allowed disabled:opacity-50',
-      props.class
-    )"
+    :class="
+      cn(
+        'flex h-9 w-full rounded-md border border-input bg-muted px-3 py-1 text-sm text-foreground shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-primary disabled:cursor-not-allowed disabled:opacity-50',
+        props.class,
+      )
+    "
     @input="emit('update:modelValue', $event.target.value)"
   />
 </template>

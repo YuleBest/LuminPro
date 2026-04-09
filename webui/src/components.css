@@ -3,7 +3,9 @@
   background-color: var(--md-sys-color-surface);
   border-radius: var(--border-radius-m);
   padding: var(--spacing-l);
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.3), 0 4px 8px 3px rgba(0, 0, 0, 0.15);
+  box-shadow:
+    0 1px 3px 0 rgba(0, 0, 0, 0.3),
+    0 4px 8px 3px rgba(0, 0, 0, 0.15);
   display: flex;
   flex-direction: column;
 }
@@ -54,7 +56,7 @@
   padding: var(--spacing-m);
   background-color: var(--md-sys-color-surface-container);
   border-radius: var(--border-radius-m);
-  border: 1px solid rgba(var(--md-sys-color-on-surface-rgb, 0,0,0), 0.05);
+  border: 1px solid rgba(var(--md-sys-color-on-surface-rgb, 0, 0, 0), 0.05);
 }
 
 .group-title {
@@ -67,7 +69,8 @@
   gap: 8px;
 }
 
-.group-title i, .group-title svg {
+.group-title i,
+.group-title svg {
   width: 16px;
   height: 16px;
 }
@@ -241,20 +244,20 @@
   right: 0;
   bottom: 0;
   background-color: var(--md-sys-color-surface-container-high);
-  transition: .4s;
+  transition: 0.4s;
   border-radius: 34px;
   border: 2px solid var(--md-sys-color-outline);
 }
 
 .slider:before {
   position: absolute;
-  content: "";
+  content: '';
   height: 24px;
   width: 24px;
   left: 2px;
   bottom: 2px;
   background-color: var(--md-sys-color-outline);
-  transition: .4s;
+  transition: 0.4s;
   border-radius: 50%;
 }
 
@@ -282,7 +285,7 @@ input:checked + .slider:before {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  border: 1px solid rgba(var(--md-sys-color-on-surface-rgb, 0,0,0), 0.04);
+  border: 1px solid rgba(var(--md-sys-color-on-surface-rgb, 0, 0, 0), 0.04);
   transition: transform 0.2s ease;
 }
 
@@ -319,7 +322,11 @@ input:checked + .slider:before {
 .brightness-section {
   margin-top: var(--spacing-l);
   padding: var(--spacing-m);
-  background: linear-gradient(135deg, var(--md-sys-color-surface-container-high) 0%, var(--md-sys-color-surface-container) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--md-sys-color-surface-container-high) 0%,
+    var(--md-sys-color-surface-container) 100%
+  );
   border-radius: var(--border-radius-m);
   border: 1px solid var(--md-sys-color-outline-variant);
 }
@@ -370,14 +377,16 @@ input:checked + .slider:before {
   height: 24px;
   border-radius: 12px;
   /* 背景将由 JS 通过 linear-gradient 动态更新实现进度条效果 */
-  background: var(--md-sys-color-surface-container-high); 
+  background: var(--md-sys-color-surface-container-high);
   outline: none;
   -webkit-appearance: none;
   appearance: none;
   cursor: grab;
-  transition: height 0.2s, box-shadow 0.2s;
+  transition:
+    height 0.2s,
+    box-shadow 0.2s;
   border: 1px solid rgba(255, 255, 255, 0.03);
-  box-shadow: inset 0 1px 2px rgba(0,0,0,0.2);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
   overflow: hidden; /* 确保进度条颜色不溢出圆角 */
 }
 
@@ -406,12 +415,16 @@ input:checked + .slider:before {
   background: var(--md-sys-color-primary);
   cursor: grab;
   border: 2px solid var(--md-sys-color-surface);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4), inset 0 1px 2px rgba(255, 255, 255, 0.3);
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.4),
+    inset 0 1px 2px rgba(255, 255, 255, 0.3);
   transition: all 0.2s;
 }
 
 .brightness-slider::-moz-range-thumb:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), inset 0 1px 2px rgba(255, 255, 255, 0.3);
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.5),
+    inset 0 1px 2px rgba(255, 255, 255, 0.3);
   transform: scale(1.1);
 }
 
@@ -464,7 +477,9 @@ input:checked + .slider:before {
   font-weight: 500;
   font-family: inherit;
   cursor: pointer;
-  transition: background-color 0.2s, opacity 0.2s;
+  transition:
+    background-color 0.2s,
+    opacity 0.2s;
 }
 
 .btn:active {
@@ -482,7 +497,8 @@ input:checked + .slider:before {
   color: var(--md-sys-color-primary);
 }
 
-.btn-outline-s, .btn-text-s {
+.btn-outline-s,
+.btn-text-s {
   background-color: transparent;
   border: 1px solid var(--md-sys-color-outline-variant);
   color: var(--md-sys-color-primary);
@@ -548,7 +564,8 @@ input:checked + .slider:before {
   transform: scale(0.9);
 }
 
-.btn-icon-only-s i, .btn-icon-only-s svg {
+.btn-icon-only-s i,
+.btn-icon-only-s svg {
   width: 16px;
   height: 16px;
 }
@@ -557,8 +574,11 @@ input:checked + .slider:before {
   animation: spin 1s linear infinite;
 }
 
-
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }

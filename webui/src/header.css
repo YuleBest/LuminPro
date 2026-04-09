@@ -15,7 +15,11 @@
 
 .header-icon {
   font-size: 2.5rem;
-  background: linear-gradient(135deg, var(--md-sys-color-primary-container), var(--md-sys-color-secondary-container));
+  background: linear-gradient(
+    135deg,
+    var(--md-sys-color-primary-container),
+    var(--md-sys-color-secondary-container)
+  );
   width: 56px;
   height: 56px;
   border-radius: 12px;
@@ -110,7 +114,8 @@
 }
 
 @keyframes status-pulse {
-  0%, 100% {
+  0%,
+  100% {
     box-shadow: 0 0 8px rgba(244, 67, 54, 0.5);
   }
   50% {
@@ -119,7 +124,8 @@
 }
 
 @keyframes status-pulse-green {
-  0%, 100% {
+  0%,
+  100% {
     box-shadow: 0 0 8px rgba(76, 175, 80, 0.6);
   }
   50% {
@@ -137,4 +143,3 @@
 .header-status.status-loading .status-dot {
   animation: status-pulse 2s infinite;
 }
-

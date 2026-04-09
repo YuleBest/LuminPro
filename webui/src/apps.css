@@ -14,7 +14,9 @@
   border-radius: var(--border-radius-m);
   padding: 8px 12px;
   margin-bottom: var(--spacing-m);
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
 }
 
 .app-search-container:focus-within {
@@ -188,7 +190,11 @@
   width: 40px;
   height: 40px;
   border-radius: 8px;
-  background: linear-gradient(135deg, var(--md-sys-color-primary-container), rgba(168, 199, 250, 0.5));
+  background: linear-gradient(
+    135deg,
+    var(--md-sys-color-primary-container),
+    rgba(168, 199, 250, 0.5)
+  );
   color: var(--md-sys-color-on-primary-container);
   display: flex;
   align-items: center;
@@ -239,7 +245,9 @@
   border-radius: var(--border-radius-s);
   color: var(--md-sys-color-on-surface-variant);
   cursor: pointer;
-  transition: transform 0.2s, background-color 0.2s;
+  transition:
+    transform 0.2s,
+    background-color 0.2s;
   padding: 0;
 }
 
@@ -337,7 +345,9 @@
   font-weight: 500;
   padding: 3px 8px;
   cursor: pointer;
-  transition: background-color 0.2s, border-color 0.2s;
+  transition:
+    background-color 0.2s,
+    border-color 0.2s;
   white-space: nowrap;
   font-family: inherit;
 }
@@ -363,7 +373,9 @@
   font-size: 0.8125rem;
   color: var(--md-sys-color-on-surface);
   outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
 }
 
 .activity-block-input:focus {
@@ -437,7 +449,10 @@
   height: 6px;
   border-radius: 50%;
   background-color: var(--md-sys-color-outline-variant);
-  transition: background-color 0.3s, transform 0.3s, width 0.3s;
+  transition:
+    background-color 0.3s,
+    transform 0.3s,
+    width 0.3s;
 }
 
 .picker-step-dot.active {
@@ -504,8 +519,13 @@
 }
 
 @keyframes picker-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.35; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
 }
 
 .picker-result-box {

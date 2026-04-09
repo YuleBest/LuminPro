@@ -12,7 +12,11 @@
   width: 72px;
   height: 72px;
   border-radius: 20px;
-  background: linear-gradient(135deg, var(--md-sys-color-primary-container), var(--md-sys-color-secondary-container));
+  background: linear-gradient(
+    135deg,
+    var(--md-sys-color-primary-container),
+    var(--md-sys-color-secondary-container)
+  );
   display: flex;
   align-items: center;
   justify-content: center;
@@ -73,7 +77,7 @@
   width: 100%;
 }
 .about-list-item + .about-list-item {
-  border-top: 1px solid rgba(var(--md-sys-color-on-surface-rgb, 0,0,0), 0.06);
+  border-top: 1px solid rgba(var(--md-sys-color-on-surface-rgb, 0, 0, 0), 0.06);
 }
 .about-list-item:active {
   background-color: var(--md-sys-color-surface-container-high);
@@ -103,7 +107,7 @@
 .doc-sheet-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.5);
+  background: rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(4px);
   z-index: 1999;
   opacity: 0;
@@ -127,7 +131,7 @@
   flex-direction: column;
   transform: translateY(100%);
   transition: transform 0.35s cubic-bezier(0.19, 1, 0.22, 1);
-  box-shadow: 0 -8px 32px rgba(0,0,0,0.3);
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.3);
   overflow: hidden;
 }
 .doc-sheet.show {
@@ -137,7 +141,7 @@
   display: flex;
   align-items: center;
   padding: 16px 16px 12px;
-  border-bottom: 1px solid rgba(var(--md-sys-color-on-surface-rgb, 0,0,0), 0.07);
+  border-bottom: 1px solid rgba(var(--md-sys-color-on-surface-rgb, 0, 0, 0), 0.07);
   gap: 12px;
   flex-shrink: 0;
 }
@@ -183,7 +187,8 @@
   color: var(--md-sys-color-on-surface);
   word-break: break-word;
 }
-.doc-sheet-content h1, .doc-sheet-content h2 {
+.doc-sheet-content h1,
+.doc-sheet-content h2 {
   color: var(--md-sys-color-primary);
   margin-top: 1.4em;
 }
@@ -232,7 +237,6 @@
   font-weight: 600;
 }
 
-
 /* ==========================================
    Theme Segmented Button
    ========================================== */
@@ -262,5 +266,3 @@
   color: var(--md-sys-color-on-primary-container);
   font-weight: 600;
 }
-
-

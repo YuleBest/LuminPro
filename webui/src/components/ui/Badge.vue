@@ -1,6 +1,6 @@
 <script setup>
-import { cn } from '@/lib/utils';
-import { cva } from 'class-variance-authority';
+import { cn } from '@/lib/utils'
+import { cva } from 'class-variance-authority'
 
 const badgeVariants = cva(
   'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium transition-colors',
@@ -16,13 +16,13 @@ const badgeVariants = cva(
       },
     },
     defaultVariants: { variant: 'default' },
-  }
-);
+  },
+)
 
 const props = defineProps({
   variant: { type: String, default: 'default' },
   class: { type: String, default: '' },
-});
+})
 </script>
 
 <template>

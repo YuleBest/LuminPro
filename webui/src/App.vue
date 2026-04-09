@@ -1,98 +1,101 @@
 <script setup>
-import { ref, provide, onMounted, onUnmounted, watch } from 'vue';
-import { moduleInfo } from 'kernelsu';
-import { runCmd, showToast } from './utils.js';
-import { useStatus } from './composables/useStatus.js';
-import { useConfig } from './composables/useConfig.js';
-import { useLog } from './composables/useLog.js';
-import BottomNav from './components/BottomNav.vue';
-import StatusView from './views/StatusView.vue';
-import ConfigView from './views/ConfigView.vue';
-import AppsView from './views/AppsView.vue';
-import LogView from './views/LogView.vue';
-import AboutView from './views/AboutView.vue';
+import { ref, provide, onMounted, onUnmounted, watch } from 'vue'
+import { moduleInfo } from 'kernelsu'
+import { runCmd, showToast } from './utils.js'
+import { useStatus } from './composables/useStatus.js'
+import { useConfig } from './composables/useConfig.js'
+import { useLog } from './composables/useLog.js'
+import BottomNav from './components/BottomNav.vue'
+import StatusView from './views/StatusView.vue'
+import ConfigView from './views/ConfigView.vue'
+import AppsView from './views/AppsView.vue'
+import LogView from './views/LogView.vue'
+import AboutView from './views/AboutView.vue'
 
-const currentView = ref('status');
-const moduleVersion = ref('');
-const status = useStatus();
-const config = useConfig();
-const log = useLog();
+const currentView = ref('status')
+const moduleVersion = ref('')
+const status = useStatus()
+const config = useConfig()
+const log = useLog()
 
 // 供子组件使用
-provide('showToast', showToast);
-provide('status', status);
-provide('config', config);
-provide('log', log);
+provide('showToast', showToast)
+provide('status', status)
+provide('config', config)
+provide('log', log)
 
-let refreshTimer = null;
+let refreshTimer = null
 
 function startRefresh() {
-  stopRefresh();
-  if (!config.autoRefresh.value) return;
-  const interval = config.statusRefreshInterval.value;
+  stopRefresh()
+  if (!config.autoRefresh.value) return
+  const interval = config.statusRefreshInterval.value
   refreshTimer = setInterval(async () => {
     try {
-      await Promise.all([status.load(), log.load()]);
+      await Promise.all([status.load(), log.load()])
     } catch {}
-  }, interval);
+  }, interval)
 }
 
 function stopRefresh() {
-  if (refreshTimer) { clearInterval(refreshTimer); refreshTimer = null; }
+  if (refreshTimer) {
+    clearInterval(refreshTimer)
+    refreshTimer = null
+  }
 }
 
 function restartRefresh(enabled, interval) {
-  config.autoRefresh.value = enabled;
-  config.statusRefreshInterval.value = interval;
-  startRefresh();
+  config.autoRefresh.value = enabled
+  config.statusRefreshInterval.value = interval
+  startRefresh()
 }
-provide('restartRefresh', restartRefresh);
+provide('restartRefresh', restartRefresh)
 
 // 跟随系统色彩偏好变化
-let _mq = null;
+let _mq = null
 function _onSystemTheme() {
-  if (config.themeMode.value === 'system') config.applyTheme('system');
+  if (config.themeMode.value === 'system') config.applyTheme('system')
 }
 
 onMounted(async () => {
   // 应用 UI 缩放 + 主题
-  config.applyZoom();
-  config.applyTheme(config.themeMode.value);
-  _mq = window.matchMedia('(prefers-color-scheme: light)');
-  _mq.addEventListener('change', _onSystemTheme);
+  config.applyZoom()
+  config.applyTheme(config.themeMode.value)
+  _mq = window.matchMedia('(prefers-color-scheme: light)')
+  _mq.addEventListener('change', _onSystemTheme)
 
   // 读取模块版本
   try {
-    const info = JSON.parse(moduleInfo());
-    moduleVersion.value = info.version || '';
+    const info = JSON.parse(moduleInfo())
+    moduleVersion.value = info.version || ''
   } catch {
-    moduleVersion.value = '[debug]';
+    moduleVersion.value = '[debug]'
   }
 
   // 页面滚动监听
-  window.addEventListener('scroll', onScroll, { passive: true });
+  window.addEventListener('scroll', onScroll, { passive: true })
 
   // 初始加载
   try {
-    await Promise.all([status.load(true), config.load(), log.load()]);
+    await Promise.all([status.load(true), config.load(), log.load()])
   } catch {}
 
-  startRefresh();
-});
+  startRefresh()
+})
 
 onUnmounted(() => {
-  stopRefresh();
-  window.removeEventListener('scroll', onScroll);
-  _mq?.removeEventListener('change', _onSystemTheme);
-});
+  stopRefresh()
+  window.removeEventListener('scroll', onScroll)
+  _mq?.removeEventListener('change', _onSystemTheme)
+})
 
 function onScroll() {
-  const topBlur = document.querySelector('.top-blur');
-  if (topBlur) topBlur.classList.toggle('scrolled', window.scrollY > 10);
+  const topBlur = document.querySelector('.top-blur')
+  if (topBlur) topBlur.classList.toggle('scrolled', window.scrollY > 10)
 }
 
 function handleViewChange(view) {
-  currentView.value = view;
+  currentView.value = view
 }
 </script>
 
@@ -112,19 +115,23 @@ function handleViewChange(view) {
           </div>
         </div>
         <div class="header-status-container">
-          <div
-            class="header-status"
-            id="module-status"
-            :class="status.statusClass.value"
-          >
+          <div class="header-status" id="module-status" :class="status.statusClass.value">
             <span class="status-dot"></span>
             <span class="status-text">{{ status.statusText.value }}</span>
           </div>
           <div class="header-status-actions">
-            <button class="btn-status-action" id="btn-toggle-service" @click="status.toggleService(showToast)">
+            <button
+              class="btn-status-action"
+              id="btn-toggle-service"
+              @click="status.toggleService(showToast)"
+            >
               {{ status.isPaused.value ? '启用' : '暂停' }}
             </button>
-            <button class="btn-status-action" id="btn-restart-service" @click="status.restartService(showToast)">
+            <button
+              class="btn-status-action"
+              id="btn-restart-service"
+              @click="status.restartService(showToast)"
+            >
               重启
             </button>
           </div>

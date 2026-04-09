@@ -1,5 +1,5 @@
-@import "tailwindcss";
-@import "tw-animate-css";
+@import 'tailwindcss';
+@import 'tw-animate-css';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -33,7 +33,8 @@
 /* ===============================
    Shadcn 主题 Token (暗色, MD3 调色板)
    =============================== */
-:root, :root.dark {
+:root,
+:root.dark {
   --radius: 0.75rem;
 
   /* Shadcn tokens */

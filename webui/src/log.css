@@ -60,8 +60,9 @@
   z-index: 998;
   pointer-events: none;
   /* 基础暗色背景，增强状态栏文字可读性 */
-  background: linear-gradient(to bottom, 
-    rgba(var(--md-sys-color-background-rgb, 17, 19, 24), 0.85) 0%, 
+  background: linear-gradient(
+    to bottom,
+    rgba(var(--md-sys-color-background-rgb, 17, 19, 24), 0.85) 0%,
     rgba(var(--md-sys-color-background-rgb, 17, 19, 24), 0.4) 40%,
     rgba(var(--md-sys-color-background-rgb, 17, 19, 24), 0) 100%
   );
@@ -69,17 +70,19 @@
   -webkit-backdrop-filter: blur(16px);
   backdrop-filter: blur(16px);
   /* 梯度蒙版：越往上越模糊的核心逻辑 */
-  -webkit-mask-image: linear-gradient(to bottom, 
-    rgba(0,0,0,1) 0%, 
-    rgba(0,0,0,1) 30%,
-    rgba(0,0,0,0.7) 60%,
-    rgba(0,0,0,0) 100%
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 1) 0%,
+    rgba(0, 0, 0, 1) 30%,
+    rgba(0, 0, 0, 0.7) 60%,
+    rgba(0, 0, 0, 0) 100%
   );
-  mask-image: linear-gradient(to bottom, 
-    rgba(0,0,0,1) 0%, 
-    rgba(0,0,0,1) 30%,
-    rgba(0,0,0,0.7) 60%,
-    rgba(0,0,0,0) 100%
+  mask-image: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 1) 0%,
+    rgba(0, 0, 0, 1) 30%,
+    rgba(0, 0, 0, 0.7) 60%,
+    rgba(0, 0, 0, 0) 100%
   );
   transform: translateZ(0); /* 开启 GPU 加速 */
   opacity: 0;
@@ -129,7 +132,9 @@
   padding: 8px 16px;
   border-radius: 28px;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 8px 32px rgba(0, 0, 0, 0.3);
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.15),
+    0 8px 32px rgba(0, 0, 0, 0.3);
   z-index: 999;
   width: fit-content;
   max-width: calc(100% - 32px);
@@ -147,7 +152,9 @@
   height: auto;
   background: var(--md-sys-color-primary-container);
   border-radius: 20px;
-  transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1), width 0.3s ease;
+  transition:
+    transform 0.3s cubic-bezier(0.25, 1, 0.5, 1),
+    width 0.3s ease;
   pointer-events: none;
   z-index: 0;
 }
@@ -173,7 +180,8 @@
   z-index: 1;
 }
 
-.navbar-btn i, .navbar-btn svg {
+.navbar-btn i,
+.navbar-btn svg {
   width: 20px;
   height: 20px;
   display: flex;
