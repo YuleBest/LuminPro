@@ -12,7 +12,7 @@ const sheetTitle = ref('')
 const sheetContent = ref('')
 const sheetLoading = ref(false)
 
-const md = new MarkdownIt({ html: false, linkify: true, typographer: true })
+const md = new MarkdownIt({ html: true, linkify: true, typographer: true })
 
 const moduleDocs = [
   { title: 'README', file: `${MODULE_DIR}/README.md`, icon: BookOpen, md: true },
