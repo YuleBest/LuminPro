@@ -14,3 +14,4 @@ rust/target/
 
 # 本地脚本
 deploy.js
+.dist-tmp
