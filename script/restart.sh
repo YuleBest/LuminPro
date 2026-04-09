@@ -15,13 +15,10 @@ _log "收到手动重启请求"
 
 pause_file="$PID_DIR/daemon.pause"
 
-# 1. 强制通知守护进程并执行清理
-_log "通知守护进程挂起，清理残余进程"
+# 1. 通知守护进程挂起，终止 lumipro 实例
+_log "通知守护进程挂起，清理 lumipro 实例"
 touch "$pause_file"
-killall -9 inotifyd 2>/dev/null
-for p in $(pgrep -f "up.sh"); do
-    [ "$p" != "$$" ] && kill -9 "$p" 2>/dev/null
-done
+[ -f "$pid_file" ] && kill -9 "$(cat "$pid_file")" 2>/dev/null
 
 # 2. 清理遗留标记
 rm -f "$pid_file"

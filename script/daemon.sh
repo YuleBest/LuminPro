@@ -74,20 +74,20 @@ while true; do
         echo "$current_config" >"$config_cache_file"
     fi
 
-    _log "正在启动 inotifyd 监听" "INFO"
+    _log "正在启动 lumipro 监听" "INFO"
     now_bri_file="${current_config%|*}"
     inotify_events="${current_config#*|}"
 
-    # 缓存当前监听路径（供 up.sh 参考）
+    # 缓存当前监听路径（供参考）
     echo -n "$now_bri_file" >"$MODDIR/config/.cached_path"
 
-    inotifyd "$MODDIR/script/up.sh" "$now_bri_file:$inotify_events" >>"$log_file" 2>&1 &
+    "$MODDIR/bin/lumipro" "$MODDIR/script/up.sh" "$now_bri_file:$inotify_events" >>"$log_file" 2>&1 &
     inotify_pid=$!
     echo "$inotify_pid" >"$pid_file"
-    _log "inotifyd 已启动 (PID: $inotify_pid), 监听: $now_bri_file, 事件: $inotify_events" "SUCCESS"
+    _log "lumipro 已启动 (PID: $inotify_pid), 监听: $now_bri_file, 事件: $inotify_events" "SUCCESS"
 
     wait "$inotify_pid"
-    _log "监听进程 (PID: $inotify_pid) 已退出，即将重启" "WARN"
+    _log "lumipro 进程 (PID: $inotify_pid) 已退出，即将重启" "WARN"
 
     sleep 0.5
 done

@@ -43,6 +43,7 @@ _log "最大亮度节点: $max_bri_file" "INFO"
 _log "正在启动守护进程" "INFO"
 chmod 755 "$MODDIR/script/up.sh"
 chmod 755 "$MODDIR/script/daemon.sh"
+chmod 755 "$MODDIR/bin/lumipro"
 
 sh "$MODDIR/script/daemon.sh" &
 _log "守护进程已启动 (PID: $!)" "SUCCESS"

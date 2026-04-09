@@ -7,3 +7,6 @@ dist/
 # 屏蔽 webroot 下的所有文件，但保留目录本身
 webroot/*
 !webroot/.gitkeep
+
+# rust
+rust/target/
