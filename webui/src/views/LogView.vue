@@ -24,10 +24,10 @@ function handleClear() {
 
 // filter options
 const filterOptions = [
-  { key: 'all',     label: '全部' },
-  { key: 'info',    label: 'INFO' },
-  { key: 'warning', label: 'WARN' },
-  { key: 'error',   label: 'ERR' },
+  { key: '',      label: '全部' },
+  { key: 'INFO',  label: 'INFO' },
+  { key: 'WARN',  label: 'WARN' },
+  { key: 'ERROR', label: 'ERROR' },
 ];
 
 onMounted(() => log.load());
