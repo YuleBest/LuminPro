@@ -13,4 +13,4 @@ webroot/*
 rust/target/
 
 # 本地脚本
-deploy.ps1
+deploy.js
