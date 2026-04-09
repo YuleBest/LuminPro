@@ -64,8 +64,8 @@ async function onSliderChange(e) {
 const statusItems = computed(() => [
   { label: '当前亮度', value: status.currentBri.value || '—', icon: SunMedium },
   { label: '系统最大亮度', value: status.sysMaxBri.value || '—', icon: Smartphone },
-  { label: 'inotifyd PID', value: status.inotifydPid.value, icon: Activity },
-  { label: 'inotifyd 状态', value: status.inotifydState.value, icon: Clock },
+  { label: 'lumipro PID', value: status.inotifydPid.value, icon: Activity },
+  { label: 'lumipro 状态', value: status.inotifydState.value, icon: Clock },
   { label: '休眠状态', value: status.sleepStatus.value, icon: Moon },
   { label: 'HDR/SDR 比率', value: status.hdrRatio.value, icon: Layers },
 ])

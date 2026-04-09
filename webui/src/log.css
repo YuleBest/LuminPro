@@ -152,9 +152,7 @@
   height: auto;
   background: var(--md-sys-color-primary-container);
   border-radius: 20px;
-  transition:
-    transform 0.3s cubic-bezier(0.25, 1, 0.5, 1),
-    width 0.3s ease;
+  will-change: transform, width;
   pointer-events: none;
   z-index: 0;
 }

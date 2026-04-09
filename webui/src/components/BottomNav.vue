@@ -23,18 +23,16 @@ const navbarEl = ref(null)
 const sliderEl = ref(null)
 const btnRefs = ref([])
 
+const TRANSITION_ON = 'transform 0.3s cubic-bezier(0.25, 1, 0.5, 1), width 0.3s ease'
+
 function updateSlider(key, animate = true) {
   const idx = navItems.findIndex((n) => n.key === key)
   if (idx < 0) return
   const btn = btnRefs.value[idx]
   if (!btn || !sliderEl.value) return
-  if (!animate) sliderEl.value.style.transition = 'none'
+  sliderEl.value.style.transition = animate ? TRANSITION_ON : 'none'
   sliderEl.value.style.width = btn.offsetWidth + 'px'
   sliderEl.value.style.transform = `translateX(${btn.offsetLeft}px)`
-  if (!animate)
-    requestAnimationFrame(() => {
-      if (sliderEl.value) sliderEl.value.style.transition = ''
-    })
 }
 
 function select(key) {

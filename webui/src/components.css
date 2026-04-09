@@ -383,6 +383,7 @@ input:checked + .slider:before {
   appearance: none;
   cursor: grab;
   transition:
+    background 0.35s ease,
     height 0.2s,
     box-shadow 0.2s;
   border: 1px solid rgba(255, 255, 255, 0.03);

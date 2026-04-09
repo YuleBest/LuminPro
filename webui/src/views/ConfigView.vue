@@ -42,7 +42,7 @@ function setTheme(v) {
 }
 
 async function viewInotifyHelp() {
-  const msg = `支持的事件字母 (toybox inotifyd 兼容):
+  const msg = `支持的事件字母 (toybox/busybox inotifyd 兼容):
   a = accessed       读取
   c = modified       内容修改 (亮度节点推荐用此)
   e = metadata change 属性变更

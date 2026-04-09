@@ -1,5 +1,5 @@
 <script setup>
-import { ref, provide, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, provide, onMounted, onUnmounted, watch } from 'vue'
 import { moduleInfo } from 'kernelsu'
 import { runCmd, showToast } from './utils.js'
 import { useStatus } from './composables/useStatus.js'
@@ -12,7 +12,13 @@ import AppsView from './views/AppsView.vue'
 import LogView from './views/LogView.vue'
 import AboutView from './views/AboutView.vue'
 
+const NAV_ORDER = ['status', 'config', 'apps', 'log', 'about']
 const currentView = ref('status')
+
+const trackStyle = computed(() => {
+  const idx = NAV_ORDER.indexOf(currentView.value)
+  return { transform: `translateX(${-idx * 100}%)` }
+})
 const moduleVersion = ref('')
 const status = useStatus()
 const config = useConfig()
@@ -72,8 +78,7 @@ onMounted(async () => {
     moduleVersion.value = '[debug]'
   }
 
-  // 页面滚动监听
-  window.addEventListener('scroll', onScroll, { passive: true })
+  window.removeEventListener('scroll', onPageScroll)
 
   // 初始加载
   try {
@@ -85,17 +90,22 @@ onMounted(async () => {
 
 onUnmounted(() => {
   stopRefresh()
-  window.removeEventListener('scroll', onScroll)
   _mq?.removeEventListener('change', _onSystemTheme)
 })
 
-function onScroll() {
+function onPageScroll(e) {
   const topBlur = document.querySelector('.top-blur')
-  if (topBlur) topBlur.classList.toggle('scrolled', window.scrollY > 10)
+  if (topBlur) topBlur.classList.toggle('scrolled', e.target.scrollTop > 10)
 }
 
 function handleViewChange(view) {
   currentView.value = view
+  // 切换页面时同步更新 top-blur 状态
+  const idx = NAV_ORDER.indexOf(view)
+  const slides = document.querySelectorAll('.page-slide')
+  const slide = slides[idx]
+  const topBlur = document.querySelector('.top-blur')
+  if (topBlur) topBlur.classList.toggle('scrolled', slide ? slide.scrollTop > 10 : false)
 }
 </script>
 
@@ -138,12 +148,16 @@ function handleViewChange(view) {
         </div>
       </header>
 
-      <!-- 各视图（v-show 保持 DOM 以维持状态） -->
-      <StatusView v-show="currentView === 'status'" />
-      <ConfigView v-show="currentView === 'config'" />
-      <AppsView v-show="currentView === 'apps'" />
-      <LogView v-show="currentView === 'log'" />
-      <AboutView v-show="currentView === 'about'" />
+      <!-- 左右滑动页面区 -->
+      <div class="page-viewport" @scroll.capture.passive="onPageScroll">
+        <div class="page-track" :style="trackStyle">
+          <div class="page-slide"><StatusView /></div>
+          <div class="page-slide"><ConfigView /></div>
+          <div class="page-slide"><AppsView /></div>
+          <div class="page-slide"><LogView /></div>
+          <div class="page-slide"><AboutView /></div>
+        </div>
+      </div>
     </div>
 
     <!-- 底栏导航 -->
