@@ -21,7 +21,7 @@ get_cfg() {
 
 _log() {
     local level="${2:-INFO}"
-    printf '[%s] [%s] [%-8s] %s\n' "$(date '+%m-%d %H:%M:%S')" "service" "$level" "$1" >>"$log_file"
+    printf '[%s] [%s] [%s] %s\n' "$(date '+%m-%d %H:%M:%S')" "service" "$level" "$1" >>"$log_file"
 }
 
 # 等待系统就绪

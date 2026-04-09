@@ -33,63 +33,61 @@ export function useStatus() {
   // 自动亮度
   const autoBriMode = ref(false);
 
-  // 缓存文件路径（避免每次都读）
+  // 缓存配置字段（避免每次刷新都 readConfig）
   let _nowBriFile = null;
   let _sysMaxBriFile = null;
+  let _sleepTime = null;
 
   async function _ensurePaths() {
     if (_nowBriFile && _sysMaxBriFile) return;
     const cfg = await readConfig();
-    _nowBriFile = cfg.now_bri_file || DEFAULT_NOW_BRI_FILE;
+    _nowBriFile  = cfg.now_bri_file  || DEFAULT_NOW_BRI_FILE;
     _sysMaxBriFile = cfg.max_bri_file || DEFAULT_SYS_MAX_BRI_FILE;
+    _sleepTime   = cfg.sleep_time    || '';
   }
 
   function invalidatePaths() {
     _nowBriFile = null;
     _sysMaxBriFile = null;
+    _sleepTime = null;
   }
 
   async function load(forceFull = false) {
     await _ensurePaths();
 
-    if (forceFull || currentBri.value === null || sysMaxBri.value === null) {
-      const [cRes, sRes] = await Promise.all([
-        runCmd(`cat "${_nowBriFile}"`),
-        runCmd(`cat "${_sysMaxBriFile}"`),
-      ]);
-      currentBri.value = cRes.errno === 0 ? cRes.stdout.trim() : '0';
-      sysMaxBri.value = sRes.errno === 0 ? sRes.stdout.trim() : '255';
-    }
+    const needBri = forceFull || currentBri.value === null || sysMaxBri.value === null;
 
-    const [pidRes, stopRes, autoBriRes, hdrRes] = await Promise.all([
-      runCmd(`cat "${PID_FILE}"`),
+    // 所有 Shell 命令一次并发，消除多轮顺序等待
+    // PID + 进程状态合并为一条命令以减少 exec 次数
+    const [pidStateRes, stopRes, autoBriRes, hdrRes, cBriRes, sBriRes] = await Promise.all([
+      runCmd(`PID=$(cat "${PID_FILE}" 2>/dev/null || true); printf '%s\\n' "$PID"; [ -n "$PID" ] && grep '^State:' "/proc/$PID/status" 2>/dev/null | awk '{print $2}' || true`),
       runCmd(`[ -f "${STOP_FLAG_FILE}" ] && echo "1" || echo "0"`),
       runCmd(`settings get system screen_brightness_mode`),
       runCmd(`dumpsys display 2>/dev/null | sed -n 's/.*hdrSdrRatio \\([0-9.]*\\).*/\\1/p' | head -n 1`),
+      needBri ? runCmd(`cat "${_nowBriFile}"`)    : Promise.resolve({ errno: -1, stdout: '' }),
+      needBri ? runCmd(`cat "${_sysMaxBriFile}"`) : Promise.resolve({ errno: -1, stdout: '' }),
     ]);
-    const cfgForSleep = await readConfig();
-    const sleepTimeStr = cfgForSleep.sleep_time || '';
 
-    isPaused.value = stopRes.errno === 0 && stopRes.stdout.trim() === '1';
-    const pidStr = pidRes.errno === 0 ? pidRes.stdout.trim() : '';
-    isRunning.value = !isPaused.value && !!pidStr;
-    inotifydPid.value = pidStr || '离线';
-
-    if (isRunning.value && pidStr) {
-      const stateRes = await runCmd(`cat /proc/${pidStr}/status 2>/dev/null | grep "State:" | sed 's/.*((\\(.*\\)))/\\1/'`);
-      inotifydState.value = (stateRes.errno === 0 && stateRes.stdout.trim()) ? stateRes.stdout.trim() : '已退出';
-    } else {
-      inotifydState.value = '离线';
+    if (needBri) {
+      currentBri.value = cBriRes.errno === 0 ? cBriRes.stdout.trim() : '0';
+      sysMaxBri.value  = sBriRes.errno === 0 ? sBriRes.stdout.trim() : '255';
     }
 
-    const autoBriVal = autoBriRes.errno === 0 ? parseInt(autoBriRes.stdout.trim(), 10) : 0;
-    autoBriMode.value = autoBriVal === 1;
+    const psLines   = (pidStateRes.errno === 0 ? pidStateRes.stdout : '').split('\n');
+    const pidStr    = psLines[0]?.trim() || '';
+    const stateChar = psLines[1]?.trim() || '';
+
+    isPaused.value      = stopRes.errno === 0 && stopRes.stdout.trim() === '1';
+    isRunning.value     = !isPaused.value && !!pidStr;
+    inotifydPid.value   = pidStr || '离线';
+    inotifydState.value = isRunning.value ? (stateChar || '已退出') : '离线';
+
+    autoBriMode.value = autoBriRes.errno === 0 && parseInt(autoBriRes.stdout.trim(), 10) === 1;
 
     const hdrRaw = hdrRes.errno === 0 ? hdrRes.stdout.trim() : '';
     hdrRatio.value = (hdrRaw && /^\d+(\.\d+)?$/.test(hdrRaw)) ? parseFloat(hdrRaw).toFixed(2) : '-';
 
-    // 计算睡眠状态
-    sleepStatus.value = _calcSleep(sleepTimeStr);
+    sleepStatus.value = _calcSleep(_sleepTime);
   }
 
   function _calcSleep(sleepTime) {
