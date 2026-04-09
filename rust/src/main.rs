@@ -10,7 +10,7 @@
 //! 防抖机制: 在指定窗口期内多次触发时，只执行最后一次；handler 执行期间
 //! 积压的事件（如亮度渐变写入）在 handler 返回后统一丢弃。
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "android"))]
 mod linux {
     use std::collections::HashMap;
     use std::os::unix::io::AsRawFd;
@@ -194,10 +194,10 @@ mod linux {
 }
 
 fn main() {
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", target_os = "android"))]
     linux::run();
 
-    #[cfg(not(target_os = "linux"))]
+    #[cfg(not(any(target_os = "linux", target_os = "android")))]
     {
         eprintln!("lumipro: only supported on Linux/Android");
         std::process::exit(1);
