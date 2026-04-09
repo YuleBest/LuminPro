@@ -1,0 +1,13 @@
+{
+  "ui_max_bri": 0,
+  "max_bri": 0,
+  "steps_num": 50,
+  "log_max_size": 512,
+  "auto_bri_sleep": 1,
+  "display_hdr_sleep": 0,
+  "sleep_time": "",
+  "inotify_events": "c",
+  "now_bri_file": "/sys/class/backlight/panel0-backlight/brightness",
+  "max_bri_file": "/sys/class/backlight/panel0-backlight/max_brightness",
+  "blacklist_apps": []
+}

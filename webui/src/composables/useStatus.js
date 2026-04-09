@@ -1,8 +1,7 @@
 import { ref, computed } from 'vue';
 import {
-  runCmd,
-  CONFIG_DIR, PATH_CONFIG_DIR, PID_FILE,
-  STOP_FLAG_FILE,
+  runCmd, readConfig,
+  PID_FILE, STOP_FLAG_FILE,
   DEFAULT_NOW_BRI_FILE, DEFAULT_SYS_MAX_BRI_FILE,
 } from '../utils.js';
 
@@ -40,12 +39,9 @@ export function useStatus() {
 
   async function _ensurePaths() {
     if (_nowBriFile && _sysMaxBriFile) return;
-    const [r1, r2] = await Promise.all([
-      runCmd(`cat "${PATH_CONFIG_DIR}/now_bri_file.txt"`),
-      runCmd(`cat "${PATH_CONFIG_DIR}/max_bri_file.txt"`),
-    ]);
-    _nowBriFile = (r1.errno === 0 && r1.stdout.trim()) ? r1.stdout.trim() : DEFAULT_NOW_BRI_FILE;
-    _sysMaxBriFile = (r2.errno === 0 && r2.stdout.trim()) ? r2.stdout.trim() : DEFAULT_SYS_MAX_BRI_FILE;
+    const cfg = await readConfig();
+    _nowBriFile = cfg.now_bri_file || DEFAULT_NOW_BRI_FILE;
+    _sysMaxBriFile = cfg.max_bri_file || DEFAULT_SYS_MAX_BRI_FILE;
   }
 
   function invalidatePaths() {
@@ -65,13 +61,14 @@ export function useStatus() {
       sysMaxBri.value = sRes.errno === 0 ? sRes.stdout.trim() : '255';
     }
 
-    const [pidRes, stopRes, autoBriRes, hdrRes, sleepRes] = await Promise.all([
+    const [pidRes, stopRes, autoBriRes, hdrRes] = await Promise.all([
       runCmd(`cat "${PID_FILE}"`),
       runCmd(`[ -f "${STOP_FLAG_FILE}" ] && echo "1" || echo "0"`),
       runCmd(`settings get system screen_brightness_mode`),
       runCmd(`dumpsys display 2>/dev/null | sed -n 's/.*hdrSdrRatio \\([0-9.]*\\).*/\\1/p' | head -n 1`),
-      runCmd(`cat "${CONFIG_DIR}/sleep_time.txt"`),
     ]);
+    const cfgForSleep = await readConfig();
+    const sleepTimeStr = cfgForSleep.sleep_time || '';
 
     isPaused.value = stopRes.errno === 0 && stopRes.stdout.trim() === '1';
     const pidStr = pidRes.errno === 0 ? pidRes.stdout.trim() : '';
@@ -92,8 +89,7 @@ export function useStatus() {
     hdrRatio.value = (hdrRaw && /^\d+(\.\d+)?$/.test(hdrRaw)) ? parseFloat(hdrRaw).toFixed(2) : '-';
 
     // 计算睡眠状态
-    const sleepTime = sleepRes.errno === 0 ? sleepRes.stdout.trim() : '';
-    sleepStatus.value = _calcSleep(sleepTime);
+    sleepStatus.value = _calcSleep(sleepTimeStr);
   }
 
   function _calcSleep(sleepTime) {

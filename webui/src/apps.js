@@ -2,7 +2,7 @@
 import { listPackages, getPackagesInfo } from 'kernelsu';
 import { createIcons, Eye, EyeOff } from 'lucide';
 import PinyinMatch from 'pinyin-match';
-import { CONFIG_DIR, showToast, runCmd, writeFile } from './utils.js';
+import { CONFIG_DIR, showToast, runCmd, readConfig, updateConfig } from './utils.js';
 
 let showingSystemApps = true;
 let savedBlacklist = new Set();
@@ -93,9 +93,9 @@ export async function loadApps() {
   container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--md-sys-color-on-surface-variant);">加载中...</div>';
 
   try {
-    // 读取已保存的黑名单（包名条目 + 活动条目分开存储）
-    const blRes = await runCmd(`cat "${CONFIG_DIR}/blacklist_apps.txt"`);
-    const allSaved = blRes.errno === 0 ? blRes.stdout.trim().split('\n').filter(Boolean) : [];
+    // 读取已保存的黑名单（从 JSON 配置读取）
+    const cfg = await readConfig();
+    const allSaved = Array.isArray(cfg.blacklist_apps) ? cfg.blacklist_apps : [];
     savedBlacklist = new Set(allSaved);
     const savedPkgEntries = new Set(allSaved.filter(e => !e.includes('/')));
     activityEntries = new Set(allSaved.filter(e => e.includes('/')));
@@ -463,9 +463,8 @@ export function setupAppsEvents() {
       const selectedPkgs = [];
       document.querySelectorAll('.app-checkbox').forEach(cb => { if (cb.checked) selectedPkgs.push(cb.dataset.pkg); });
       const allEntries = [...selectedPkgs, ...activityEntries];
-      const content = allEntries.join('\n');
-      const res = await writeFile(`${CONFIG_DIR}/blacklist_apps.txt`, content);
-      if (res.errno === 0 || res.stdout.includes('OK')) {
+      const res = await updateConfig({ blacklist_apps: allEntries });
+      if (res.errno === 0 || res.stdout?.includes('OK')) {
         showToast('黑名单保存成功');
         savedBlacklist = new Set(allEntries);
         updateUnsavedStyling();

@@ -1,1 +1,0 @@
-/sys/class/backlight/panel0-backlight/max_brightness
