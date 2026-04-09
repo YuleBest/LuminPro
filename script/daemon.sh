@@ -77,11 +77,16 @@ while true; do
     _log "正在启动 lumipro 监听" "INFO"
     now_bri_file="${current_config%|*}"
     inotify_events="${current_config#*|}"
+    debug_mode="$(get_cfg debug_mode "0")"
 
     # 缓存当前监听路径（供参考）
     echo -n "$now_bri_file" >"$MODDIR/config/.cached_path"
 
-    "$MODDIR/bin/lumipro" "$MODDIR/script/up.sh" "$now_bri_file:$inotify_events" >>"$log_file" 2>&1 &
+    if [ "$debug_mode" = "1" ]; then
+        "$MODDIR/bin/lumipro" --debug "$MODDIR/script/up.sh" "$now_bri_file:$inotify_events" >>"$log_file" 2>&1 &
+    else
+        "$MODDIR/bin/lumipro" "$MODDIR/script/up.sh" "$now_bri_file:$inotify_events" >>"$log_file" 2>&1 &
+    fi
     inotify_pid=$!
     echo "$inotify_pid" >"$pid_file"
     _log "lumipro 已启动 (PID: $inotify_pid), 监听: $now_bri_file, 事件: $inotify_events" "SUCCESS"

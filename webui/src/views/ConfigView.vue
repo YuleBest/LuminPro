@@ -213,6 +213,17 @@ function handleSaveWebUI() {
 
         <div class="config-item">
           <div class="config-label">
+            <span class="config-name">调试模式</span>
+            <span class="config-desc">将每个 inotify 事件及防抖触发信息写入日志</span>
+            <span class="config-desc" style="color: var(--color-warning)"
+              >开启后需重启服务，日志量增大。诊断完成后请关闭</span
+            >
+          </div>
+          <Switch v-model="config.debugMode.value" />
+        </div>
+
+        <div class="config-item">
+          <div class="config-label">
             <span class="config-name">inotifyd 监听事件</span>
             <span class="config-desc">默认 c。修改需重启服务</span>
             <span class="config-desc" style="color: var(--color-warning)"

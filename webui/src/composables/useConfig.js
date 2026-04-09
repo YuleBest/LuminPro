@@ -31,6 +31,7 @@ export function useConfig() {
   const nowBriFile = ref(DEFAULT_NOW_BRI_FILE)
   const sysMaxBriFile = ref(DEFAULT_SYS_MAX_BRI_FILE)
   const inotifyEvents = ref('c')
+  const debugMode = ref(false)
 
   // Web UI 配置 (localStorage 持久化)
   const autoRefresh = ref(localStorage.getItem('autoRefresh') !== 'false')
@@ -55,6 +56,7 @@ export function useConfig() {
     nowBriFile.value = cfg.now_bri_file || DEFAULT_NOW_BRI_FILE
     sysMaxBriFile.value = cfg.max_bri_file || DEFAULT_SYS_MAX_BRI_FILE
     inotifyEvents.value = cfg.inotify_events || 'c'
+    debugMode.value = cfg.debug_mode === 1
 
     const st = cfg.sleep_time || ''
     if (st && st.includes('-')) {
@@ -112,6 +114,7 @@ export function useConfig() {
       now_bri_file: nowBriFile.value || DEFAULT_NOW_BRI_FILE,
       max_bri_file: sysMaxBriFile.value || DEFAULT_SYS_MAX_BRI_FILE,
       inotify_events: inotifyEvents.value || 'c',
+      debug_mode: debugMode.value ? 1 : 0,
     })
     onPathsChanged?.()
     toast('高级设置已保存，需重启服务生效')
@@ -207,6 +210,7 @@ export function useConfig() {
     nowBriFile,
     sysMaxBriFile,
     inotifyEvents,
+    debugMode,
     autoRefresh,
     statusRefreshInterval,
     uiZoom,

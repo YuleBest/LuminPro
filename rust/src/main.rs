@@ -84,10 +84,18 @@ mod linux {
         let mut idx = 0;
 
         let mut debounce_ms: u64 = 300;
-        if args.get(idx).map(String::as_str) == Some("--debounce") {
-            idx += 1;
-            debounce_ms = args.get(idx).and_then(|s| s.parse().ok()).unwrap_or(300);
-            idx += 1;
+        let mut debug = false;
+
+        loop {
+            match args.get(idx).map(String::as_str) {
+                Some("--debug") => { debug = true; idx += 1; }
+                Some("--debounce") => {
+                    idx += 1;
+                    debounce_ms = args.get(idx).and_then(|s| s.parse().ok()).unwrap_or(300);
+                    idx += 1;
+                }
+                _ => break,
+            }
         }
 
         let handler = match args.get(idx) {
@@ -124,6 +132,9 @@ mod linux {
             let mask = letters_to_mask(letters);
             match inotify.watches().add(&path, mask) {
                 Ok(wd) => {
+                    if debug {
+                        eprintln!("[lumipro] watching: {} events: {}", path_str, letters);
+                    }
                     watches.insert(wd, (path, letters.to_string()));
                 }
                 Err(e) => {
@@ -131,6 +142,10 @@ mod linux {
                     std::process::exit(1);
                 }
             }
+        }
+
+        if debug {
+            eprintln!("[lumipro] debounce={}ms handler={}", debounce_ms, handler);
         }
 
         let debounce = Duration::from_millis(debounce_ms);
@@ -161,9 +176,13 @@ mod linux {
                     Ok(events) => {
                         for event in events {
                             if let Some((path, _)) = watches.get(&event.wd) {
+                                let letters = mask_to_letters(event.mask);
+                                if debug {
+                                    eprintln!("[lumipro] event: {} path: {}", letters, path.display());
+                                }
                                 pending = Some(Pending {
                                     triggered_at: Instant::now(),
-                                    event_letters: mask_to_letters(event.mask),
+                                    event_letters: letters,
                                     path: path.clone(),
                                 });
                             }
@@ -174,19 +193,26 @@ mod linux {
                 }
             } else if let Some(p) = pending.take() {
                 // ── 3. 防抖窗口结束：同步执行 handler ───────────────────────
+                if debug {
+                    eprintln!("[lumipro] debounce fired → handler: {} {}", p.event_letters, p.path.display());
+                }
                 let _ = Command::new(&handler)
                     .arg(&p.event_letters)
                     .arg(&p.path)
                     .status();
 
                 // ── 4. 丢弃 handler 执行期间（亮度渐变写入）积压的全部事件 ─
+                let mut drained = 0usize;
                 loop {
                     match inotify.read_events(&mut buffer) {
                         Ok(events) => {
-                            for _ in events {}
+                            for _ in events { drained += 1; }
                         }
                         Err(_) => break, // WouldBlock：积压已清空
                     }
+                }
+                if debug && drained > 0 {
+                    eprintln!("[lumipro] drain: discarded {} event(s)", drained);
                 }
             }
         }
