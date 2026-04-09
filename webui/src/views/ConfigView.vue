@@ -42,10 +42,24 @@ function setTheme(v) {
 }
 
 async function viewInotifyHelp() {
-  showToast('获取中...')
-  const res = await runCmd('inotifyd --help')
-  const out = (res.stderr || '') + (res.stdout || '')
-  alert(out.trim() || '无法获取帮助信息')
+  const msg = `支持的事件字母 (toybox inotifyd 兼容):
+  a = accessed       读取
+  c = modified       内容修改 (亮度节点推荐用此)
+  e = metadata change 属性变更
+  w = closed (writable)   写入后关闭
+  0 = closed (unwritable) 查看后关闭
+  r = opened         打开
+  n = created        创建
+  d = deleted        删除(目录内)
+  D = deleted (self) 自身被删除
+  M = moved (self)   自身被移动
+  m = moved in       移入目录
+  y = moved out      移出目录
+  u = unmounted      挂载卷卸载
+  * = all events
+
+提示: sysfs 亮度节点使用 c (MODIFY)，这也是默认值`
+  alert(msg)
 }
 
 function handleSaveWebUI() {
@@ -224,8 +238,8 @@ function handleSaveWebUI() {
 
         <div class="config-item">
           <div class="config-label">
-            <span class="config-name">inotifyd 监听事件</span>
-            <span class="config-desc">默认 c。修改需重启服务</span>
+            <span class="config-name">lumipro 监听事件</span>
+            <span class="config-desc">默认 c（sysfs MODIFY）。修改需重启服务</span>
             <span class="config-desc" style="color: var(--color-warning)"
               >修改为 c 以外时建议关闭自动刷新</span
             >

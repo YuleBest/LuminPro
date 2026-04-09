@@ -1,11 +1,12 @@
 //! lumipro: 带防抖的 inotify 监听工具
 //!
-//! 用法: lumipro [--debounce <ms>] <handler> <path:events> [<path:events>...]
+//! 用法: lumipro [--debug] [--debounce <ms>] <handler> <path:events> [<path:events>...]
 //!
-//! 事件字母与 busybox inotifyd 完全兼容:
-//!   a=ACCESS  c=CLOSE_WRITE  e=CLOSE_NOWRITE  w=OPEN
-//!   r=MOVED_FROM  y=MOVED_TO  n=CREATE  d=DELETE
-//!   D=DELETE_SELF  M=MOVE_SELF  u=MODIFY  o=ATTRIB  *=ALL
+//! 事件字母与 Android toybox inotifyd 完全兼容:
+//!   a=ACCESS      c=MODIFY       e=ATTRIB       w=CLOSE_WRITE
+//!   0=CLOSE_NOWRITE  r=OPEN      n=CREATE       d=DELETE
+//!   D=DELETE_SELF M=MOVE_SELF   m=MOVED_TO     y=MOVED_FROM
+//!   u=UNMOUNT     o=OVERFLOW     x=IGNORED      *=ALL
 //!
 //! 防抖机制: 在指定窗口期内多次触发时，只执行最后一次；handler 执行期间
 //! 积压的事件（如亮度渐变写入）在 handler 返回后统一丢弃。
@@ -25,18 +26,20 @@ mod linux {
         for c in letters.chars() {
             mask |= match c {
                 'a' => WatchMask::ACCESS,
-                'c' => WatchMask::CLOSE_WRITE,
-                'e' => WatchMask::CLOSE_NOWRITE,
-                'w' => WatchMask::OPEN,
-                'r' => WatchMask::MOVED_FROM,
-                'y' => WatchMask::MOVED_TO,
+                'c' => WatchMask::MODIFY,          // toybox: modified
+                'e' => WatchMask::ATTRIB,          // toybox: metadata change
+                'w' => WatchMask::CLOSE_WRITE,     // toybox: closed (writable)
+                '0' => WatchMask::CLOSE_NOWRITE,   // toybox: closed (unwritable)
+                'r' => WatchMask::OPEN,            // toybox: opened
                 'n' => WatchMask::CREATE,
                 'd' => WatchMask::DELETE,
                 'D' => WatchMask::DELETE_SELF,
                 'M' => WatchMask::MOVE_SELF,
-                'u' => WatchMask::MODIFY,
-                'o' => WatchMask::ATTRIB,
+                'm' => WatchMask::MOVED_TO,        // toybox: moved in
+                'y' => WatchMask::MOVED_FROM,      // toybox: moved out
+                'u' => WatchMask::UNMOUNT,         // toybox: unmounted
                 '*' => WatchMask::ALL_EVENTS,
+                // 'o'=overflow 'x'=ignored 为内核产生，不设置 watch mask
                 _ => WatchMask::empty(),
             };
         }
@@ -46,17 +49,20 @@ mod linux {
     fn mask_to_letters(mask: EventMask) -> String {
         let mut s = String::new();
         if mask.contains(EventMask::ACCESS) { s.push('a'); }
-        if mask.contains(EventMask::CLOSE_WRITE) { s.push('c'); }
-        if mask.contains(EventMask::CLOSE_NOWRITE) { s.push('e'); }
-        if mask.contains(EventMask::OPEN) { s.push('w'); }
-        if mask.contains(EventMask::MOVED_FROM) { s.push('r'); }
-        if mask.contains(EventMask::MOVED_TO) { s.push('y'); }
+        if mask.contains(EventMask::MODIFY) { s.push('c'); }
+        if mask.contains(EventMask::ATTRIB) { s.push('e'); }
+        if mask.contains(EventMask::CLOSE_WRITE) { s.push('w'); }
+        if mask.contains(EventMask::CLOSE_NOWRITE) { s.push('0'); }
+        if mask.contains(EventMask::OPEN) { s.push('r'); }
+        if mask.contains(EventMask::MOVED_FROM) { s.push('y'); }
+        if mask.contains(EventMask::MOVED_TO) { s.push('m'); }
         if mask.contains(EventMask::CREATE) { s.push('n'); }
         if mask.contains(EventMask::DELETE) { s.push('d'); }
         if mask.contains(EventMask::DELETE_SELF) { s.push('D'); }
         if mask.contains(EventMask::MOVE_SELF) { s.push('M'); }
-        if mask.contains(EventMask::MODIFY) { s.push('u'); }
-        if mask.contains(EventMask::ATTRIB) { s.push('o'); }
+        if mask.contains(EventMask::UNMOUNT) { s.push('u'); }
+        if mask.contains(EventMask::Q_OVERFLOW) { s.push('o'); }
+        if mask.contains(EventMask::IGNORED) { s.push('x'); }
         if s.is_empty() { s.push('?'); }
         s
     }
