@@ -2,7 +2,7 @@
 import { listPackages, getPackagesInfo } from 'kernelsu'
 import { createIcons, Eye, EyeOff } from 'lucide'
 import PinyinMatch from 'pinyin-match'
-import { CONFIG_DIR, showToast, runCmd, readConfig, updateConfig } from './utils.js'
+import { showToast, runCmd, readConfig, updateConfig } from './utils.js'
 
 let showingSystemApps = true
 let savedBlacklist = new Set()
@@ -142,10 +142,30 @@ export async function loadApps() {
 
     if (infoList.length === 0) {
       infoList.push(
-        { packageName: 'com.example.app1', appLabel: '示例 1', isSystem: false, uid: 10123 },
-        { packageName: 'com.example.app2', appLabel: '示例 2', isSystem: false, uid: 10124 },
-        { packageName: 'com.example.sys1', appLabel: '系统示例 1', isSystem: true, uid: 1000 },
-        { packageName: 'com.example.sys2', appLabel: '系统示例 2', isSystem: true, uid: 1001 },
+        {
+          packageName: 'com.example.app1',
+          appLabel: '示例 1',
+          isSystem: false,
+          uid: 10123,
+        },
+        {
+          packageName: 'com.example.app2',
+          appLabel: '示例 2',
+          isSystem: false,
+          uid: 10124,
+        },
+        {
+          packageName: 'com.example.sys1',
+          appLabel: '系统示例 1',
+          isSystem: true,
+          uid: 1000,
+        },
+        {
+          packageName: 'com.example.sys2',
+          appLabel: '系统示例 2',
+          isSystem: true,
+          uid: 1001,
+        },
       )
       if (!showingSystemApps) {
         infoList = infoList.filter((app) => !app.isSystem)

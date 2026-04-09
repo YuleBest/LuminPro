@@ -36,6 +36,11 @@ function handleReset() {
   config.resetToDefaults(showToast)
 }
 
+function setTheme(v) {
+  config.themeMode.value = v
+  config.applyTheme(v)
+}
+
 async function viewInotifyHelp() {
   showToast('获取中...')
   const res = await runCmd('inotifyd --help')
@@ -296,10 +301,7 @@ function handleSaveWebUI() {
               :key="opt.v"
               class="theme-seg-btn"
               :class="{ active: config.themeMode.value === opt.v }"
-              @click="
-                config.themeMode.value = opt.v
-                config.applyTheme(opt.v)
-              "
+              @click="setTheme(opt.v)"
             >
               {{ opt.l }}
             </button>

@@ -7,8 +7,8 @@
     "dev": "cd webui && vite",
     "build": "cd webui && vite build && cd .. && node build-module.js",
     "preview": "cd webui && vite preview",
-    "lint": "oxlint",
-    "lint:fix": "oxlint --fix",
+    "lint": "oxlint webui/",
+    "lint:fix": "oxlint --fix webui/",
     "fmt": "oxfmt webui/",
     "fmt:check": "oxfmt webui/ --check"
   },

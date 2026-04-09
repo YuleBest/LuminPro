@@ -75,6 +75,27 @@ function doAddActivity() {
   showToast(`已添加: ${val}`)
 }
 
+function menuToggleSystemApps() {
+  toggleSystemApps()
+  appsMenuOpen.value = false
+}
+function menuSmartSelect() {
+  smartSelect()
+  appsMenuOpen.value = false
+}
+function menuSelectAll() {
+  selectAll()
+  appsMenuOpen.value = false
+}
+function menuSelectNone() {
+  selectNone()
+  appsMenuOpen.value = false
+}
+function menuInvertSelection() {
+  invertSelection()
+  appsMenuOpen.value = false
+}
+
 // 手动添加包名
 async function handleManualAdd() {
   appsMenuOpen.value = false
@@ -155,6 +176,11 @@ function confirmPicker() {
   showToast(`已添加: ${pickerResult.value}`)
   closePicker()
 }
+function retryPicker() {
+  pickerStep.value = 2
+  pickerPolling.value = false
+  stopPolling()
+}
 </script>
 
 <template>
@@ -185,53 +211,23 @@ function confirmPicker() {
             </svg>
           </Button>
           <div class="dropdown-menu" :class="{ show: appsMenuOpen }" @click.stop>
-            <div
-              class="dropdown-item"
-              @click="
-                toggleSystemApps()
-                appsMenuOpen = false
-              "
-            >
+            <div class="dropdown-item" @click="menuToggleSystemApps">
               <component :is="showingSystemApps ? EyeOff : Eye" :size="18" />
               <span>{{ showingSystemApps ? '隐藏系统应用' : '显示系统应用' }}</span>
             </div>
-            <div
-              class="dropdown-item"
-              @click="
-                smartSelect()
-                appsMenuOpen = false
-              "
-            >
+            <div class="dropdown-item" @click="menuSmartSelect">
               <Sparkles :size="18" /><span>智能选择</span>
             </div>
             <div class="dropdown-item" @click="handleManualAdd">
               <Plus :size="18" /><span>手动添加包名</span>
             </div>
-            <div
-              class="dropdown-item"
-              @click="
-                selectAll()
-                appsMenuOpen = false
-              "
-            >
+            <div class="dropdown-item" @click="menuSelectAll">
               <CheckCheck :size="18" /><span>全选</span>
             </div>
-            <div
-              class="dropdown-item"
-              @click="
-                selectNone()
-                appsMenuOpen = false
-              "
-            >
+            <div class="dropdown-item" @click="menuSelectNone">
               <Square :size="18" /><span>全不选</span>
             </div>
-            <div
-              class="dropdown-item"
-              @click="
-                invertSelection()
-                appsMenuOpen = false
-              "
-            >
+            <div class="dropdown-item" @click="menuInvertSelection">
               <CheckSquare :size="18" /><span>反选</span>
             </div>
           </div>
@@ -427,15 +423,7 @@ function confirmPicker() {
             <p class="picker-step-desc">以下活动将被添加到按活动屏蔽列表：</p>
             <div class="picker-result-box">{{ pickerResult }}</div>
             <div class="picker-result-actions">
-              <Button
-                variant="secondary"
-                @click="
-                  pickerStep = 2
-                  pickerPolling = false
-                  stopPolling()
-                "
-                >重试</Button
-              >
+              <Button variant="secondary" @click="retryPicker">重试</Button>
               <Button @click="confirmPicker"><Check :size="15" /> 确认添加</Button>
             </div>
           </div>

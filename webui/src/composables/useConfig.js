@@ -4,7 +4,6 @@ import {
   readConfig,
   writeConfig,
   updateConfig,
-  CONFIG_FILE,
   BACKUP_CONFIG_FILE,
   PID_FILE,
   FLAG_FILE,

@@ -10,6 +10,14 @@ const logMenuOpen = ref(false)
 const clearConfirming = ref(false)
 
 let clearConfirmTimer = null
+function copyLog() {
+  log.copy(showToast)
+  logMenuOpen.value = false
+}
+function exportLog() {
+  log.exportLog(showToast)
+  logMenuOpen.value = false
+}
 function handleClear() {
   if (!clearConfirming.value) {
     clearConfirming.value = true
@@ -62,22 +70,8 @@ onMounted(() => log.load())
           </svg>
         </Button>
         <div class="dropdown-menu" :class="{ show: logMenuOpen }" @click.stop>
-          <div
-            class="dropdown-item"
-            @click="
-              log.copy(showToast)
-              logMenuOpen = false
-            "
-          >
-            <Copy :size="18" /><span>复制日志</span>
-          </div>
-          <div
-            class="dropdown-item"
-            @click="
-              log.exportLog(showToast)
-              logMenuOpen = false
-            "
-          >
+          <div class="dropdown-item" @click="copyLog"><Copy :size="18" /><span>复制日志</span></div>
+          <div class="dropdown-item" @click="exportLog">
             <Download :size="18" /><span>导出日志文件</span>
           </div>
           <div

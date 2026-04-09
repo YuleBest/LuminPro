@@ -1,7 +1,7 @@
 import { ref, reactive } from 'vue'
 import { listPackages, getPackagesInfo } from 'kernelsu'
 import PinyinMatch from 'pinyin-match'
-import { runCmd, readConfig, updateConfig } from '../utils.js'
+import { readConfig, updateConfig } from '../utils.js'
 
 export function useApps() {
   const apps = ref([])

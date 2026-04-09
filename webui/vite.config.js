@@ -13,5 +13,6 @@ export default defineConfig({
   build: {
     outDir: '../webroot',
     emptyOutDir: true,
+    minify: 'oxc',
   },
 })
