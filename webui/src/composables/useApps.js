@@ -1,7 +1,7 @@
 import { ref, reactive } from 'vue';
 import { listPackages, getPackagesInfo } from 'kernelsu';
 import PinyinMatch from 'pinyin-match';
-import { runCmd, writeFile, CONFIG_DIR } from '../utils.js';
+import { runCmd, readConfig, updateConfig } from '../utils.js';
 
 export function useApps() {
   const apps = ref([]);
@@ -18,8 +18,8 @@ export function useApps() {
     isLoading.value = true;
     loadError.value = '';
     try {
-      const blRes = await runCmd(`cat "${CONFIG_DIR}/blacklist_apps.txt"`);
-      const allSaved = blRes.errno === 0 ? blRes.stdout.trim().split('\n').filter(Boolean) : [];
+      const cfg = await readConfig();
+      const allSaved = Array.isArray(cfg.blacklist_apps) ? cfg.blacklist_apps : [];
       savedBlacklist.value = new Set(allSaved);
       const savedPkgSet = new Set(allSaved.filter(e => !e.includes('/')));
       activityEntries.value = new Set(allSaved.filter(e => e.includes('/')));
@@ -100,8 +100,8 @@ export function useApps() {
     toast('保存中...');
     const selectedPkgs = apps.value.filter(a => a.checked).map(a => a.packageName);
     const allEntries = [...selectedPkgs, ...activityEntries.value];
-    const res = await writeFile(`${CONFIG_DIR}/blacklist_apps.txt`, allEntries.join('\n'));
-    if (res.errno === 0 || res.stdout?.includes('OK')) {
+    const res = await updateConfig({ blacklist_apps: allEntries });
+    if (res.errno === 0) {
       savedBlacklist.value = new Set(allEntries);
       toast('黑名单保存成功');
     } else {

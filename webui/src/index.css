@@ -27,7 +27,7 @@
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
   --font-sans: Geist, system-ui, -apple-system, sans-serif;
-  --font-mono: 'Google Sans Code', 'Roboto Mono', monospace;
+  --font-mono: 'Geist Mono', 'Roboto Mono', monospace;
 }
 
 /* ===============================

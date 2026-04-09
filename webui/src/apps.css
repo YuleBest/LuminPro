@@ -157,7 +157,7 @@
 .app-pkg {
   font-size: 0.8125rem;
   color: var(--md-sys-color-on-surface-variant);
-  font-family: 'Google Sans Code', monospace;
+  font-family: 'Geist Mono', monospace;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -206,7 +206,7 @@
   border: 1px solid var(--md-sys-color-outline-variant);
   padding: 0 4px;
   border-radius: 4px;
-  font-family: 'Google Sans Code', monospace;
+  font-family: 'Geist Mono', monospace;
   margin-left: 6px;
   vertical-align: middle;
 }
@@ -275,7 +275,7 @@
 
 .activity-entry-path {
   flex: 1;
-  font-family: 'Google Sans Code', 'Roboto Mono', monospace;
+  font-family: 'Geist Mono', 'Roboto Mono', monospace;
   font-size: 0.75rem;
   color: var(--md-sys-color-on-surface-variant);
   word-break: break-all;
@@ -359,7 +359,7 @@
   border: 1px solid var(--md-sys-color-outline-variant);
   border-radius: var(--border-radius-s);
   padding: 7px 10px;
-  font-family: 'Google Sans Code', 'Roboto Mono', monospace;
+  font-family: 'Geist Mono', 'Roboto Mono', monospace;
   font-size: 0.8125rem;
   color: var(--md-sys-color-on-surface);
   outline: none;
@@ -513,7 +513,7 @@
   border: 1.5px solid var(--md-sys-color-primary);
   border-radius: var(--border-radius-m);
   padding: 14px 18px;
-  font-family: 'Google Sans Code', 'Roboto Mono', monospace;
+  font-family: 'Geist Mono', 'Roboto Mono', monospace;
   font-size: 0.875rem;
   color: var(--md-sys-color-on-surface);
   word-break: break-all;

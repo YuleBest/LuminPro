@@ -146,7 +146,7 @@
   border-radius: var(--border-radius-m);
   resize: vertical;
   padding: 10px 14px;
-  font-family: 'Google Sans Code', system-ui, monospace;
+  font-family: 'Geist Mono', system-ui, monospace;
   font-size: 0.875rem;
   line-height: 1.4;
   transition: all 0.2s ease;
@@ -203,7 +203,7 @@
   border: none;
   font-size: 0.875rem;
   text-align: center;
-  font-family: 'Google Sans Code', monospace;
+  font-family: 'Geist Mono', monospace;
   outline: none;
   -moz-appearance: textfield;
 }

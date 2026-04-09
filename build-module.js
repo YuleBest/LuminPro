@@ -1,4 +1,6 @@
 import fs from 'fs';
+import path from 'path';
+import crypto from 'crypto';
 import archiver from 'archiver';
 
 // 读取版本信息用以命名
@@ -21,14 +23,12 @@ if (fs.existsSync(updateJsonPath)) {
     updateJson.version = version;
     updateJson.zipUrl = `https://share.yule.ink/magisk/mod/luminpro/module/${zipName}`;
     fs.writeFileSync(updateJsonPath, JSON.stringify(updateJson, null, 4), 'utf-8');
-    console.log(`>>> [1/2] 已同步 update.json (版本: ${version}, Code: ${versionCode})`);
+    console.log(`>>> [1/3] 已同步 update.json (版本: ${version}, Code: ${versionCode})`);
   } catch (e) {
     console.error(`[错误] 无法更新 update.json: ${e.message}`);
   }
 }
 // ---------------------------------
-
-console.log(`\n>>> [2/2] 创建模块 ZIP 压缩包...`);
 
 // 明确需要忽略的文件清单
 const excludes = [
@@ -45,6 +45,35 @@ const excludes = [
   'webui', // webui 目录已经构建到 webroot
   zipName
 ];
+
+console.log(`\n>>> [2/3] 生成 SHA256SUMS...`);
+
+// 计算可执行文件（所有 .sh 脚本 + bin/ 二进制）的 SHA256
+function sha256File(filePath) {
+  return crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
+}
+
+function collectExecutables(dir, baseDir = dir) {
+  const results = [];
+  for (const dirent of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, dirent.name);
+    const rel  = path.relative(baseDir, full).replace(/\\/g, '/');
+    if (dirent.isDirectory()) {
+      results.push(...collectExecutables(full, baseDir));
+    } else if (dirent.name.endsWith('.sh') || dir.endsWith('bin')) {
+      results.push(rel);
+    }
+  }
+  return results;
+}
+
+const execFiles = collectExecutables('.').filter(f => !excludes.some(e => f.startsWith(e)));
+const sha256Lines = execFiles.sort().map(f => `${sha256File(f)}  ${f}`);
+const sha256SumsPath = 'SHA256SUMS';
+fs.writeFileSync(sha256SumsPath, sha256Lines.join('\n') + '\n', 'utf-8');
+console.log(`已生成 ${sha256Lines.length} 条记录:\n${sha256Lines.join('\n')}`);
+
+console.log(`\n>>> [3/3] 创建模块 ZIP 压缩包...`);
 
 // 初始化归档器
 const output = fs.createWriteStream(zipName);
@@ -72,6 +101,22 @@ archive.on('error', function (err) {
 });
 
 archive.pipe(output);
+
+// 将所有 .sh 文件统一转换为 LF 换行符，防止 Windows 环境写入 CRLF 导致 ash 报错
+function fixLineEndings(dir) {
+  for (const dirent of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, dirent.name);
+    if (dirent.isDirectory() && !excludes.includes(dirent.name)) {
+      fixLineEndings(full);
+    } else if (dirent.name.endsWith('.sh')) {
+      const content = fs.readFileSync(full, 'utf8');
+      if (content.includes('\r\n')) {
+        fs.writeFileSync(full, content.replace(/\r\n/g, '\n'), 'utf8');
+      }
+    }
+  }
+}
+fixLineEndings('.');
 
 // 将没在排除列表里的文件打进去
 const dirContents = fs.readdirSync('.', { withFileTypes: true });
