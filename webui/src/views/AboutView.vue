@@ -1,5 +1,6 @@
 <script setup>
 import { ref } from 'vue'
+import MarkdownIt from 'markdown-it'
 import Button from '@/components/ui/Button.vue'
 import { BookOpen, ScrollText, StickyNote, X, Github } from 'lucide-vue-next'
 import { runCmd } from '../utils.js'
@@ -11,25 +12,14 @@ const sheetTitle = ref('')
 const sheetContent = ref('')
 const sheetLoading = ref(false)
 
+const md = new MarkdownIt({ html: false, linkify: true, typographer: true })
+
 const moduleDocs = [
   { title: 'README', file: `${MODULE_DIR}/README.md`, icon: BookOpen, md: true },
   { title: 'README (EN)', file: `${MODULE_DIR}/README_en.md`, icon: BookOpen, md: true },
   { title: '更新日志', file: `${MODULE_DIR}/changelog.md`, icon: ScrollText, md: true },
   { title: 'NOTE', file: `${MODULE_DIR}/NOTE.txt`, icon: StickyNote, md: false },
 ]
-
-function mdToHtml(text) {
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
-    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
-    .replace(/^# (.+)$/gm, '<h1>$1</h1>')
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/`([^`]+)`/g, '<code>$1</code>')
-    .replace(/\n/g, '<br>')
-}
 
 async function openModuleDoc(doc) {
   sheetTitle.value = doc.title
@@ -40,7 +30,7 @@ async function openModuleDoc(doc) {
     const res = await runCmd(`cat "${doc.file}" 2>/dev/null`)
     if (res.errno !== 0 || !res.stdout.trim()) throw new Error('文件不存在或为空')
     sheetContent.value = doc.md
-      ? mdToHtml(res.stdout)
+      ? md.render(res.stdout)
       : res.stdout
           .replace(/&/g, '&amp;')
           .replace(/</g, '&lt;')
