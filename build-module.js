@@ -22,6 +22,7 @@ if (fs.existsSync(updateJsonPath)) {
     updateJson.versionCode = versionCode;
     updateJson.version = version;
     updateJson.zipUrl = `https://share.yule.ink/magisk/mod/luminpro/module/${zipName}`;
+    updateJson.changelog = `https://raw.githubusercontent.com/YuleBest/LuminPro/main/changelog.md`;
     fs.writeFileSync(updateJsonPath, JSON.stringify(updateJson, null, 4), 'utf-8');
     console.log(`>>> [1/3] 已同步 update.json (版本: ${version}, Code: ${versionCode})`);
   } catch (e) {
