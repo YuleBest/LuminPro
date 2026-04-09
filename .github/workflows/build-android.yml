@@ -1,4 +1,4 @@
-name: Build Android Binary
+name: Build & Package Module
 
 on:
   push:
@@ -7,12 +7,31 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-android:
+  build:
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
 
+      # ── 1. WebUI ────────────────────────────────────────────────────────
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install Node.js dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build WebUI
+        run: pnpm build
+
+      # ── 2. lumipro 二进制 ────────────────────────────────────────────────
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -32,19 +51,36 @@ jobs:
       - name: Install cargo-ndk
         run: cargo install cargo-ndk --locked
 
-      - name: Update lockfile
-        working-directory: rust
-        run: cargo update
-
-      - name: Build
+      - name: Build lumipro (aarch64-linux-android)
         working-directory: rust
         env:
           ANDROID_NDK_HOME: ${{ steps.ndk.outputs.ndk-path }}
         run: cargo ndk -t arm64-v8a --platform 26 build --release
 
-      - name: Upload binary
+      - name: Copy binary to bin/
+        run: |
+          cp rust/target/aarch64-linux-android/release/lumipro bin/lumipro
+          chmod +x bin/lumipro
+
+      # ── 3. 打包模块 ──────────────────────────────────────────────────────
+      - name: Package module
+        run: node build-module.js
+
+      # ── 4. 重命名 zip（加入 commit 短哈希）──────────────────────────────
+      - name: Rename zip with commit hash
+        id: names
+        run: |
+          VERSION=$(grep '^version=' module.prop | cut -d= -f2 | tr -d '[:space:]')
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          ORIGINAL="LuminPro_${VERSION}.zip"
+          FINAL="LuminPro_${VERSION}-${SHORT_SHA}.zip"
+          mv "$ORIGINAL" "$FINAL"
+          echo "zip=$FINAL" >> "$GITHUB_OUTPUT"
+
+      # ── 5. 上传 artifact ─────────────────────────────────────────────────
+      - name: Upload module zip
         uses: actions/upload-artifact@v4
         with:
-          name: lumipro-aarch64-linux-android
-          path: rust/target/aarch64-linux-android/release/lumipro
+          name: ${{ steps.names.outputs.zip }}
+          path: ${{ steps.names.outputs.zip }}
           if-no-files-found: error
