@@ -68,6 +68,7 @@ write_config_json() {
         --arg inotify_events "${cfg_inotify_events:-c}" \
         --arg now_bri_file "${cfg_now_bri_file:-$DEFAULT_NOW_BRI_FILE}" \
         --arg max_bri_file "${cfg_max_bri_file:-$DEFAULT_MAX_BRI_FILE}" \
+        --arg log_level "${cfg_log_level:-info}" \
         --argjson blacklist_apps "${cfg_blacklist_apps:-[]}" \
         '{
             ui_max_bri:        ($ui_max_bri        | tonumber),
@@ -80,6 +81,7 @@ write_config_json() {
             inotify_events:    $inotify_events,
             now_bri_file:      $now_bri_file,
             max_bri_file:      $max_bri_file,
+            log_level:         $log_level,
             blacklist_apps:    $blacklist_apps
         }' >"$CONFIG_FILE"
 }
@@ -291,6 +293,7 @@ INIT_CONFIG() {
         cfg_now_bri_file="$DEFAULT_NOW_BRI_FILE"
         cfg_max_bri_file="$DEFAULT_MAX_BRI_FILE"
         cfg_blacklist_apps="[]"
+        cfg_log_level="info"
         write_config_json
     fi
 }
@@ -304,6 +307,7 @@ ENSURE_DEFAULTS() {
         .display_hdr_sleep = (.display_hdr_sleep  // 0) |
         .sleep_time        = (.sleep_time         // "") |
         .inotify_events    = (.inotify_events     // "c") |
+        .log_level         = (.log_level          // "info") |
         .blacklist_apps    = (.blacklist_apps     // [])
     ' "$CONFIG_FILE" >"$CONFIG_FILE.tmp" && mv "$CONFIG_FILE.tmp" "$CONFIG_FILE"
 }

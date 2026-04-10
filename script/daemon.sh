@@ -36,6 +36,13 @@ get_config_hash() {
 
 _log() {
     local level="${2:-INFO}"
+    local ll
+    ll="$(get_cfg log_level "info")"
+    case "$ll" in
+    off) return ;;
+    error) case "$level" in ERROR) ;; *) return ;; esac ;;
+    warn) case "$level" in ERROR | WARN) ;; *) return ;; esac ;;
+    esac
     printf '[%s] [%s] [%s] %s\n' "$(date '+%m-%d %H:%M:%S')" "daemon" "$level" "$1" >>"$log_file"
 }
 

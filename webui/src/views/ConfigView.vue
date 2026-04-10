@@ -208,6 +208,29 @@ function handleSaveWebUI() {
             class="config-input"
           />
         </div>
+
+        <div class="config-item">
+          <div class="config-label">
+            <span class="config-name">日志等级</span>
+            <span class="config-desc">低于该等级的日志不写入文件</span>
+          </div>
+          <div class="theme-seg">
+            <button
+              v-for="opt in [
+                { v: 'off', l: '关闭' },
+                { v: 'error', l: '错误' },
+                { v: 'warn', l: '警告' },
+                { v: 'info', l: '全部' },
+              ]"
+              :key="opt.v"
+              class="theme-seg-btn"
+              :class="{ active: config.logLevel.value === opt.v }"
+              @click="config.logLevel.value = opt.v"
+            >
+              {{ opt.l }}
+            </button>
+          </div>
+        </div>
       </div>
 
       <div class="card-actions">

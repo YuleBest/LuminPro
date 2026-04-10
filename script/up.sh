@@ -22,6 +22,7 @@ get_cfg() {
 }
 
 now_bri_file="$(get_cfg now_bri_file "$DEFAULT_NOW_BRI_FILE")"
+log_level="$(get_cfg log_level "info")"
 
 _log() {
     local level="${2:-INFO}"
@@ -29,6 +30,12 @@ _log() {
     case "$1" in
     "日志超限"*) ;;
     *) if [ -f "$stop_file" ]; then return; fi ;;
+    esac
+
+    case "$log_level" in
+    off) return ;;
+    error) case "$level" in ERROR) ;; *) return ;; esac ;;
+    warn) case "$level" in ERROR | WARN) ;; *) return ;; esac ;;
     esac
 
     local max_size

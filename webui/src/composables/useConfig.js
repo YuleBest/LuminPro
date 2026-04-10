@@ -32,6 +32,7 @@ export function useConfig() {
   const sysMaxBriFile = ref(DEFAULT_SYS_MAX_BRI_FILE)
   const inotifyEvents = ref('c')
   const debugMode = ref(false)
+  const logLevel = ref('info')
 
   // Web UI 配置 (localStorage 持久化)
   const autoRefresh = ref(localStorage.getItem('autoRefresh') !== 'false')
@@ -57,6 +58,7 @@ export function useConfig() {
     sysMaxBriFile.value = cfg.max_bri_file || DEFAULT_SYS_MAX_BRI_FILE
     inotifyEvents.value = cfg.inotify_events || 'c'
     debugMode.value = cfg.debug_mode === 1
+    logLevel.value = cfg.log_level || 'info'
 
     const st = cfg.sleep_time || ''
     if (st && st.includes('-')) {
@@ -98,6 +100,7 @@ export function useConfig() {
       auto_bri_sleep: autoBriSleep.value ? 1 : 0,
       display_hdr_sleep: displayHdrSleep.value ? 1 : 0,
       sleep_time: getSleepTimeStr(),
+      log_level: logLevel.value,
     })
     await runCmd(`rm -f "${FLAG_FILE}"`)
     const pidRes = await runCmd(`cat "${PID_FILE}"`)
@@ -211,6 +214,7 @@ export function useConfig() {
     sysMaxBriFile,
     inotifyEvents,
     debugMode,
+    logLevel,
     autoRefresh,
     statusRefreshInterval,
     uiZoom,
