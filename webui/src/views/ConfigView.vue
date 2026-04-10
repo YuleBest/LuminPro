@@ -13,12 +13,16 @@ import {
   Settings,
   Monitor,
   HelpCircle,
+  ChevronDown,
 } from 'lucide-vue-next'
 import { runCmd } from '../utils.js'
 
 const config = inject('config')
 const showToast = inject('showToast')
 const restartRefresh = inject('restartRefresh')
+
+const advancedOpen = ref(false)
+const webuiOpen = ref(false)
 
 // 恢复默认二次确认
 const resetConfirming = ref(false)
@@ -220,136 +224,148 @@ function handleSaveWebUI() {
 
     <!-- === 高级设置 === -->
     <section class="card" id="advanced-section" data-nav-group="config">
-      <div class="card-header"><h2>高级设置</h2></div>
-
-      <div class="config-group">
-        <h3 class="group-title"><Settings :size="16" /> 运行环境</h3>
-
-        <div class="config-item">
-          <div class="config-label">
-            <span class="config-name">调试模式</span>
-            <span class="config-desc">将每个 inotify 事件及防抖触发信息写入日志</span>
-            <span class="config-desc" style="color: var(--color-warning)"
-              >开启后需重启服务，日志量增大。诊断完成后请关闭</span
-            >
-          </div>
-          <Switch v-model="config.debugMode.value" />
-        </div>
-
-        <div class="config-item">
-          <div class="config-label">
-            <span class="config-name">lumipro 监听事件</span>
-            <span class="config-desc">默认 c（sysfs MODIFY）。修改需重启服务</span>
-            <span class="config-desc" style="color: var(--color-warning)"
-              >修改为 c 以外时建议关闭自动刷新</span
-            >
-            <button
-              class="btn-text-s"
-              style="margin-top: 6px; padding: 2px 6px"
-              @click="viewInotifyHelp"
-            >
-              查看支持事件
-            </button>
-          </div>
-          <Input
-            v-model="config.inotifyEvents.value"
-            type="text"
-            placeholder="c"
-            class="config-input"
-          />
-        </div>
-
-        <div class="config-item" id="advanced-section">
-          <div class="config-label">
-            <span class="config-name">当前亮度节点</span>
-            <span class="config-desc">修改需重启服务</span>
-          </div>
-          <Textarea v-model="config.nowBriFile.value" class="config-textarea" />
-        </div>
-
-        <div class="config-item">
-          <div class="config-label">
-            <span class="config-name">最大亮度节点</span>
-            <span class="config-desc">修改需重启服务</span>
-          </div>
-          <Textarea v-model="config.sysMaxBriFile.value" class="config-textarea" />
-        </div>
+      <div class="card-header card-header-toggle" @click="advancedOpen = !advancedOpen">
+        <h2>高级设置</h2>
+        <ChevronDown :size="18" class="collapse-chevron" :class="{ open: advancedOpen }" />
       </div>
+      <div class="collapsible-body" :class="{ open: advancedOpen }">
+        <div>
+          <div class="config-group">
+            <h3 class="group-title"><Settings :size="16" /> 运行环境</h3>
 
-      <div class="card-actions">
-        <Button @click="config.saveAdvanced(showToast, () => {})">
-          <Save :size="15" /> 保存设置
-        </Button>
+            <div class="config-item">
+              <div class="config-label">
+                <span class="config-name">调试模式</span>
+                <span class="config-desc">将每个 inotify 事件及防抖触发信息写入日志</span>
+                <span class="config-desc" style="color: var(--color-warning)"
+                  >开启后需重启服务，日志量增大。诊断完成后请关闭</span
+                >
+              </div>
+              <Switch v-model="config.debugMode.value" />
+            </div>
+
+            <div class="config-item">
+              <div class="config-label">
+                <span class="config-name">lumipro 监听事件</span>
+                <span class="config-desc">默认 c（sysfs MODIFY）。修改需重启服务</span>
+                <span class="config-desc" style="color: var(--color-warning)"
+                  >修改为 c 以外时建议关闭自动刷新</span
+                >
+                <button
+                  class="btn-text-s"
+                  style="margin-top: 6px; padding: 2px 6px"
+                  @click="viewInotifyHelp"
+                >
+                  查看支持事件
+                </button>
+              </div>
+              <Input
+                v-model="config.inotifyEvents.value"
+                type="text"
+                placeholder="c"
+                class="config-input"
+              />
+            </div>
+
+            <div class="config-item" id="advanced-section">
+              <div class="config-label">
+                <span class="config-name">当前亮度节点</span>
+                <span class="config-desc">修改需重启服务</span>
+              </div>
+              <Textarea v-model="config.nowBriFile.value" class="config-textarea" />
+            </div>
+
+            <div class="config-item">
+              <div class="config-label">
+                <span class="config-name">最大亮度节点</span>
+                <span class="config-desc">修改需重启服务</span>
+              </div>
+              <Textarea v-model="config.sysMaxBriFile.value" class="config-textarea" />
+            </div>
+          </div>
+
+          <div class="card-actions">
+            <Button @click="config.saveAdvanced(showToast, () => {})">
+              <Save :size="15" /> 保存设置
+            </Button>
+          </div>
+        </div>
       </div>
     </section>
 
     <!-- === Web UI 配置 === -->
     <section class="card" id="webui-config-section" data-nav-group="config">
-      <div class="card-header"><h2>Web UI 配置</h2></div>
-
-      <div class="config-group">
-        <h3 class="group-title"><Monitor :size="16" /> 界面设置</h3>
-
-        <div class="config-item">
-          <div class="config-label">
-            <span class="config-name">自动刷新</span>
-            <span class="config-desc">定时刷新状态和日志。监听非 c 事件时建议关闭</span>
-          </div>
-          <Switch v-model="config.autoRefresh.value" />
-        </div>
-
-        <div class="config-item" v-show="config.autoRefresh.value">
-          <div class="config-label">
-            <span class="config-name">状态/日志刷新间隔</span>
-            <span class="config-desc">单位: 毫秒 (最小100ms)</span>
-          </div>
-          <Input
-            v-model="config.statusRefreshInterval.value"
-            type="number"
-            min="100"
-            class="config-input"
-          />
-        </div>
-
-        <div class="config-item">
-          <div class="config-label">
-            <span class="config-name">外观主题</span>
-            <span class="config-desc">深色 / 浅色 / 跟随系统</span>
-          </div>
-          <div class="theme-seg">
-            <button
-              v-for="opt in [
-                { v: 'system', l: '系统' },
-                { v: 'light', l: '浅色' },
-                { v: 'dark', l: '深色' },
-              ]"
-              :key="opt.v"
-              class="theme-seg-btn"
-              :class="{ active: config.themeMode.value === opt.v }"
-              @click="setTheme(opt.v)"
-            >
-              {{ opt.l }}
-            </button>
-          </div>
-        </div>
-
-        <div class="config-item">
-          <div class="config-label">
-            <span class="config-name">界面缩放</span>
-            <span class="config-desc">50% - 150%（立即生效）</span>
-          </div>
-          <Input
-            v-model="config.uiZoom.value"
-            type="number"
-            min="50"
-            max="150"
-            class="config-input"
-          />
-        </div>
+      <div class="card-header card-header-toggle" @click="webuiOpen = !webuiOpen">
+        <h2>Web UI 配置</h2>
+        <ChevronDown :size="18" class="collapse-chevron" :class="{ open: webuiOpen }" />
       </div>
+      <div class="collapsible-body" :class="{ open: webuiOpen }">
+        <div>
+          <div class="config-group">
+            <h3 class="group-title"><Monitor :size="16" /> 界面设置</h3>
 
-      <div class="card-actions">
-        <Button @click="handleSaveWebUI"> <Save :size="15" /> 保存配置 </Button>
+            <div class="config-item">
+              <div class="config-label">
+                <span class="config-name">自动刷新</span>
+                <span class="config-desc">定时刷新状态和日志。监听非 c 事件时建议关闭</span>
+              </div>
+              <Switch v-model="config.autoRefresh.value" />
+            </div>
+
+            <div class="config-item" v-show="config.autoRefresh.value">
+              <div class="config-label">
+                <span class="config-name">状态/日志刷新间隔</span>
+                <span class="config-desc">单位: 毫秒 (最小100ms)</span>
+              </div>
+              <Input
+                v-model="config.statusRefreshInterval.value"
+                type="number"
+                min="100"
+                class="config-input"
+              />
+            </div>
+
+            <div class="config-item">
+              <div class="config-label">
+                <span class="config-name">外观主题</span>
+                <span class="config-desc">深色 / 浅色 / 跟随系统</span>
+              </div>
+              <div class="theme-seg">
+                <button
+                  v-for="opt in [
+                    { v: 'system', l: '系统' },
+                    { v: 'light', l: '浅色' },
+                    { v: 'dark', l: '深色' },
+                  ]"
+                  :key="opt.v"
+                  class="theme-seg-btn"
+                  :class="{ active: config.themeMode.value === opt.v }"
+                  @click="setTheme(opt.v)"
+                >
+                  {{ opt.l }}
+                </button>
+              </div>
+            </div>
+
+            <div class="config-item">
+              <div class="config-label">
+                <span class="config-name">界面缩放</span>
+                <span class="config-desc">50% - 150%（立即生效）</span>
+              </div>
+              <Input
+                v-model="config.uiZoom.value"
+                type="number"
+                min="50"
+                max="150"
+                class="config-input"
+              />
+            </div>
+          </div>
+
+          <div class="card-actions">
+            <Button @click="handleSaveWebUI"> <Save :size="15" /> 保存配置 </Button>
+          </div>
+        </div>
       </div>
     </section>
   </div>

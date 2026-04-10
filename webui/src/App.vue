@@ -14,6 +14,9 @@ import AboutView from './views/AboutView.vue'
 
 const NAV_ORDER = ['status', 'config', 'apps', 'log', 'about']
 const currentView = ref('status')
+const headerEl = ref(null)
+const headerHidden = ref(false)
+const lastScrollTops = {}
 
 const trackStyle = computed(() => {
   const idx = NAV_ORDER.indexOf(currentView.value)
@@ -80,6 +83,13 @@ onMounted(async () => {
 
   window.removeEventListener('scroll', onPageScroll)
 
+  // 测量 header 高度，用于隐藏时 viewport 补位
+  if (headerEl.value) {
+    const h = headerEl.value.offsetHeight
+    const appEl = document.getElementById('app')
+    if (appEl) appEl.style.setProperty('--header-height', h + 'px')
+  }
+
   // 初始加载
   try {
     await Promise.all([status.load(true), config.load(), log.load()])
@@ -95,11 +105,25 @@ onUnmounted(() => {
 
 function onPageScroll(e) {
   const topBlur = document.querySelector('.top-blur')
-  if (topBlur) topBlur.classList.toggle('scrolled', e.target.scrollTop > 10)
+  const { scrollTop, scrollHeight, clientHeight } = e.target
+  if (topBlur) topBlur.classList.toggle('scrolled', scrollTop > 10)
+
+  // 根据滚动方向自动隐藏/显示 header
+  // nearBottom: 接近底部时不触发隐藏，防止弹性滚动引发抖动
+  const nearBottom = scrollTop + clientHeight >= scrollHeight - 30
+  const idx = NAV_ORDER.indexOf(currentView.value)
+  const last = lastScrollTops[idx] ?? 0
+  if (scrollTop > last + 6 && !nearBottom) {
+    headerHidden.value = true
+  } else if (scrollTop < last - 4) {
+    headerHidden.value = false
+  }
+  lastScrollTops[idx] = scrollTop
 }
 
 function handleViewChange(view) {
   currentView.value = view
+  headerHidden.value = false // 切换页面时恢复显示 header
   // 切换页面时同步更新 top-blur 状态
   const idx = NAV_ORDER.indexOf(view)
   const slides = document.querySelectorAll('.page-slide')
@@ -114,9 +138,9 @@ function handleViewChange(view) {
     <!-- 顶部状态栏渐变模糊 -->
     <div class="top-blur"></div>
 
-    <div id="app">
+    <div id="app" :class="{ 'header-hidden': headerHidden }">
       <!-- 顶部头 -->
-      <header class="app-header">
+      <header class="app-header" ref="headerEl">
         <div class="header-content">
           <div class="header-text">
             <h1>LuminPro</h1>

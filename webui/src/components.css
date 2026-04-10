@@ -10,6 +10,47 @@
   flex-direction: column;
 }
 
+/* Collapsible card header */
+.card-header-toggle {
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  border-radius: var(--border-radius-s);
+  transition: background-color 0.15s;
+  margin: calc(-1 * var(--spacing-l));
+  padding: var(--spacing-l);
+}
+.card-header-toggle:active {
+  background-color: rgba(var(--md-sys-color-primary-rgb), 0.06);
+}
+.collapse-chevron {
+  color: var(--md-sys-color-on-surface-variant);
+  transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+  flex-shrink: 0;
+}
+.collapse-chevron.open {
+  transform: rotate(180deg);
+}
+
+/* grid-template-rows collapse animation */
+.collapsible-body {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.35s cubic-bezier(0.25, 1, 0.5, 1);
+}
+.collapsible-body.open {
+  grid-template-rows: 1fr;
+}
+.collapsible-body > div {
+  overflow: hidden;
+  padding-top: 0;
+  transition: padding-top 0.35s cubic-bezier(0.25, 1, 0.5, 1);
+}
+.collapsible-body.open > div {
+  padding-top: var(--spacing-l);
+  overflow: visible;
+}
+
 /* Page Transitions */
 .card-animate-in {
   animation: cardFadeIn 0.4s cubic-bezier(0.2, 0, 0, 1) forwards;
@@ -39,7 +80,6 @@
   display: flex;
   align-items: center;
   gap: var(--spacing-s);
-  margin-bottom: var(--spacing-l);
 }
 
 .card-header h2 {
@@ -52,6 +92,7 @@
 
 /* Config Items */
 .config-group {
+  margin-top: var(--spacing-l);
   margin-bottom: var(--spacing-l);
   padding: var(--spacing-m);
   background-color: var(--md-sys-color-surface-container);
