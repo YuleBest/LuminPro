@@ -50,12 +50,19 @@ _log() {
     printf '[%s] [%s] [%s] %s\n' "$(date '+%m-%d %H:%M:%S')" "up" "$level" "$1" >>"$log_file"
 }
 
-_log "收到亮度变更通知 (PID: $$)" "INFO"
-
 if [ -f "$stop_file" ]; then
     _log "服务已暂停，跳过本次处理" "WARN"
     exit 0
 fi
+
+# 防止 up.sh 自身读写亮度节点时触发 inotify 事件导致递归调用
+lock_file="$PID_DIR/up.lock"
+if [ -e "$lock_file" ]; then
+    exit 0
+fi
+echo $$ >"$lock_file"
+# shellcheck disable=SC2064
+trap "rm -f '$lock_file'" EXIT HUP INT TERM
 
 # 读取配置
 ui_max_bri="$(get_cfg ui_max_bri 0)"
@@ -119,7 +126,6 @@ CHECK_BRI() {
         fi
         sleep 0.3
     done
-    _log "检测超时: 亮度未持续达到提升阈値" "INFO"
     return 1
 }
 
@@ -188,7 +194,6 @@ MAIN() {
         fi
     fi
 
-    _log "正在检测亮度变化..." "INFO"
     CHECK_BRI
 }
 
