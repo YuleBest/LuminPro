@@ -16,7 +16,6 @@ const NAV_ORDER = ['status', 'config', 'apps', 'log', 'about']
 const currentView = ref('status')
 const headerEl = ref(null)
 const headerHidden = ref(false)
-const lastScrollTops = {}
 
 const trackStyle = computed(() => {
   const idx = NAV_ORDER.indexOf(currentView.value)
@@ -104,32 +103,28 @@ onUnmounted(() => {
 })
 
 function onPageScroll(e) {
+  // 只响应 .page-slide 的滚动，忽略内部子滚动容器（如应用列表）
+  if (!e.target.classList.contains('page-slide')) return
   const topBlur = document.querySelector('.top-blur')
-  const { scrollTop, scrollHeight, clientHeight } = e.target
+  const { scrollTop } = e.target
   if (topBlur) topBlur.classList.toggle('scrolled', scrollTop > 10)
-
-  // 根据滚动方向自动隐藏/显示 header
-  // nearBottom: 接近底部时不触发隐藏，防止弹性滚动引发抖动
-  const nearBottom = scrollTop + clientHeight >= scrollHeight - 30
-  const idx = NAV_ORDER.indexOf(currentView.value)
-  const last = lastScrollTops[idx] ?? 0
-  if (scrollTop > last + 6 && !nearBottom) {
-    headerHidden.value = true
-  } else if (scrollTop < last - 4) {
-    headerHidden.value = false
-  }
-  lastScrollTops[idx] = scrollTop
+  headerHidden.value = scrollTop > 0
 }
 
 function handleViewChange(view) {
   currentView.value = view
   headerHidden.value = false // 切换页面时恢复显示 header
-  // 切换页面时同步更新 top-blur 状态
+
   const idx = NAV_ORDER.indexOf(view)
   const slides = document.querySelectorAll('.page-slide')
   const slide = slides[idx]
+
+  // 切换页面时回顶
+  if (slide) slide.scrollTop = 0
+
+  // 切换后 top-blur 跟随新页面状态（已回顶故一定为 false）
   const topBlur = document.querySelector('.top-blur')
-  if (topBlur) topBlur.classList.toggle('scrolled', slide ? slide.scrollTop > 10 : false)
+  if (topBlur) topBlur.classList.remove('scrolled')
 }
 </script>
 

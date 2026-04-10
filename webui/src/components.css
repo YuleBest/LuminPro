@@ -92,18 +92,18 @@
 
 /* Config Items */
 .config-group {
-  margin-top: var(--spacing-l);
-  margin-bottom: var(--spacing-l);
-  padding: var(--spacing-m);
+  margin-top: 12px;
+  margin-bottom: 0;
+  padding: 12px;
   background-color: var(--md-sys-color-surface-container);
   border-radius: var(--border-radius-m);
   border: 1px solid rgba(var(--md-sys-color-on-surface-rgb, 0, 0, 0), 0.05);
 }
 
 .group-title {
-  margin: 0 0 var(--spacing-m) 0;
+  margin: 0 0 10px 0;
   color: var(--md-sys-color-primary);
-  font-size: 0.9rem;
+  font-size: 0.875rem;
   font-weight: 600;
   display: flex;
   align-items: center;
@@ -135,9 +135,9 @@
 }
 
 .config-item + .config-item {
-  margin-top: var(--spacing-m);
+  margin-top: 10px;
   border-top: 1px solid rgba(var(--md-sys-color-outline-variant-rgb, 142, 144, 153), 0.1);
-  padding-top: var(--spacing-m);
+  padding-top: 10px;
 }
 
 .config-label {
@@ -170,6 +170,25 @@
 }
 
 .config-input:focus {
+  border-color: var(--md-sys-color-primary);
+  box-shadow: 0 0 0 2px rgba(var(--md-sys-color-primary-rgb), 0.2);
+  background-color: var(--md-sys-color-surface);
+}
+
+.config-select {
+  padding: 8px 12px;
+  background-color: var(--md-sys-color-surface-container-high);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--border-radius-s);
+  color: var(--md-sys-color-on-surface);
+  font-size: 1rem;
+  font-family: inherit;
+  outline: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.config-select:focus {
   border-color: var(--md-sys-color-primary);
   box-shadow: 0 0 0 2px rgba(var(--md-sys-color-primary-rgb), 0.2);
   background-color: var(--md-sys-color-surface);
@@ -317,6 +336,7 @@ input:checked + .slider:before {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--spacing-m);
+  margin-top: var(--spacing-m);
 }
 
 .status-item {
@@ -497,12 +517,23 @@ input:checked + .slider:before {
 }
 
 /* Actions */
+.unsaved-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--md-sys-color-error);
+  margin-left: 6px;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
 .card-actions {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
-  margin-top: var(--spacing-l);
-  padding-top: var(--spacing-m);
+  margin-top: 16px;
+  padding-top: 12px;
   border-top: 1px solid var(--md-sys-color-outline-variant);
 }
 

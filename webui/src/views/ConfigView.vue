@@ -82,7 +82,11 @@ function handleSaveWebUI() {
   <div style="display: contents">
     <!-- === 亮度配置 === -->
     <section class="card" id="config-section" data-nav-group="config">
-      <div class="card-header"><h2>亮度配置</h2></div>
+      <div class="card-header">
+        <h2>
+          亮度配置<span v-if="config.dirty.value" class="unsaved-dot" title="有未保存的更改"></span>
+        </h2>
+      </div>
 
       <div class="config-group">
         <h3 class="group-title"><Settings2 :size="16" /> 亮度调节</h3>
@@ -134,7 +138,7 @@ function handleSaveWebUI() {
             <span class="config-name">显示 HDR 内容时休眠</span>
             <span class="config-desc">HDR/SDR 比率 &gt; 1 时不提升</span>
             <span class="config-desc" style="color: var(--color-warning)"
-              >建议配合去温控使用。出现闪屏时可改用黑名单功能</span
+              >出现闪屏建议改用黑名单</span
             >
           </div>
           <Switch v-model="config.displayHdrSleep.value" />
@@ -212,24 +216,14 @@ function handleSaveWebUI() {
         <div class="config-item">
           <div class="config-label">
             <span class="config-name">日志等级</span>
-            <span class="config-desc">低于该等级的日志不写入文件</span>
+            <span class="config-desc">低于此级别不写入日志</span>
           </div>
-          <div class="theme-seg">
-            <button
-              v-for="opt in [
-                { v: 'off', l: '关闭' },
-                { v: 'error', l: '错误' },
-                { v: 'warn', l: '警告' },
-                { v: 'info', l: '全部' },
-              ]"
-              :key="opt.v"
-              class="theme-seg-btn"
-              :class="{ active: config.logLevel.value === opt.v }"
-              @click="config.logLevel.value = opt.v"
-            >
-              {{ opt.l }}
-            </button>
-          </div>
+          <select v-model="config.logLevel.value" class="config-select">
+            <option value="off">关闭</option>
+            <option value="error">仅错误</option>
+            <option value="warn">警告+</option>
+            <option value="info">全部</option>
+          </select>
         </div>
       </div>
 
@@ -248,7 +242,13 @@ function handleSaveWebUI() {
     <!-- === 高级设置 === -->
     <section class="card" id="advanced-section" data-nav-group="config">
       <div class="card-header card-header-toggle" @click="advancedOpen = !advancedOpen">
-        <h2>高级设置</h2>
+        <h2>
+          高级设置<span
+            v-if="config.dirtyAdvanced.value"
+            class="unsaved-dot"
+            title="有未保存的更改"
+          ></span>
+        </h2>
         <ChevronDown :size="18" class="collapse-chevron" :class="{ open: advancedOpen }" />
       </div>
       <div class="collapsible-body" :class="{ open: advancedOpen }">
@@ -259,9 +259,9 @@ function handleSaveWebUI() {
             <div class="config-item">
               <div class="config-label">
                 <span class="config-name">调试模式</span>
-                <span class="config-desc">将每个 inotify 事件及防抖触发信息写入日志</span>
+                <span class="config-desc">记录详细 inotify 事件到日志</span>
                 <span class="config-desc" style="color: var(--color-warning)"
-                  >开启后需重启服务，日志量增大。诊断完成后请关闭</span
+                  >需重启生效，用完请关闭</span
                 >
               </div>
               <Switch v-model="config.debugMode.value" />
@@ -270,10 +270,7 @@ function handleSaveWebUI() {
             <div class="config-item">
               <div class="config-label">
                 <span class="config-name">lumipro 监听事件</span>
-                <span class="config-desc">默认 c（sysfs MODIFY）。修改需重启服务</span>
-                <span class="config-desc" style="color: var(--color-warning)"
-                  >修改为 c 以外时建议关闭自动刷新</span
-                >
+                <span class="config-desc">默认 c，改后需重启</span>
                 <button
                   class="btn-text-s"
                   style="margin-top: 6px; padding: 2px 6px"
@@ -293,7 +290,7 @@ function handleSaveWebUI() {
             <div class="config-item" id="advanced-section">
               <div class="config-label">
                 <span class="config-name">当前亮度节点</span>
-                <span class="config-desc">修改需重启服务</span>
+                <span class="config-desc">改后需重启</span>
               </div>
               <Textarea v-model="config.nowBriFile.value" class="config-textarea" />
             </div>
@@ -301,7 +298,7 @@ function handleSaveWebUI() {
             <div class="config-item">
               <div class="config-label">
                 <span class="config-name">最大亮度节点</span>
-                <span class="config-desc">修改需重启服务</span>
+                <span class="config-desc">改后需重启</span>
               </div>
               <Textarea v-model="config.sysMaxBriFile.value" class="config-textarea" />
             </div>
@@ -330,7 +327,7 @@ function handleSaveWebUI() {
             <div class="config-item">
               <div class="config-label">
                 <span class="config-name">自动刷新</span>
-                <span class="config-desc">定时刷新状态和日志。监听非 c 事件时建议关闭</span>
+                <span class="config-desc">定时拉取状态和日志</span>
               </div>
               <Switch v-model="config.autoRefresh.value" />
             </div>
@@ -338,7 +335,7 @@ function handleSaveWebUI() {
             <div class="config-item" v-show="config.autoRefresh.value">
               <div class="config-label">
                 <span class="config-name">状态/日志刷新间隔</span>
-                <span class="config-desc">单位: 毫秒 (最小100ms)</span>
+                <span class="config-desc">ms，最小 100</span>
               </div>
               <Input
                 v-model="config.statusRefreshInterval.value"
@@ -351,29 +348,22 @@ function handleSaveWebUI() {
             <div class="config-item">
               <div class="config-label">
                 <span class="config-name">外观主题</span>
-                <span class="config-desc">深色 / 浅色 / 跟随系统</span>
               </div>
-              <div class="theme-seg">
-                <button
-                  v-for="opt in [
-                    { v: 'system', l: '系统' },
-                    { v: 'light', l: '浅色' },
-                    { v: 'dark', l: '深色' },
-                  ]"
-                  :key="opt.v"
-                  class="theme-seg-btn"
-                  :class="{ active: config.themeMode.value === opt.v }"
-                  @click="setTheme(opt.v)"
-                >
-                  {{ opt.l }}
-                </button>
-              </div>
+              <select
+                class="config-select"
+                :value="config.themeMode.value"
+                @change="setTheme($event.target.value)"
+              >
+                <option value="system">跟随系统</option>
+                <option value="light">浅色</option>
+                <option value="dark">深色</option>
+              </select>
             </div>
 
             <div class="config-item">
               <div class="config-label">
                 <span class="config-name">界面缩放</span>
-                <span class="config-desc">50% - 150%（立即生效）</span>
+                <span class="config-desc">50%–150%，立即生效</span>
               </div>
               <Input
                 v-model="config.uiZoom.value"

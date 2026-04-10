@@ -49,6 +49,7 @@
 html {
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none; /* IE/Edge */
+  background-color: var(--md-sys-color-background);
 }
 
 html::-webkit-scrollbar {
@@ -58,6 +59,7 @@ html::-webkit-scrollbar {
 body {
   margin: 0;
   padding: 0;
+  zoom: 0.95;
   /* insets 会在这里被 internal/insets.css 处理，我们预留顶底内边距 */
   padding-top: var(--safe-area-inset-top, 0);
   padding-bottom: var(--safe-area-inset-bottom, 0);
@@ -84,7 +86,7 @@ body::-webkit-scrollbar {
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  height: 100dvh;
+  height: calc(100dvh / 0.95);
   overflow: hidden;
 }
 

@@ -1,4 +1,4 @@
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import {
   runCmd,
   readConfig,
@@ -34,6 +34,11 @@ export function useConfig() {
   const debugMode = ref(false)
   const logLevel = ref('info')
 
+  // 脸污标记
+  const dirty = ref(false)
+  const dirtyAdvanced = ref(false)
+  let _silent = false
+
   // Web UI 配置 (localStorage 持久化)
   const autoRefresh = ref(localStorage.getItem('autoRefresh') !== 'false')
   const statusRefreshInterval = ref(
@@ -44,9 +49,38 @@ export function useConfig() {
   )
   const themeMode = ref(localStorage.getItem('themeMode') || 'system')
 
+  // 监听主配置字段
+  watch(
+    [
+      uiMaxBri,
+      maxBri,
+      stepsNum,
+      logMaxSize,
+      autoBriSleep,
+      displayHdrSleep,
+      sleepMode,
+      sleepStartH,
+      sleepStartM,
+      sleepEndH,
+      sleepEndM,
+      logLevel,
+    ],
+    () => {
+      if (!_silent) dirty.value = true
+    },
+  )
+  // 监听高级设置字段
+  watch([nowBriFile, sysMaxBriFile, inotifyEvents, debugMode], () => {
+    if (!_silent) dirtyAdvanced.value = true
+  })
+
   async function load() {
+    _silent = true
     const cfg = await readConfig()
-    if (!cfg || Object.keys(cfg).length === 0) return
+    if (!cfg || Object.keys(cfg).length === 0) {
+      _silent = false
+      return
+    }
 
     uiMaxBri.value = cfg.ui_max_bri != null ? String(cfg.ui_max_bri) : ''
     maxBri.value = cfg.max_bri != null ? String(cfg.max_bri) : ''
@@ -75,6 +109,9 @@ export function useConfig() {
     } else {
       sleepMode.value = false
     }
+    dirty.value = false
+    dirtyAdvanced.value = false
+    _silent = false
   }
 
   function getSleepTimeStr() {
@@ -109,6 +146,7 @@ export function useConfig() {
         ? '配置已保存 (下次调整时生效)'
         : '配置已保存 (服务未运行)',
     )
+    dirty.value = false
   }
 
   async function saveAdvanced(toast, onPathsChanged) {
@@ -121,6 +159,7 @@ export function useConfig() {
     })
     onPathsChanged?.()
     toast('高级设置已保存，需重启服务生效')
+    dirtyAdvanced.value = false
   }
 
   async function resetToDefaults(toast) {
@@ -215,6 +254,8 @@ export function useConfig() {
     inotifyEvents,
     debugMode,
     logLevel,
+    dirty,
+    dirtyAdvanced,
     autoRefresh,
     statusRefreshInterval,
     uiZoom,
