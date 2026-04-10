@@ -111,7 +111,7 @@ SHOW_CHANGELOG() {
     local f="$MODPATH/changelog.md"
     [ -f "$f" ] || return
     echo "========================================"
-    echo "[*] 本次更新日志:"
+    echo " ✦ 本次更新日志:"
     awk '/^## / { if (p) exit; p=1; print; next } p { print }' "$f"
     echo "========================================"
 }
@@ -119,9 +119,9 @@ SHOW_CHANGELOG() {
 NOTE() {
     cat "$MODPATH/NOTE.txt"
     echo ""
-    echo "[i] 按音量 + 进入下一步, 按音量 - 退出"
-    echo "[i] 继续则表明你已理解并接受所有风险"
-    [ "$(btn)" = "0" ] && echo "[OK] 已确认" || abort "[X] 已退出"
+    echo " ❆ 按音量 + 进入下一步, 按音量 - 退出"
+    echo " ❆ 继续则表明你已理解并接受所有风险"
+    [ "$(btn)" = "0" ] && echo " ✦ 已确认" || abort " ✗ 已退出"
 }
 
 CHECK_FILES() {
@@ -130,35 +130,35 @@ CHECK_FILES() {
     max_bri_file="$(cfg_get max_bri_file "$DEFAULT_MAX_BRI_FILE")"
 
     echo ""
-    echo "[*] 正在验证设备亮度节点..."
-    echo "- 当前亮度节点: $now_bri_file"
-    echo "- 最大亮度节点: $max_bri_file"
+    echo " ✦ 正在验证设备亮度节点..."
+    echo " ✦ 当前亮度节点: $now_bri_file"
+    echo " ✦ 最大亮度节点: $max_bri_file"
     echo ""
 
     if [ -f "$now_bri_file" ] && [ -f "$max_bri_file" ]; then
-        echo "[OK] 找到亮度节点文件"
+        echo " ✦ 找到亮度节点文件"
     else
-        [ ! -f "$now_bri_file" ] && echo "[X] 当前亮度节点不存在: $now_bri_file"
-        [ ! -f "$max_bri_file" ] && echo "[X] 最大亮度节点不存在: $max_bri_file"
+        [ ! -f "$now_bri_file" ] && echo " ✗ 当前亮度节点不存在: $now_bri_file"
+        [ ! -f "$max_bri_file" ] && echo " ✗ 最大亮度节点不存在: $max_bri_file"
         echo ""
-        echo "设备不支持默认路径，刷入后请通过 Web UI 手动配置亮度节点"
-        echo "查找路径: find /sys -name '*brightness*' 2>/dev/null"
-        abort "[X] 安装中止：无法找到设备亮度节点"
+        echo " ◇ 设备不支持默认路径，刷入后请通过 Web UI 手动配置亮度节点"
+        echo " ◇ 查找路径: find /sys -name '*brightness*' 2>/dev/null"
+        abort " ✕ 安装中止：无法找到设备亮度节点"
     fi
 
-    echo "[OK] 当前亮度: $(cat "$now_bri_file")"
-    echo "[OK] 系统最大亮度: $(cat "$max_bri_file")"
+    echo " ✦ 当前亮度: $(cat "$now_bri_file")"
+    echo " ✦ 系统最大亮度: $(cat "$max_bri_file")"
 }
 
 TEST_UI_MAX_BRI() {
     echo ""
-    echo "[*] 开始测试前台最大亮度"
+    echo " ✿ 开始测试前台最大亮度"
     echo ""
     sleep 1
 
     echo "======== 请关闭自动亮度 ========"
-    echo "[i] 按音量 + 进入下一步, 按音量 - 退出"
-    [ "$(btn)" = "0" ] && echo "[OK] 已确认" || abort "[X] 已退出"
+    echo " ❆ 按音量 + 进入下一步, 按音量 - 退出"
+    [ "$(btn)" = "0" ] && echo " ✦ 已确认" || abort " ✗ 已退出"
 
     local restore_bri
     restore_bri="$(cat "$now_bri_file")"
@@ -166,23 +166,23 @@ TEST_UI_MAX_BRI() {
     sleep 1
 
     echo "======== 请将屏幕亮度调至最大 ========"
-    echo "[i] 按音量 + 进入下一步, 按音量 - 退出"
-    [ "$(btn)" = "0" ] && echo "[OK] 已确认" || abort "[X] 已退出"
+    echo " ❆ 按音量 + 进入下一步, 按音量 - 退出"
+    [ "$(btn)" = "0" ] && echo " ✦ 已确认" || abort " ✗ 已退出"
 
     local measured_ui measured_max
     measured_ui="$(cat "$now_bri_file")"
     measured_max="$(cat "$max_bri_file")"
-    echo "[OK] 前台最大亮度: [ $measured_ui ]"
-    echo "[i] 峰值最大亮度由节点文件获得: [ $measured_max ]"
-    echo "[i] 若不符合预期，请稍后到 Web UI 更改"
+    echo " ✦ 前台最大亮度: [ $measured_ui ]"
+    echo " ✦ 峰值最大亮度由节点文件获得: [ $measured_max ]"
+    echo " ✦ 若不符合预期，请稍后到 Web UI 更改"
 
     # 写入 JSON
     "$JQ" ".ui_max_bri = ($measured_ui | tonumber) | .max_bri = ($measured_max | tonumber)" \
         "$CONFIG_FILE" >"$CONFIG_FILE.tmp" && mv "$CONFIG_FILE.tmp" "$CONFIG_FILE"
 
     echo ""
-    echo "[OK] 测试完成"
-    echo "[*] 正在恢复亮度..."
+    echo " ✦ 测试完成"
+    echo " ✦ 正在恢复亮度..."
     echo -n "$restore_bri" >"$now_bri_file"
 }
 
@@ -195,14 +195,14 @@ IMPORT_OLD_CONFIG() {
         if [ "${old_ui:-0}" -gt 0 ] 2>/dev/null; then
             echo ""
             sleep 1
-            echo "[i] 检测到已有 JSON 配置:"
+            echo " ✦ 检测到已有 JSON 配置:"
             echo "    - 前台最大亮度: $old_ui"
             echo "    - 峰值最大亮度: $("$JQ" -re '.max_bri' "$old_config/config.json" 2>/dev/null)"
             local old_st
             old_st=$("$JQ" -re '.sleep_time // empty' "$old_config/config.json" 2>/dev/null)
             [ -n "$old_st" ] && echo "    - 休眠时间: $old_st"
             echo ""
-            echo "[?] 按音量 + 沿用旧配置, 按音量 - 重新测试"
+            echo " ❆ 按音量 + 沿用旧配置, 按音量 - 重新测试"
             if [ "$(btn)" = "0" ]; then
                 cp -f "$old_config/config.json" "$CONFIG_FILE"
                 # 若旧 JSON 缺少 blacklist_apps 字段，尝试从 blacklist_apps.txt 补入
@@ -218,10 +218,10 @@ IMPORT_OLD_CONFIG() {
                     "$JQ" --argjson bl "$bl_arr" '. + {blacklist_apps: $bl}' \
                         "$CONFIG_FILE" >"$tmp_cfg" && mv -f "$tmp_cfg" "$CONFIG_FILE"
                 fi
-                echo "[OK] 已导入 JSON 配置"
+                echo " ✦ 已导入 JSON 配置"
                 return 0
             else
-                echo "[*] 将重新测试"
+                echo " ❆ 将重新测试"
                 return 1
             fi
         fi
@@ -232,7 +232,7 @@ IMPORT_OLD_CONFIG() {
     if [ -d "$old_config" ] && [ -s "$old_config/ui_max_bri.txt" ] && [ -s "$old_config/max_bri.txt" ]; then
         echo ""
         sleep 1
-        echo "[i] 检测到旧格式配置，将迁移至 JSON:"
+        echo " ✦ 检测到旧格式配置，将迁移至 JSON:"
         echo "    - 前台最大亮度: $(cat "$old_config/ui_max_bri.txt")"
         echo "    - 峰值最大亮度: $(cat "$old_config/max_bri.txt")"
         [ -s "$old_config/sleep_time.txt" ] && echo "    - 休眠时间: $(cat "$old_config/sleep_time.txt")"
@@ -241,7 +241,7 @@ IMPORT_OLD_CONFIG() {
         [ -s "$old_config/log_max_size.txt" ] && echo "    - 日志限制: $(cat "$old_config/log_max_size.txt") KB"
         [ -s "$old_config/blacklist_apps.txt" ] && echo "    - 黑名单: $(wc -l <"$old_config/blacklist_apps.txt" | tr -d ' ') 个"
         echo ""
-        echo "[?] 按音量 + 沿用旧配置, 按音量 - 重新测试"
+        echo " ❆ 按音量 + 沿用旧配置, 按音量 - 重新测试"
         if [ "$(btn)" = "0" ]; then
             cfg_ui_max_bri="$(read_old_txt ui_max_bri.txt '0')"
             cfg_max_bri="$(read_old_txt max_bri.txt '0')"
@@ -267,10 +267,10 @@ IMPORT_OLD_CONFIG() {
             # 删除旧 txt 配置文件
             rm -f "$old_config/"*.txt 2>/dev/null
             rm -rf "$old_config/path" 2>/dev/null
-            echo "[OK] 配置已迁移至 JSON，旧文件已清理"
+            echo " ✦ 配置已迁移至 JSON, 旧文件已清理"
             return 0
         else
-            echo "[*] 将重新测试"
+            echo " ❆ 将重新测试"
             return 1
         fi
     fi
@@ -320,13 +320,13 @@ CHECK_DEVICE_COMPATIBILITY() {
 
     if [ "$prefix" = "25128PNA1" ] || [ "$prefix" = "2512BPNDA" ]; then
         echo ""
-        echo "[!] 您可能是 Xiaomi 17 Ultra 用户，建议使用 '0' 事件作为监测对象"
-        echo "[?] 是否将 inotifyd 监测事件修改为 '0'? (音量 + 确认，音量 - 跳过)"
+        echo "  ✿ 您可能是 Xiaomi 17 Ultra 用户，建议使用 '0' 事件作为监测对象"
+        echo "  ✿ 是否将 inotifyd 监测事件修改为 '0'? (音量 + 确认，音量 - 跳过)"
         if [ "$(btn)" = "0" ]; then
             "$JQ" '.inotify_events = "0"' "$CONFIG_FILE" >"$CONFIG_FILE.tmp" && mv "$CONFIG_FILE.tmp" "$CONFIG_FILE"
-            echo "[OK] 已设置为 0 事件监测"
+            echo " ✦ 已设置为 0 事件监测"
         else
-            echo "[*] 已跳过"
+            echo " ✦ 已跳过"
         fi
         sleep 1
     fi
@@ -352,12 +352,12 @@ END() {
 
     if [ -z "$final_max" ] || [ -z "$final_ui" ]; then
         echo ""
-        echo "[!] ======== 配置不完整 ========"
-        [ -z "$final_max" ] && echo "[X] 峰值最大亮度: 未配置" || echo "[OK] 峰值最大亮度: $final_max"
-        [ -z "$final_ui" ] && echo "[X] 前台最大亮度: 未配置" || echo "[OK] 前台最大亮度: $final_ui"
+        echo "======== 配置不完整 ========"
+        [ -z "$final_max" ] && echo " ✕ 峰值最大亮度: 未配置" || echo " ✦ 峰值最大亮度: $final_max"
+        [ -z "$final_ui" ] && echo " ✕ 前台最大亮度: 未配置" || echo " ✦ 前台最大亮度: $final_ui"
         echo ""
-        echo "[i] 配置缺失，请重启后通过 Web UI 手动配置"
-        echo "[i] 或按音量 + 现在进行测试, 按音量 - 跳过"
+        echo " ❆ 配置缺失, 请重启后通过 Web UI 手动配置"
+        echo " ❆ 或按音量 + 现在进行测试, 按音量 - 跳过"
         if [ "$(btn)" = "0" ]; then
             TEST_UI_MAX_BRI
             final_ui=$("$JQ" -re 'if .ui_max_bri > 0 then .ui_max_bri else empty end' "$CONFIG_FILE" 2>/dev/null)
@@ -367,8 +367,8 @@ END() {
 
     echo ""
     echo "======== 将要应用的配置 ========"
-    echo "[*] 前台最大亮度:   $final_ui"
-    echo "[*] 峰值最大亮度:   $final_max"
+    echo " - 前台最大亮度:   $final_ui"
+    echo " - 峰值最大亮度:   $final_max"
 
     local steps log_size auto_bri disp_hdr st inotify bl_count now_path max_path
     steps=$("$JQ" -re '.steps_num' "$CONFIG_FILE" 2>/dev/null || echo "50")
@@ -381,34 +381,34 @@ END() {
     max_path=$("$JQ" -re '.max_bri_file' "$CONFIG_FILE" 2>/dev/null || echo "$DEFAULT_MAX_BRI_FILE")
     bl_count=$("$JQ" -re '.blacklist_apps | length' "$CONFIG_FILE" 2>/dev/null || echo "0")
 
-    echo "[*] 亮度渐变步数:   $steps"
-    echo "[*] 日志大小上限:   ${log_size} KB"
+    echo " - 亮度渐变步数:   $steps"
+    echo " - 日志大小上限:   ${log_size} KB"
     if [ "$auto_bri" = "1" ]; then
-        echo "[*] 自动亮度时跳过: 开启"
+        echo " - 自动亮度时跳过: 开启"
     else
-        echo "[*] 自动亮度时跳过: 关闭"
+        echo " - 自动亮度时跳过: 关闭"
     fi
     if [ "$disp_hdr" = "1" ]; then
-        echo "[*] HDR 内容时跳过: 开启"
+        echo " - HDR 内容时跳过: 开启"
     else
-        echo "[*] HDR 内容时跳过: 关闭"
+        echo " - HDR 内容时跳过: 关闭"
     fi
     if [ -n "$st" ]; then
-        echo "[*] 休眠时段:       $st"
+        echo " - 休眠时段:       $st"
     else
-        echo "[*] 休眠时段:       未配置"
+        echo " - 休眠时段:       未配置"
     fi
-    echo "[*] inotifyd 事件:  $inotify"
-    echo "[*] 当前亮度节点:   $now_path"
-    echo "[*] 最大亮度节点:   $max_path"
-    echo "[*] 黑名单应用:     ${bl_count} 个"
+    echo " - inotifyd 事件:  $inotify"
+    echo " - 当前亮度节点:   $now_path"
+    echo " - 最大亮度节点:   $max_path"
+    echo " - 黑名单应用:     ${bl_count} 个"
     echo "==============================="
-    echo "[i] 配置文件: /data/adb/modules/LuminPro/config/config.json"
-    echo "[i] 也可以使用 Web UI 进行配置"
+    echo " ❆ 配置文件: /data/adb/modules/LuminPro/config/config.json"
+    echo " ❆ 也可以使用 Web UI 进行配置"
     echo ""
-    echo "[OK] 模块已刷入，请重启手机"
-    echo "[i] 感谢您的使用"
-    echo "[i] 作者: 酷安 @于乐yule"
+    echo " ✦ 模块已刷入，请重启手机"
+    echo " ❆ 感谢您的使用"
+    echo " ❆ 作者: 酷安 @于乐yule"
     echo ""
     sleep 1
     exit 0
