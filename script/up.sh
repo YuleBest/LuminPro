@@ -63,6 +63,7 @@ if [ -f "$lock_file" ]; then
         exit 0
     fi
     # PID 不存在，说明是遗留的锁，清理之
+    _log "检测到遗留的锁文件 (PID: $old_pid 不存在)，已自动清除" "WARN"
     rm -f "$lock_file"
 fi
 echo $$ >"$lock_file"
