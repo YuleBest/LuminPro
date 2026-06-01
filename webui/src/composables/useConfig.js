@@ -21,6 +21,7 @@ export function useConfig() {
   // 执行策略
   const autoBriSleep = ref(false)
   const displayHdrSleep = ref(false)
+  const compatibilityMode = ref(false)
   const sleepMode = ref(false)
   const sleepStartH = ref('19')
   const sleepStartM = ref('00')
@@ -58,6 +59,7 @@ export function useConfig() {
       logMaxSize,
       autoBriSleep,
       displayHdrSleep,
+      compatibilityMode,
       sleepMode,
       sleepStartH,
       sleepStartM,
@@ -88,6 +90,7 @@ export function useConfig() {
     logMaxSize.value = cfg.log_max_size != null ? String(cfg.log_max_size) : '500'
     autoBriSleep.value = cfg.auto_bri_sleep === 1
     displayHdrSleep.value = cfg.display_hdr_sleep === 1
+    compatibilityMode.value = cfg.compatibility_mode === 1
     nowBriFile.value = cfg.now_bri_file || DEFAULT_NOW_BRI_FILE
     sysMaxBriFile.value = cfg.max_bri_file || DEFAULT_SYS_MAX_BRI_FILE
     inotifyEvents.value = cfg.inotify_events || 'c'
@@ -136,6 +139,7 @@ export function useConfig() {
       log_max_size: parseInt(logMaxSize.value) || 500,
       auto_bri_sleep: autoBriSleep.value ? 1 : 0,
       display_hdr_sleep: displayHdrSleep.value ? 1 : 0,
+      compatibility_mode: compatibilityMode.value ? 1 : 0,
       sleep_time: getSleepTimeStr(),
       log_level: logLevel.value,
     })
@@ -143,7 +147,7 @@ export function useConfig() {
     const pidRes = await runCmd(`cat "${PID_FILE}"`)
     toast(
       pidRes.errno === 0 && pidRes.stdout.trim()
-        ? '配置已保存 (下次调整时生效)'
+        ? '配置已保存 (下次重启或触发时生效)'
         : '配置已保存 (服务未运行)',
     )
     dirty.value = false
@@ -181,6 +185,7 @@ export function useConfig() {
     maxBri.value = backup.max_bri != null ? String(backup.max_bri) : ''
     autoBriSleep.value = backup.auto_bri_sleep === 1
     displayHdrSleep.value = backup.display_hdr_sleep === 1
+    compatibilityMode.value = backup.compatibility_mode === 1
     stepsNum.value = backup.steps_num != null ? String(backup.steps_num) : '50'
     logMaxSize.value = backup.log_max_size != null ? String(backup.log_max_size) : '500'
     nowBriFile.value = backup.now_bri_file || DEFAULT_NOW_BRI_FILE
@@ -244,6 +249,7 @@ export function useConfig() {
     logMaxSize,
     autoBriSleep,
     displayHdrSleep,
+    compatibilityMode,
     sleepMode,
     sleepStartH,
     sleepStartM,

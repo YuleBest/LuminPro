@@ -81,25 +81,46 @@ while true; do
         echo "$current_config" >"$config_cache_file"
     fi
 
-    _log "正在启动 lumipro 监听" "INFO"
-    now_bri_file="${current_config%|*}"
-    inotify_events="${current_config#*|}"
-    debug_mode="$(get_cfg debug_mode "0")"
+    compatibility_mode="$(get_cfg compatibility_mode "0")"
 
-    # 缓存当前监听路径（供参考）
-    echo -n "$now_bri_file" >"$MODDIR/config/.cached_path"
-
-    if [ "$debug_mode" = "1" ]; then
-        "$MODDIR/bin/lumipro" --debug "$MODDIR/script/up.sh" "$now_bri_file:$inotify_events" >>"$log_file" 2>&1 &
+    if [ "$compatibility_mode" = "1" ]; then
+        _log "兼容模式已开启 (轮询驱动)" "WARN"
+        # 写入一个特殊的 PID 标识轮询模式
+        echo "polling" >"$pid_file"
+        while true; do
+            if [ -f "$stop_file" ] || [ -f "$pause_file" ]; then
+                break
+            fi
+            # 检查配置哈希是否变化
+            new_config="$(get_config_hash)"
+            if [ "$new_config" != "$current_config" ]; then
+                break
+            fi
+            sh "$MODDIR/script/up.sh" &
+            sleep 2
+        done
+        _log "轮询模式已退出" "INFO"
     else
-        "$MODDIR/bin/lumipro" "$MODDIR/script/up.sh" "$now_bri_file:$inotify_events" >>"$log_file" 2>&1 &
-    fi
-    inotify_pid=$!
-    echo "$inotify_pid" >"$pid_file"
-    _log "lumipro 已启动 (PID: $inotify_pid), 监听: $now_bri_file, 事件: $inotify_events" "SUCCESS"
+        _log "正在启动 lumipro 监听" "INFO"
+        now_bri_file="${current_config%|*}"
+        inotify_events="${current_config#*|}"
+        debug_mode="$(get_cfg debug_mode "0")"
 
-    wait "$inotify_pid"
-    _log "lumipro 进程 (PID: $inotify_pid) 已退出，即将重启" "WARN"
+        # 缓存当前监听路径（供参考）
+        echo -n "$now_bri_file" >"$MODDIR/config/.cached_path"
+
+        if [ "$debug_mode" = "1" ]; then
+            "$MODDIR/bin/lumipro" --debug "$MODDIR/script/up.sh" "$now_bri_file:$inotify_events" >>"$log_file" 2>&1 &
+        else
+            "$MODDIR/bin/lumipro" "$MODDIR/script/up.sh" "$now_bri_file:$inotify_events" >>"$log_file" 2>&1 &
+        fi
+        inotify_pid=$!
+        echo "$inotify_pid" >"$pid_file"
+        _log "lumipro 已启动 (PID: $inotify_pid), 监听: $now_bri_file, 事件: $inotify_events" "SUCCESS"
+
+        wait "$inotify_pid"
+        _log "lumipro 进程 (PID: $inotify_pid) 已退出，即将重启" "WARN"
+    fi
 
     sleep 0.5
 done

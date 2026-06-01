@@ -146,6 +146,17 @@ function handleSaveWebUI() {
 
         <div class="config-item">
           <div class="config-label">
+            <span class="config-name">兼容模式 (轮询驱动)</span>
+            <span class="config-desc">不使用事件监听，改用 2 秒一次轮询</span>
+            <span class="config-desc" style="color: var(--color-warning)"
+              >仅在事件驱动失效时开启，会略微增加耗电</span
+            >
+          </div>
+          <Switch v-model="config.compatibilityMode.value" />
+        </div>
+
+        <div class="config-item">
+          <div class="config-label">
             <span class="config-name">定时休眠</span>
             <span class="config-desc">设定时段内不提升亮度</span>
           </div>

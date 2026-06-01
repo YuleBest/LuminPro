@@ -64,6 +64,7 @@ write_config_json() {
         --arg log_max_size "${cfg_log_max_size:-512}" \
         --arg auto_bri_sleep "${cfg_auto_bri_sleep:-1}" \
         --arg display_hdr_sleep "${cfg_display_hdr_sleep:-0}" \
+        --arg compatibility_mode "${cfg_compatibility_mode:-0}" \
         --arg sleep_time "${cfg_sleep_time:-}" \
         --arg inotify_events "${cfg_inotify_events:-c}" \
         --arg now_bri_file "${cfg_now_bri_file:-$DEFAULT_NOW_BRI_FILE}" \
@@ -77,6 +78,7 @@ write_config_json() {
             log_max_size:      ($log_max_size       | tonumber),
             auto_bri_sleep:    ($auto_bri_sleep     | tonumber),
             display_hdr_sleep: ($display_hdr_sleep  | tonumber),
+            compatibility_mode:($compatibility_mode | tonumber),
             sleep_time:        $sleep_time,
             inotify_events:    $inotify_events,
             now_bri_file:      $now_bri_file,
@@ -249,6 +251,7 @@ IMPORT_OLD_CONFIG() {
             cfg_log_max_size="$(read_old_txt log_max_size.txt '512')"
             cfg_auto_bri_sleep="$(read_old_txt auto_bri_sleep.txt '1')"
             cfg_display_hdr_sleep="$(read_old_txt display_hdr_sleep.txt '0')"
+            cfg_compatibility_mode="$(read_old_txt compatibility_mode.txt '0')"
             cfg_sleep_time="$(read_old_txt sleep_time.txt '')"
             cfg_inotify_events="$(read_old_txt inotify_events.txt 'c')"
             cfg_now_bri_file="$(read_old_txt path/now_bri_file.txt "$DEFAULT_NOW_BRI_FILE")"
@@ -288,6 +291,7 @@ INIT_CONFIG() {
         cfg_log_max_size=512
         cfg_auto_bri_sleep=1
         cfg_display_hdr_sleep=0
+        cfg_compatibility_mode=0
         cfg_sleep_time=""
         cfg_inotify_events="c"
         cfg_now_bri_file="$DEFAULT_NOW_BRI_FILE"
@@ -305,6 +309,7 @@ ENSURE_DEFAULTS() {
         .log_max_size      = (.log_max_size       // 512) |
         .auto_bri_sleep    = (.auto_bri_sleep     // 1) |
         .display_hdr_sleep = (.display_hdr_sleep  // 0) |
+        .compatibility_mode= (.compatibility_mode // 0) |
         .sleep_time        = (.sleep_time         // "") |
         .inotify_events    = (.inotify_events     // "c") |
         .log_level         = (.log_level          // "info") |
@@ -392,6 +397,11 @@ END() {
         echo " - HDR 内容时跳过: 开启"
     else
         echo " - HDR 内容时跳过: 关闭"
+    fi
+    if [ "$("$JQ" -re '.compatibility_mode' "$CONFIG_FILE" 2>/dev/null || echo "0")" = "1" ]; then
+        echo " - 兼容模式 (轮询):  开启"
+    else
+        echo " - 兼容模式 (轮询):  关闭"
     fi
     if [ -n "$st" ]; then
         echo " - 休眠时段:       $st"
