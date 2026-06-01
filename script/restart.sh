@@ -23,6 +23,7 @@ touch "$pause_file"
 # 2. 清理遗留标记
 rm -f "$pid_file"
 rm -f "$flag_file"
+rm -f "$PID_DIR/up.lock"
 _log "已清理锁文件"
 
 # 3. 恢复守护进程 (它会自动拉起新 inotifyd)

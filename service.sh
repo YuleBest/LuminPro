@@ -35,7 +35,7 @@ _log() {
 sleep 30
 
 # 清理上次遗留的标记文件
-rm -f "$MODDIR/pid/"*.flag "$MODDIR/pid/"*.pause "$MODDIR/pid/.hdr_ratio_cache"
+rm -f "$MODDIR/pid/"*.flag "$MODDIR/pid/"*.pause "$MODDIR/pid/"*.lock "$MODDIR/pid/.hdr_ratio_cache"
 
 _log "LuminPro 服务启动" "INFO"
 _log "前台最大亮度: $(get_cfg ui_max_bri 0)" "INFO"

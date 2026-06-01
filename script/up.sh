@@ -1,4 +1,4 @@
-﻿#!/system/bin/sh
+#!/system/bin/sh
 #shellcheck shell=ash
 # 亮度提升脚本
 
@@ -57,8 +57,13 @@ fi
 
 # 防止 up.sh 自身读写亮度节点时触发 inotify 事件导致递归调用
 lock_file="$PID_DIR/up.lock"
-if [ -e "$lock_file" ]; then
-    exit 0
+if [ -f "$lock_file" ]; then
+    old_pid=$(cat "$lock_file" 2>/dev/null)
+    if [ -n "$old_pid" ] && [ -d "/proc/$old_pid" ]; then
+        exit 0
+    fi
+    # PID 不存在，说明是遗留的锁，清理之
+    rm -f "$lock_file"
 fi
 echo $$ >"$lock_file"
 # shellcheck disable=SC2064
