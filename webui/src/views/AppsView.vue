@@ -102,10 +102,6 @@ function menuToggleSystemApps() {
   toggleSystemApps()
   appsMenuOpen.value = false
 }
-function menuSmartSelect() {
-  smartSelect()
-  appsMenuOpen.value = false
-}
 function menuSelectAll() {
   selectAll()
   appsMenuOpen.value = false
@@ -215,6 +211,10 @@ function retryPicker() {
           <Button variant="ghost" size="icon" @click="load">
             <RefreshCw :size="18" />
           </Button>
+          <Button variant="ghost" size="icon" @click="smartSelect">
+            <span class="sr-only">智能选择</span>
+            <Sparkles :size="18" />
+          </Button>
           <Button variant="ghost" size="icon" @click="appsMenuOpen = !appsMenuOpen">
             <span class="sr-only">更多</span>
             <svg
@@ -237,9 +237,6 @@ function retryPicker() {
             <div class="dropdown-item" @click="menuToggleSystemApps">
               <component :is="showingSystemApps ? EyeOff : Eye" :size="18" />
               <span>{{ showingSystemApps ? '隐藏系统应用' : '显示系统应用' }}</span>
-            </div>
-            <div class="dropdown-item" @click="menuSmartSelect">
-              <Sparkles :size="18" /><span>智能选择</span>
             </div>
             <div class="dropdown-item" @click="handleManualAdd">
               <Plus :size="18" /><span>手动添加包名</span>
