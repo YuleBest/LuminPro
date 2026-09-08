@@ -137,12 +137,41 @@ function handleSaveWebUI() {
         <div class="config-item">
           <div class="config-label">
             <span class="config-name">显示 HDR 内容时休眠</span>
-            <span class="config-desc">HDR/SDR 比率 &gt; 1 时不提升</span>
+            <span class="config-desc">比率 ≥ 进入阈值休眠，≤ 退出阈值恢复</span>
             <span class="config-desc" style="color: var(--color-warning)"
               >出现闪屏建议改用黑名单</span
             >
           </div>
           <Switch v-model="config.displayHdrSleep.value" />
+        </div>
+
+        <div class="config-item-expand" :class="{ show: config.displayHdrSleep.value }">
+          <div class="custom-time-picker">
+            <div class="time-unit">
+              <input
+                type="number"
+                v-model="config.hdrEnterRatio.value"
+                class="time-input time-input-wide"
+                min="1"
+                max="5"
+                step="0.01"
+                autocomplete="off"
+              />
+              <span class="time-sep">进入</span>
+            </div>
+            <div class="time-unit">
+              <input
+                type="number"
+                v-model="config.hdrExitRatio.value"
+                class="time-input time-input-wide"
+                min="1"
+                max="5"
+                step="0.01"
+                autocomplete="off"
+              />
+              <span class="time-sep">退出</span>
+            </div>
+          </div>
         </div>
 
         <div class="config-item">

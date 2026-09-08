@@ -76,6 +76,8 @@ max_bri="$(get_cfg max_bri 0)"
 sleep_time="$(get_cfg sleep_time '')"
 auto_bri_sleep="$(get_cfg auto_bri_sleep 1)"
 display_hdr_sleep="$(get_cfg display_hdr_sleep 0)"
+hdr_enter_ratio="$(get_cfg hdr_enter_ratio 1.15)"
+hdr_exit_ratio="$(get_cfg hdr_exit_ratio 1.05)"
 steps_num="$(get_cfg steps_num 50)"
 
 # 解析休眠时间
@@ -166,22 +168,11 @@ MAIN() {
         fi
     fi
 
-    # 显示 HDR 内容时休眠
+    # 显示 HDR 内容时休眠 (迟滞: 比率达到进入阈值休眠, 降至退出阈值恢复)
     if [ "$display_hdr_sleep" = "1" ]; then
-        local hdr_flag_file="$PID_DIR/hdr.flag"
-        if [ -f "$hdr_flag_file" ]; then
-            local flag_time now
-            flag_time="$(cat "$hdr_flag_file")"
-            now="$(date +%s)"
-            if awk "BEGIN{exit !(($now - $flag_time) < 2)}" 2>/dev/null; then
-                _log "HDR 冷却期内，跳过提升" "INFO"
-                return
-            else
-                rm -f "$hdr_flag_file"
-            fi
-        fi
-        local hdr_ratio
+        local hdr_state_file="$PID_DIR/hdr.flag"
         local hdr_cache_file="$PID_DIR/.hdr_ratio_cache"
+        local hdr_ratio
         hdr_ratio="$(dumpsys display 2>/dev/null | sed -n 's/.*hdrSdrRatio \([0-9.]*\).*/\1/p' | head -n 1)"
         if echo "$hdr_ratio" | grep -qE '^[0-9]+\.[0-9]+$'; then
             echo -n "$hdr_ratio" >"$hdr_cache_file"
@@ -190,13 +181,23 @@ MAIN() {
             _log "HDR 比率读取为空，使用缓存值: $hdr_ratio" "INFO"
         fi
         if echo "$hdr_ratio" | grep -qE '^[0-9]+\.[0-9]+$'; then
-            local hdr_ratio_rounded
-            hdr_ratio_rounded="$(awk "BEGIN{printf \"%.2f\", $hdr_ratio}")"
-            if awk "BEGIN{exit !($hdr_ratio_rounded > 1.00)}" 2>/dev/null; then
-                _log "检测到 HDR 内容 (比率: $hdr_ratio_rounded)，跳过提升" "INFO"
-                date +%s >"$hdr_flag_file"
+            hdr_ratio="$(awk "BEGIN{printf \"%.2f\", $hdr_ratio}")"
+            if [ -f "$hdr_state_file" ]; then
+                if awk "BEGIN{exit !($hdr_ratio <= $hdr_exit_ratio)}" 2>/dev/null; then
+                    rm -f "$hdr_state_file"
+                    _log "HDR 休眠解除 (比率: $hdr_ratio ≤ 退出阈值 $hdr_exit_ratio)" "INFO"
+                else
+                    _log "HDR 休眠中 (比率: $hdr_ratio)，跳过提升" "INFO"
+                    return
+                fi
+            elif awk "BEGIN{exit !($hdr_ratio >= $hdr_enter_ratio)}" 2>/dev/null; then
+                touch "$hdr_state_file"
+                _log "检测到 HDR 内容 (比率: $hdr_ratio ≥ 进入阈值 $hdr_enter_ratio)，进入休眠" "INFO"
                 return
             fi
+        elif [ -f "$hdr_state_file" ]; then
+            _log "HDR 比率不可读，保持休眠，跳过提升" "INFO"
+            return
         fi
     fi
 

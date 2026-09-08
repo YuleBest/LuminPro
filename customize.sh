@@ -67,6 +67,8 @@ write_config_json() {
         --arg log_max_size "${cfg_log_max_size:-512}" \
         --arg auto_bri_sleep "${cfg_auto_bri_sleep:-1}" \
         --arg display_hdr_sleep "${cfg_display_hdr_sleep:-0}" \
+        --arg hdr_enter_ratio "${cfg_hdr_enter_ratio:-1.15}" \
+        --arg hdr_exit_ratio "${cfg_hdr_exit_ratio:-1.05}" \
         --arg compatibility_mode "${cfg_compatibility_mode:-0}" \
         --arg sleep_time "${cfg_sleep_time:-}" \
         --arg inotify_events "${cfg_inotify_events:-c}" \
@@ -81,6 +83,8 @@ write_config_json() {
             log_max_size:      ($log_max_size       | tonumber),
             auto_bri_sleep:    ($auto_bri_sleep     | tonumber),
             display_hdr_sleep: ($display_hdr_sleep  | tonumber),
+            hdr_enter_ratio:   ($hdr_enter_ratio   | tonumber),
+            hdr_exit_ratio:    ($hdr_exit_ratio    | tonumber),
             compatibility_mode:($compatibility_mode | tonumber),
             sleep_time:        $sleep_time,
             inotify_events:    $inotify_events,
@@ -297,6 +301,8 @@ INIT_CONFIG() {
         cfg_log_max_size=512
         cfg_auto_bri_sleep=1
         cfg_display_hdr_sleep=0
+        cfg_hdr_enter_ratio=1.15
+        cfg_hdr_exit_ratio=1.05
         cfg_compatibility_mode=0
         cfg_sleep_time=""
         cfg_inotify_events="c"
@@ -315,6 +321,8 @@ ENSURE_DEFAULTS() {
         .log_max_size      = (.log_max_size       // 512) |
         .auto_bri_sleep    = (.auto_bri_sleep     // 1) |
         .display_hdr_sleep = (.display_hdr_sleep  // 0) |
+        .hdr_enter_ratio   = (.hdr_enter_ratio   // 1.15) |
+        .hdr_exit_ratio    = (.hdr_exit_ratio    // 1.05) |
         .compatibility_mode= (.compatibility_mode // 0) |
         .sleep_time        = (.sleep_time         // "") |
         .inotify_events    = (.inotify_events     // "c") |

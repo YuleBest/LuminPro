@@ -64,6 +64,8 @@ _基于 KernelSU WebUI + Rust 事件驱动架构_
 | `sleep_time`        | 休眠时段，格式 `HHMM-HHMM`      | 空（禁用）        |
 | `auto_bri_sleep`    | 自动亮度开启时跳过              | `1`（启用）       |
 | `display_hdr_sleep` | HDR 内容时跳过                  | `0`（禁用）       |
+| `hdr_enter_ratio`   | HDR 进入休眠阈值（HDR/SDR 比率）| `1.15`            |
+| `hdr_exit_ratio`    | HDR 退出休眠阈值（HDR/SDR 比率）| `1.05`            |
 | `log_level`         | 日志等级（off/error/warn/info） | `info`            |
 | `log_max_size`      | 日志文件大小上限（KB）          | `512`             |
 | `now_bri_file`      | 当前亮度节点路径                | 标准 panel0 路径  |

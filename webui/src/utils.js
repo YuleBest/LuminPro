@@ -36,6 +36,8 @@ export async function runCmd(cmd) {
           log_max_size: 1024,
           auto_bri_sleep: 1,
           display_hdr_sleep: 0,
+          hdr_enter_ratio: 1.15,
+          hdr_exit_ratio: 1.05,
           sleep_time: '1900-0600',
           inotify_events: 'c',
           now_bri_file: '/sys/mock/brightness',

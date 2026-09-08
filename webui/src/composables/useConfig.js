@@ -20,6 +20,8 @@ export function useConfig() {
   // 执行策略
   const autoBriSleep = ref(false)
   const displayHdrSleep = ref(false)
+  const hdrEnterRatio = ref('1.15')
+  const hdrExitRatio = ref('1.05')
   const compatibilityMode = ref(false)
   const sleepMode = ref(false)
   const sleepStartH = ref('19')
@@ -58,6 +60,8 @@ export function useConfig() {
       stepsNum,
       autoBriSleep,
       displayHdrSleep,
+      hdrEnterRatio,
+      hdrExitRatio,
       compatibilityMode,
       sleepMode,
       sleepStartH,
@@ -88,6 +92,8 @@ export function useConfig() {
     logMaxSize.value = cfg.log_max_size != null ? String(cfg.log_max_size) : '500'
     autoBriSleep.value = cfg.auto_bri_sleep === 1
     displayHdrSleep.value = cfg.display_hdr_sleep === 1
+    hdrEnterRatio.value = cfg.hdr_enter_ratio != null ? String(cfg.hdr_enter_ratio) : '1.15'
+    hdrExitRatio.value = cfg.hdr_exit_ratio != null ? String(cfg.hdr_exit_ratio) : '1.05'
     compatibilityMode.value = cfg.compatibility_mode === 1
     nowBriFile.value = cfg.now_bri_file || DEFAULT_NOW_BRI_FILE
     sysMaxBriFile.value = cfg.max_bri_file || DEFAULT_SYS_MAX_BRI_FILE
@@ -136,6 +142,8 @@ export function useConfig() {
       steps_num: parseInt(stepsNum.value) || 50,
       auto_bri_sleep: autoBriSleep.value ? 1 : 0,
       display_hdr_sleep: displayHdrSleep.value ? 1 : 0,
+      hdr_enter_ratio: parseFloat(hdrEnterRatio.value) || 1.15,
+      hdr_exit_ratio: parseFloat(hdrExitRatio.value) || 1.05,
       compatibility_mode: compatibilityMode.value ? 1 : 0,
       sleep_time: getSleepTimeStr(),
     })
@@ -183,6 +191,8 @@ export function useConfig() {
     maxBri.value = backup.max_bri != null ? String(backup.max_bri) : ''
     autoBriSleep.value = backup.auto_bri_sleep === 1
     displayHdrSleep.value = backup.display_hdr_sleep === 1
+    hdrEnterRatio.value = backup.hdr_enter_ratio != null ? String(backup.hdr_enter_ratio) : '1.15'
+    hdrExitRatio.value = backup.hdr_exit_ratio != null ? String(backup.hdr_exit_ratio) : '1.05'
     compatibilityMode.value = backup.compatibility_mode === 1
     stepsNum.value = backup.steps_num != null ? String(backup.steps_num) : '50'
     logMaxSize.value = backup.log_max_size != null ? String(backup.log_max_size) : '500'
@@ -248,6 +258,8 @@ export function useConfig() {
     logMaxSize,
     autoBriSleep,
     displayHdrSleep,
+    hdrEnterRatio,
+    hdrExitRatio,
     compatibilityMode,
     sleepMode,
     sleepStartH,

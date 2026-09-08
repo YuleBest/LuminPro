@@ -271,6 +271,10 @@
   -moz-appearance: textfield;
 }
 
+.time-input-wide {
+  width: 48px;
+}
+
 .time-input::-webkit-outer-spin-button,
 .time-input::-webkit-inner-spin-button {
   -webkit-appearance: none;
