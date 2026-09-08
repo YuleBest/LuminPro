@@ -27,6 +27,9 @@ CONFIG_FILE="$mod_config/config.json"
 mkdir -p "$mod_config"
 chmod 755 "$JQ" 2>/dev/null
 
+# 亮度节点校验结果: 1 = 默认节点不可用 (安装继续, 但功能不启用)
+NODE_MISSING=0
+
 # ==========================
 # 工具函数
 # ==========================
@@ -139,17 +142,20 @@ CHECK_FILES() {
 
     if [ -f "$now_bri_file" ] && [ -f "$max_bri_file" ]; then
         echo " ✦ 找到亮度节点文件"
-    else
-        [ ! -f "$now_bri_file" ] && echo " ✗ 当前亮度节点不存在: $now_bri_file"
-        [ ! -f "$max_bri_file" ] && echo " ✗ 最大亮度节点不存在: $max_bri_file"
-        echo ""
-        echo " ◇ 设备不支持默认路径，刷入后请通过 Web UI 手动配置亮度节点"
-        echo " ◇ 查找路径: find /sys -name '*brightness*' 2>/dev/null"
-        abort " ✕ 安装中止：无法找到设备亮度节点"
+        echo " ✦ 当前亮度: $(cat "$now_bri_file")"
+        echo " ✦ 系统最大亮度: $(cat "$max_bri_file")"
+        return 0
     fi
 
-    echo " ✦ 当前亮度: $(cat "$now_bri_file")"
-    echo " ✦ 系统最大亮度: $(cat "$max_bri_file")"
+    # 节点缺失不再中止安装: 继续安装, 但重启后功能不会启用 (见 service.sh)
+    [ ! -f "$now_bri_file" ] && echo " ✗ 当前亮度节点不存在: $now_bri_file"
+    [ ! -f "$max_bri_file" ] && echo " ✗ 最大亮度节点不存在: $max_bri_file"
+    echo ""
+    echo " ◇ 设备默认亮度节点不可用, 将继续安装但功能不会启用"
+    echo " ◇ 安装后可在 Web UI 配置正确的亮度节点路径, 然后重启服务启用"
+    echo " ◇ 查找路径: find /sys -name '*brightness*' 2>/dev/null"
+    NODE_MISSING=1
+    return 1
 }
 
 TEST_UI_MAX_BRI() {
@@ -356,17 +362,25 @@ END() {
     final_max=$("$JQ" -re 'if .max_bri > 0 then .max_bri else empty end' "$CONFIG_FILE" 2>/dev/null)
 
     if [ -z "$final_max" ] || [ -z "$final_ui" ]; then
-        echo ""
-        echo "======== 配置不完整 ========"
-        [ -z "$final_max" ] && echo " ✕ 峰值最大亮度: 未配置" || echo " ✦ 峰值最大亮度: $final_max"
-        [ -z "$final_ui" ] && echo " ✕ 前台最大亮度: 未配置" || echo " ✦ 前台最大亮度: $final_ui"
-        echo ""
-        echo " ❆ 配置缺失, 请重启后通过 Web UI 手动配置"
-        echo " ❆ 或按音量 + 现在进行测试, 按音量 - 跳过"
-        if [ "$(btn)" = "0" ]; then
-            TEST_UI_MAX_BRI
-            final_ui=$("$JQ" -re 'if .ui_max_bri > 0 then .ui_max_bri else empty end' "$CONFIG_FILE" 2>/dev/null)
-            final_max=$("$JQ" -re 'if .max_bri > 0 then .max_bri else empty end' "$CONFIG_FILE" 2>/dev/null)
+        if [ "$NODE_MISSING" = "1" ]; then
+            echo ""
+            echo "======== 亮度节点不可用 ========"
+            echo " ✕ 已跳过亮度校准 (节点不存在, 无法读写亮度)"
+            echo " ❆ 安装后请在 Web UI 配置亮度节点路径并校准亮度值"
+            echo " ❆ 配置完成后点击「重启服务」即可启用模块功能"
+        else
+            echo ""
+            echo "======== 配置不完整 ========"
+            [ -z "$final_max" ] && echo " ✕ 峰值最大亮度: 未配置" || echo " ✦ 峰值最大亮度: $final_max"
+            [ -z "$final_ui" ] && echo " ✕ 前台最大亮度: 未配置" || echo " ✦ 前台最大亮度: $final_ui"
+            echo ""
+            echo " ❆ 配置缺失, 请重启后通过 Web UI 手动配置"
+            echo " ❆ 或按音量 + 现在进行测试, 按音量 - 跳过"
+            if [ "$(btn)" = "0" ]; then
+                TEST_UI_MAX_BRI
+                final_ui=$("$JQ" -re 'if .ui_max_bri > 0 then .ui_max_bri else empty end' "$CONFIG_FILE" 2>/dev/null)
+                final_max=$("$JQ" -re 'if .max_bri > 0 then .max_bri else empty end' "$CONFIG_FILE" 2>/dev/null)
+            fi
         fi
     fi
 
@@ -411,10 +425,18 @@ END() {
     echo " - inotifyd 事件:  $inotify"
     echo " - 当前亮度节点:   $now_path"
     echo " - 最大亮度节点:   $max_path"
+    [ ! -f "$now_path" ] && echo " ⚠ 当前亮度节点不存在, 重启后功能将不会启用"
     echo " - 黑名单应用:     ${bl_count} 个"
     echo "==============================="
     echo " ❆ 配置文件: /data/adb/modules/LuminPro/config/config.json"
     echo " ❆ 也可以使用 Web UI 进行配置"
+    if [ "$NODE_MISSING" = "1" ]; then
+        echo ""
+        echo "======== ⚠ 模块功能未启用 ========"
+        echo " ✗ 设备默认亮度节点不可用, 本次安装不会开启亮度提升"
+        echo " ❆ 请在 Web UI「配置」中填写正确的亮度节点路径并保存"
+        echo " ❆ 然后点击「重启服务」即可启用, 无需重新刷入"
+    fi
     echo ""
     echo " ✦ 模块已刷入，请重启手机"
     echo " ❆ 感谢您的使用"
@@ -430,7 +452,12 @@ MAIN() {
     if ! IMPORT_OLD_CONFIG; then
         INIT_CONFIG
         CHECK_FILES
-        TEST_UI_MAX_BRI
+        if [ "$NODE_MISSING" = "1" ]; then
+            echo ""
+            echo " ⚠ 亮度节点不可用, 跳过亮度校准"
+        else
+            TEST_UI_MAX_BRI
+        fi
     fi
     ENSURE_DEFAULTS
     CHECK_DEVICE_COMPATIBILITY

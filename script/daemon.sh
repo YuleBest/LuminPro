@@ -82,6 +82,21 @@ while true; do
     fi
 
     compatibility_mode="$(get_cfg compatibility_mode "0")"
+    now_bri_file="${current_config%|*}"
+
+    # 亮度节点不存在时挂起监听 (功能未启用或路径配置错误)，等待节点出现或配置变更
+    if [ ! -f "$now_bri_file" ]; then
+        if [ -z "$node_wait_logged" ]; then
+            _log "亮度节点不存在: $now_bri_file，功能挂起，每 10 秒重试" "ERROR"
+            node_wait_logged=1
+        fi
+        sleep 10
+        continue
+    fi
+    if [ -n "$node_wait_logged" ]; then
+        _log "亮度节点已就绪: $now_bri_file" "INFO"
+        node_wait_logged=""
+    fi
 
     if [ "$compatibility_mode" = "1" ]; then
         _log "兼容模式已开启 (轮询驱动)" "WARN"
@@ -102,7 +117,6 @@ while true; do
         _log "轮询模式已退出" "INFO"
     else
         _log "正在启动 lumipro 监听" "INFO"
-        now_bri_file="${current_config%|*}"
         inotify_events="${current_config#*|}"
         debug_mode="$(get_cfg debug_mode "0")"
 
