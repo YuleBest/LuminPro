@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, provide, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, provide, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { moduleInfo } from 'kernelsu'
 import { runCmd, showToast } from './utils.js'
 import { useStatus } from './composables/useStatus.js'
@@ -17,6 +17,9 @@ const NAV_ORDER = ['status', 'config', 'apps', 'log', 'about']
 const currentView = ref('status')
 const headerEl = ref(null)
 const headerHidden = ref(false)
+// 操作锁横幅实测高度，用于把 header 与页面内容整体下移，避免被横幅遮挡
+const bannerEl = ref(null)
+const oplockOffset = ref('0px')
 
 const trackStyle = computed(() => {
   const idx = NAV_ORDER.indexOf(currentView.value)
@@ -92,6 +95,12 @@ function restartRefresh(enabled, interval) {
   startRefresh()
 }
 provide('restartRefresh', restartRefresh)
+
+// 横幅出现/消失时测量其高度，作为 header 与页面内容的下移量
+watch(oplock.isLocked, async (locked) => {
+  await nextTick()
+  oplockOffset.value = locked && bannerEl.value ? `${bannerEl.value.offsetHeight}px` : '0px'
+})
 
 // 跟随系统色彩偏好变化
 let _mq = null
@@ -170,11 +179,11 @@ function handleViewChange(view) {
     <div
       id="app"
       :class="{ 'header-hidden': headerHidden }"
-      :style="oplock.isLocked.value ? { '--oplock-offset': '32px' } : {}"
+      :style="{ '--oplock-offset': oplockOffset }"
     >
       <!-- 操作锁横幅 -->
       <Transition name="oplock-fade">
-        <div v-if="oplock.isLocked.value" class="oplock-banner" role="status">
+        <div v-if="oplock.isLocked.value" class="oplock-banner" role="status" ref="bannerEl">
           <span class="oplock-spinner"></span>
           <span>正在执行后台操作，已暂停刷新</span>
         </div>
