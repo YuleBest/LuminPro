@@ -105,8 +105,22 @@ node build-module.js
 
 - **service.sh**: 模块启动入口，负责拉起守护进程。
 - **script/daemon.sh**: 持续监控 `lumipro` 进程，并处理亮度提升逻辑。
+- **script/up.sh**: 亮度提升核心逻辑（阈值判断、黑名单、HDR、渐变写入）。
+- **script/restart.sh**: 重启守护进程与监听。
+- **boost.sh**: 一键提升至峰值亮度 / 恢复原亮度。
 - **customize.sh**: 刷入时的安装逻辑，处理初次校准与文件权限。
 - **action.sh**: 快捷操作逻辑（音量键或管理器按钮触发）。
+
+### 操作锁 (oplock)
+
+`pid/oplock` 是脚本与 WebUI 之间的约定文件：任何会写亮度节点或重建监听的操作
+（`up.sh` 渐变期间、`boost.sh` 全程、`restart.sh` 全程）都会把自己的 PID 写入该文件，
+结束时删除。WebUI 轮询此文件，发现持锁时暂停状态刷新并禁用写操作入口（配置保存、
+黑名单保存、亮度滑条、重启模块），顶部显示提示横幅。
+
+- 查询约定：文件存在且其中的 PID 在 `/proc` 中存活 → 锁定中；否则视为遗留锁，由查询方
+  就地清理（避免脚本被 SIGKILL 后 WebUI 永久卡在锁定态）。
+- `service.sh` 开机时清理该文件；WebUI 侧的实现见 `webui/src/composables/useOplock.js`。
 
 ---
 

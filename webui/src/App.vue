@@ -5,6 +5,7 @@ import { runCmd, showToast } from './utils.js'
 import { useStatus } from './composables/useStatus.js'
 import { useConfig } from './composables/useConfig.js'
 import { useLog } from './composables/useLog.js'
+import { useOplock } from './composables/useOplock.js'
 import BottomNav from './components/BottomNav.vue'
 import StatusView from './views/StatusView.vue'
 import ConfigView from './views/ConfigView.vue'
@@ -25,31 +26,64 @@ const moduleVersion = ref('')
 const status = useStatus()
 const config = useConfig()
 const log = useLog()
+const oplock = useOplock()
 
 // 供子组件使用
 provide('showToast', showToast)
 provide('status', status)
 provide('config', config)
 provide('log', log)
+provide('oplock', oplock)
 
+// 操作锁探测间隔：锁定期间用短间隔以便尽快感知结束；自动刷新关闭时用较轻的空闲间隔
+const LOCK_POLL_INTERVAL = 300
+const LOCK_IDLE_INTERVAL = 2000
 let refreshTimer = null
+let refreshStopped = false
+let _prevLocked = false
 
 function startRefresh() {
   stopRefresh()
-  if (!config.autoRefresh.value) return
-  const interval = config.statusRefreshInterval.value
-  refreshTimer = setInterval(async () => {
-    try {
-      await Promise.all([status.load(), log.load()])
-    } catch {}
-  }, interval)
+  refreshStopped = false
+  refreshTimer = setTimeout(tick, config.statusRefreshInterval.value)
 }
 
 function stopRefresh() {
+  refreshStopped = true
   if (refreshTimer) {
-    clearInterval(refreshTimer)
+    clearTimeout(refreshTimer)
     refreshTimer = null
   }
+}
+
+async function tick() {
+  refreshTimer = null
+  if (refreshStopped) return
+
+  let locked = false
+  try {
+    locked = await oplock.refresh()
+  } catch {}
+
+  if (locked) {
+    // 锁定期间不刷新数据，仅以更短间隔探测锁释放
+    _prevLocked = true
+    refreshTimer = setTimeout(tick, LOCK_POLL_INTERVAL)
+    return
+  }
+
+  // 锁刚释放时强制全量刷新，否则亮度值会停留在操作前的旧值
+  try {
+    if (config.autoRefresh.value) {
+      await Promise.all([status.load(_prevLocked), log.load()])
+    } else if (_prevLocked) {
+      await status.load(true)
+    }
+  } catch {}
+  _prevLocked = false
+
+  const next = config.autoRefresh.value ? config.statusRefreshInterval.value : LOCK_IDLE_INTERVAL
+  refreshTimer = setTimeout(tick, next)
 }
 
 function restartRefresh(enabled, interval) {
@@ -133,7 +167,19 @@ function handleViewChange(view) {
     <!-- 顶部状态栏渐变模糊 -->
     <div class="top-blur"></div>
 
-    <div id="app" :class="{ 'header-hidden': headerHidden }">
+    <div
+      id="app"
+      :class="{ 'header-hidden': headerHidden }"
+      :style="oplock.isLocked.value ? { '--oplock-offset': '32px' } : {}"
+    >
+      <!-- 操作锁横幅 -->
+      <Transition name="oplock-fade">
+        <div v-if="oplock.isLocked.value" class="oplock-banner" role="status">
+          <span class="oplock-spinner"></span>
+          <span>正在执行后台操作，已暂停刷新</span>
+        </div>
+      </Transition>
+
       <!-- 顶部头 -->
       <header class="app-header" ref="headerEl">
         <div class="header-content">
@@ -159,6 +205,7 @@ function handleViewChange(view) {
             <button
               class="btn-status-action"
               id="btn-restart-service"
+              :disabled="oplock.isLocked.value"
               @click="status.restartService(showToast)"
             >
               重启模块

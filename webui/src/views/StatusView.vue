@@ -17,6 +17,7 @@ import {
 const status = inject('status')
 const showToast = inject('showToast')
 const config = inject('config')
+const oplock = inject('oplock')
 
 const confirmedLowBri = ref(false)
 
@@ -105,6 +106,7 @@ const statusItems = computed(() => [
           :max="status.sysMaxBri.value || 255"
           :value="status.currentBri.value || 0"
           :style="sliderStyle"
+          :disabled="oplock.isLocked.value"
           @change="onSliderChange"
         />
         <span class="brightness-label">100%</span>

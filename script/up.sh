@@ -57,6 +57,8 @@ fi
 
 # 防止 up.sh 自身读写亮度节点时触发 inotify 事件导致递归调用
 lock_file="$PID_DIR/up.lock"
+# 操作锁：仅在真正写亮度节点期间持有，供 WebUI 暂停刷新并禁用写操作
+oplock_file="$PID_DIR/oplock"
 if [ -f "$lock_file" ]; then
     old_pid=$(cat "$lock_file" 2>/dev/null)
     if [ -n "$old_pid" ] && [ -d "/proc/$old_pid" ]; then
@@ -68,7 +70,7 @@ if [ -f "$lock_file" ]; then
 fi
 echo $$ >"$lock_file"
 # shellcheck disable=SC2064
-trap "rm -f '$lock_file'" EXIT HUP INT TERM
+trap "rm -f '$lock_file' '$oplock_file'" EXIT HUP INT TERM
 
 # 读取配置
 ui_max_bri="$(get_cfg ui_max_bri 0)"
@@ -99,22 +101,28 @@ IS_SLEEP_TIME() {
 target_bri="$max_bri"
 
 update_all() {
-    local step
+    local step rc=0
+    # 持操作锁：仅在写亮度节点期间，WebUI 据此暂停刷新并禁用写操作
+    echo $$ >"$oplock_file"
+
     start_bri="$(cat "$now_bri_file")"
     bri_diff="$((target_bri - start_bri))"
     step_value="$((bri_diff / steps_num))"
 
     if [ "$step_value" -eq 0 ]; then
         _log "差値过小，直接设定亮度: $target_bri" "INFO"
-        echo -n "$target_bri" >"$now_bri_file" && return 0 || return 1
+        echo -n "$target_bri" >"$now_bri_file" || rc=1
+    else
+        _log "开始渐变调整: $start_bri → $target_bri ($steps_num 步)" "INFO"
+        for step in $(seq 1 "$steps_num"); do
+            echo -n $((start_bri + step * step_value)) >"$now_bri_file"
+            sleep 0.02
+        done
+        echo -n "$target_bri" >"$now_bri_file" || rc=1
     fi
 
-    _log "开始渐变调整: $start_bri → $target_bri ($steps_num 步)" "INFO"
-    for step in $(seq 1 "$steps_num"); do
-        echo -n $((start_bri + step * step_value)) >"$now_bri_file"
-        sleep 0.02
-    done
-    echo -n "$target_bri" >"$now_bri_file" && return 0 || return 1
+    rm -f "$oplock_file"
+    return "$rc"
 }
 
 CHECK_BRI() {

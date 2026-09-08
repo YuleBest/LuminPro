@@ -28,6 +28,13 @@ _log() {
 _log "收到手动重启请求"
 
 pause_file="$PID_DIR/daemon.pause"
+oplock_file="$PID_DIR/oplock"
+
+# 持操作锁：覆盖守护进程重建窗口，WebUI 据此暂停刷新并禁用写操作
+mkdir -p "$PID_DIR"
+echo $$ >"$oplock_file"
+# shellcheck disable=SC2064
+trap "rm -f '$oplock_file'" EXIT HUP INT TERM
 
 # 1. 通知守护进程挂起，终止 lumipro 实例
 _log "通知守护进程挂起，清理 lumipro 实例"
@@ -57,5 +64,19 @@ if ! pgrep -f "script/daemon.sh" >/dev/null 2>&1; then
 else
     _log "守护进程已恢复，等待自动拉起监听"
 fi
+
+# 5. 等待新监听就绪，让操作锁覆盖守护进程重建窗口
+wait_i=0
+while [ "$wait_i" -lt 15 ]; do
+    if [ -f "$pid_file" ]; then
+        new_pid="$(cat "$pid_file" 2>/dev/null)"
+        if [ "$new_pid" = "polling" ] || { [ -n "$new_pid" ] && [ -d "/proc/$new_pid" ]; }; then
+            _log "新监听已就绪 (PID: $new_pid)"
+            break
+        fi
+    fi
+    sleep 0.2
+    wait_i=$((wait_i + 1))
+done
 
 exit 0

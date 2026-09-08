@@ -8,6 +8,7 @@ CONFIG_FILE="$MODDIR/config/config.json"
 JQ="$MODDIR/bin/jq"
 PID_DIR="$MODDIR/pid"
 BOOST_FLAG="$PID_DIR/boost.flag"
+OPLOCK_FILE="$PID_DIR/oplock"
 
 DEFAULT_NOW_BRI_FILE="/sys/class/backlight/panel0-backlight/brightness"
 
@@ -27,6 +28,12 @@ if [ ! -f "$now_bri_file" ]; then
     exit 1
 fi
 
+mkdir -p "$PID_DIR"
+# 持操作锁：WebUI 据此暂停刷新并禁用写操作
+echo $$ >"$OPLOCK_FILE"
+# shellcheck disable=SC2064
+trap "rm -f '$OPLOCK_FILE'" EXIT HUP INT TERM
+
 if [ -f "$BOOST_FLAG" ]; then
     restore_bri="$(cat "$BOOST_FLAG" 2>/dev/null | tr -d ' \n')"
     [ -n "$restore_bri" ] && echo -n "$restore_bri" >"$now_bri_file" 2>/dev/null
@@ -37,7 +44,6 @@ else
         exit 1
     fi
     now_bri="$(cat "$now_bri_file" 2>/dev/null | tr -d ' \n')"
-    mkdir -p "$PID_DIR"
     echo -n "$now_bri" >"$BOOST_FLAG"
     echo -n "$max_bri" >"$now_bri_file" 2>/dev/null
 fi

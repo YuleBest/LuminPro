@@ -26,6 +26,7 @@ import {
 } from 'lucide-vue-next'
 
 const showToast = inject('showToast')
+const oplock = inject('oplock')
 const appsMenuOpen = ref(false)
 
 const {
@@ -312,6 +313,7 @@ function retryPicker() {
             white-space: nowrap;
             flex-shrink: 0;
           "
+          :disabled="oplock.isLocked.value"
           @click="save(showToast)"
           >保存</Button
         >

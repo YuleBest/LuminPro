@@ -1,7 +1,7 @@
 /* Header */
 .app-header {
   position: absolute;
-  top: 0;
+  top: var(--oplock-offset, 0);
   left: 0;
   right: 0;
   z-index: 10;
@@ -109,6 +109,61 @@
 .btn-status-action:active {
   background-color: var(--md-sys-color-primary-container);
   opacity: 1;
+}
+
+.btn-status-action:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* 操作锁横幅 */
+.oplock-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 16px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--md-sys-color-on-surface);
+  background: var(--md-sys-color-surface-container-high);
+  border-bottom: 1px solid var(--md-sys-color-outline-variant);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.oplock-spinner {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  border: 2px solid var(--md-sys-color-primary);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: oplock-spin 0.8s linear infinite;
+}
+
+@keyframes oplock-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.oplock-fade-enter-active,
+.oplock-fade-leave-active {
+  transition:
+    opacity 0.2s,
+    transform 0.2s;
+}
+
+.oplock-fade-enter-from,
+.oplock-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-100%);
 }
 
 .status-dot {

@@ -460,6 +460,15 @@ input:checked + .slider:before {
   height: 28px;
 }
 
+.brightness-slider:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.brightness-slider:disabled:hover {
+  height: 24px;
+}
+
 .brightness-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;

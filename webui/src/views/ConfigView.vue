@@ -20,6 +20,7 @@ import { runCmd } from '../utils.js'
 const config = inject('config')
 const showToast = inject('showToast')
 const restartRefresh = inject('restartRefresh')
+const oplock = inject('oplock')
 
 const advancedOpen = ref(false)
 const webuiOpen = ref(false)
@@ -241,12 +242,15 @@ function handleSaveWebUI() {
       <div class="card-actions">
         <Button
           variant="outline"
+          :disabled="oplock.isLocked.value"
           @click="handleReset"
           :class="resetConfirming ? 'border-destructive text-destructive' : ''"
         >
           {{ resetConfirming ? '确认恢复？' : '恢复默认' }}
         </Button>
-        <Button @click="config.save(showToast)"> <Save :size="15" /> 保存配置 </Button>
+        <Button :disabled="oplock.isLocked.value" @click="config.save(showToast)">
+          <Save :size="15" /> 保存配置
+        </Button>
       </div>
     </section>
 
@@ -343,7 +347,10 @@ function handleSaveWebUI() {
           </div>
 
           <div class="card-actions">
-            <Button @click="config.saveAdvanced(showToast, () => {})">
+            <Button
+              :disabled="oplock.isLocked.value"
+              @click="config.saveAdvanced(showToast, () => {})"
+            >
               <Save :size="15" /> 保存设置
             </Button>
           </div>

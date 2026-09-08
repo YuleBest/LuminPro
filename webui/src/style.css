@@ -117,7 +117,7 @@ body::-webkit-scrollbar {
   overflow-y: auto;
   overflow-x: hidden;
   padding: 12px;
-  padding-top: var(--header-height, 120px);
+  padding-top: calc(var(--header-height, 120px) + var(--oplock-offset, 0px));
   padding-bottom: calc(16px + 80px + var(--safe-area-inset-bottom, 0px));
   scrollbar-width: none;
   -ms-overflow-style: none;

@@ -7,6 +7,7 @@ export const BACKUP_CONFIG_FILE = `${MODULE_DIR}/config/.backup/config.json`
 export const PID_FILE = `${MODULE_DIR}/pid/inotifyd.pid`
 export const FLAG_FILE = `${MODULE_DIR}/pid/up.flag`
 export const STOP_FLAG_FILE = `${MODULE_DIR}/pid/stop.flag`
+export const OPLOCK_FILE = `${MODULE_DIR}/pid/oplock`
 export const LOG_FILE = `${MODULE_DIR}/service.log`
 export const DEFAULT_NOW_BRI_FILE = '/sys/class/backlight/panel0-backlight/brightness'
 export const DEFAULT_SYS_MAX_BRI_FILE = '/sys/class/backlight/panel0-backlight/max_brightness'
@@ -53,6 +54,7 @@ export async function runCmd(cmd) {
       return { errno: 0, stdout: '12345', stderr: '' }
     if (cmd.includes('[ -f') && cmd.includes('stop.flag'))
       return { errno: 0, stdout: '0', stderr: '' }
+    if (cmd.includes('oplock')) return { errno: 0, stdout: 'free', stderr: '' }
     if (cmd.includes('cat') && (cmd.includes('brightness') || cmd.includes('now_bri')))
       return { errno: 0, stdout: '1200', stderr: '' }
     if (cmd.includes('cat') && (cmd.includes('max_brightness') || cmd.includes('max_bri')))

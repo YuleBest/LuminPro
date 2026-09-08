@@ -15,3 +15,6 @@ rust/target/
 # 本地脚本
 deploy.js
 .dist-tmp
+
+# 编辑器 / 会话临时文件
+.zcode/
