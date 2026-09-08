@@ -501,15 +501,24 @@ input:checked + .slider:before {
 }
 
 /* Actions */
-.unsaved-dot {
-  display: inline-block;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--md-sys-color-error);
-  margin-left: 6px;
-  vertical-align: middle;
+.save-badge {
+  margin-left: auto;
   flex-shrink: 0;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.save-badge.unsaved {
+  color: var(--color-warning);
+  background: color-mix(in srgb, var(--color-warning) 15%, transparent);
+}
+
+.save-badge.saved {
+  color: #2f9e63;
+  background: rgba(47, 158, 99, 0.14);
 }
 
 .card-actions {

@@ -16,7 +16,6 @@ export function useConfig() {
   const uiMaxBri = ref('')
   const maxBri = ref('')
   const stepsNum = ref('50')
-  const logMaxSize = ref('500')
 
   // 执行策略
   const autoBriSleep = ref(false)
@@ -34,6 +33,7 @@ export function useConfig() {
   const inotifyEvents = ref('c')
   const debugMode = ref(false)
   const logLevel = ref('info')
+  const logMaxSize = ref('500')
 
   // 脸污标记
   const dirty = ref(false)
@@ -56,7 +56,6 @@ export function useConfig() {
       uiMaxBri,
       maxBri,
       stepsNum,
-      logMaxSize,
       autoBriSleep,
       displayHdrSleep,
       compatibilityMode,
@@ -65,14 +64,13 @@ export function useConfig() {
       sleepStartM,
       sleepEndH,
       sleepEndM,
-      logLevel,
     ],
     () => {
       if (!_silent) dirty.value = true
     },
   )
-  // 监听高级设置字段
-  watch([nowBriFile, sysMaxBriFile, inotifyEvents, debugMode], () => {
+  // 监听高级设置字段 (系统管理的日志项也随「保存设置」写入)
+  watch([nowBriFile, sysMaxBriFile, inotifyEvents, debugMode, logLevel, logMaxSize], () => {
     if (!_silent) dirtyAdvanced.value = true
   })
 
@@ -136,12 +134,10 @@ export function useConfig() {
       ui_max_bri: parseInt(uiMaxBri.value) || 0,
       max_bri: parseInt(maxBri.value) || 0,
       steps_num: parseInt(stepsNum.value) || 50,
-      log_max_size: parseInt(logMaxSize.value) || 500,
       auto_bri_sleep: autoBriSleep.value ? 1 : 0,
       display_hdr_sleep: displayHdrSleep.value ? 1 : 0,
       compatibility_mode: compatibilityMode.value ? 1 : 0,
       sleep_time: getSleepTimeStr(),
-      log_level: logLevel.value,
     })
     await runCmd(`rm -f "${FLAG_FILE}"`)
     const pidRes = await runCmd(`cat "${PID_FILE}"`)
@@ -160,6 +156,8 @@ export function useConfig() {
       max_bri_file: sysMaxBriFile.value || DEFAULT_SYS_MAX_BRI_FILE,
       inotify_events: inotifyEvents.value || 'c',
       debug_mode: debugMode.value ? 1 : 0,
+      log_max_size: parseInt(logMaxSize.value) || 500,
+      log_level: logLevel.value,
     })
     onPathsChanged?.()
     toast('高级设置已保存，需重启模块生效')
@@ -212,6 +210,7 @@ export function useConfig() {
       sleepEndM.value = '00'
     }
     await save(toast)
+    await saveAdvanced(toast)
   }
 
   function saveWebUIConfig(toast, newAutoRefresh, newInterval, newZoom, newTheme, onRestart) {

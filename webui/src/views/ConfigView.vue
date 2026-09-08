@@ -83,9 +83,10 @@ function handleSaveWebUI() {
     <!-- === 亮度配置 === -->
     <section class="card" id="config-section" data-nav-group="config">
       <div class="card-header">
-        <h2>
-          亮度配置<span v-if="config.dirty.value" class="unsaved-dot" title="有未保存的更改"></span>
-        </h2>
+        <h2>亮度配置</h2>
+        <span class="save-badge" :class="config.dirty.value ? 'unsaved' : 'saved'">
+          {{ config.dirty.value ? '未保存' : '已保存' }}
+        </span>
       </div>
 
       <div class="config-group">
@@ -208,36 +209,6 @@ function handleSaveWebUI() {
         </div>
       </div>
 
-      <div class="config-group">
-        <h3 class="group-title"><FileText :size="16" /> 系统管理</h3>
-        <div class="config-item">
-          <div class="config-label">
-            <span class="config-name">日志大小限制</span>
-            <span class="config-desc">单位: KB</span>
-          </div>
-          <Input
-            v-model="config.logMaxSize.value"
-            type="number"
-            min="1"
-            max="10240"
-            class="config-input"
-          />
-        </div>
-
-        <div class="config-item">
-          <div class="config-label">
-            <span class="config-name">日志等级</span>
-            <span class="config-desc">低于此级别不写入日志</span>
-          </div>
-          <select v-model="config.logLevel.value" class="config-select">
-            <option value="off">关闭</option>
-            <option value="error">仅错误</option>
-            <option value="warn">警告+</option>
-            <option value="info">全部</option>
-          </select>
-        </div>
-      </div>
-
       <div class="card-actions">
         <Button
           variant="outline"
@@ -253,13 +224,10 @@ function handleSaveWebUI() {
     <!-- === 高级设置 === -->
     <section class="card" id="advanced-section" data-nav-group="config">
       <div class="card-header card-header-toggle" @click="advancedOpen = !advancedOpen">
-        <h2>
-          高级设置<span
-            v-if="config.dirtyAdvanced.value"
-            class="unsaved-dot"
-            title="有未保存的更改"
-          ></span>
-        </h2>
+        <h2>高级设置</h2>
+        <span class="save-badge" :class="config.dirtyAdvanced.value ? 'unsaved' : 'saved'">
+          {{ config.dirtyAdvanced.value ? '未保存' : '已保存' }}
+        </span>
         <ChevronDown :size="18" class="collapse-chevron" :class="{ open: advancedOpen }" />
       </div>
       <div class="collapsible-body" :class="{ open: advancedOpen }">
@@ -312,6 +280,36 @@ function handleSaveWebUI() {
                 <span class="config-desc">改后需重启模块</span>
               </div>
               <Textarea v-model="config.sysMaxBriFile.value" class="config-textarea" />
+            </div>
+          </div>
+
+          <div class="config-group">
+            <h3 class="group-title"><FileText :size="16" /> 系统管理</h3>
+            <div class="config-item">
+              <div class="config-label">
+                <span class="config-name">日志大小限制</span>
+                <span class="config-desc">单位: KB</span>
+              </div>
+              <Input
+                v-model="config.logMaxSize.value"
+                type="number"
+                min="1"
+                max="10240"
+                class="config-input"
+              />
+            </div>
+
+            <div class="config-item">
+              <div class="config-label">
+                <span class="config-name">日志等级</span>
+                <span class="config-desc">低于此级别不写入日志</span>
+              </div>
+              <select v-model="config.logLevel.value" class="config-select">
+                <option value="off">关闭</option>
+                <option value="error">仅错误</option>
+                <option value="warn">警告+</option>
+                <option value="info">全部</option>
+              </select>
             </div>
           </div>
 
