@@ -33,9 +33,6 @@ export function useStatus() {
   const hdrRatio = ref('—')
   const sleepStatus = ref('—')
 
-  // 自动亮度
-  const autoBriMode = ref(false)
-
   // 缓存配置字段（避免每次刷新都 readConfig）
   let _nowBriFile = null
   let _sysMaxBriFile = null
@@ -62,12 +59,11 @@ export function useStatus() {
 
     // 所有 Shell 命令一次并发，消除多轮顺序等待
     // PID + 进程状态合并为一条命令以减少 exec 次数
-    const [pidStateRes, stopRes, autoBriRes, hdrRes, cBriRes, sBriRes] = await Promise.all([
+    const [pidStateRes, stopRes, hdrRes, cBriRes, sBriRes] = await Promise.all([
       runCmd(
         `PID=$(cat "${PID_FILE}" 2>/dev/null || true); printf '%s\\n' "$PID"; [ -n "$PID" ] && grep '^State:' "/proc/$PID/status" 2>/dev/null | awk '{print $2}' || true`,
       ),
       runCmd(`[ -f "${STOP_FLAG_FILE}" ] && echo "1" || echo "0"`),
-      runCmd(`settings get system screen_brightness_mode`),
       runCmd(
         `dumpsys display 2>/dev/null | sed -n 's/.*hdrSdrRatio \\([0-9.]*\\).*/\\1/p' | head -n 1`,
       ),
@@ -88,8 +84,6 @@ export function useStatus() {
     isRunning.value = !isPaused.value && !!pidStr
     inotifydPid.value = pidStr || '离线'
     inotifydState.value = isRunning.value ? stateChar || '已退出' : '离线'
-
-    autoBriMode.value = autoBriRes.errno === 0 && parseInt(autoBriRes.stdout.trim(), 10) === 1
 
     const hdrRaw = hdrRes.errno === 0 ? hdrRes.stdout.trim() : ''
     hdrRatio.value = hdrRaw && /^\d+(\.\d+)?$/.test(hdrRaw) ? parseFloat(hdrRaw).toFixed(2) : '-'
@@ -136,17 +130,6 @@ export function useStatus() {
     }
   }
 
-  async function setAutoBrightness(enabled, toast) {
-    const mode = enabled ? 1 : 0
-    const res = await runCmd(`settings put system screen_brightness_mode ${mode}`)
-    if (res.errno === 0) {
-      autoBriMode.value = enabled
-      toast(enabled ? '自动亮度已启用' : '手动亮度已启用')
-    } else {
-      toast('设置失败: ' + (res.stderr || '未知错误'))
-    }
-  }
-
   return {
     currentBri,
     sysMaxBri,
@@ -158,12 +141,10 @@ export function useStatus() {
     statusText,
     hdrRatio,
     sleepStatus,
-    autoBriMode,
     load,
     invalidatePaths,
     toggleService,
     restartService,
     setBrightness,
-    setAutoBrightness,
   }
 }

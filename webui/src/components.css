@@ -500,22 +500,6 @@ input:checked + .slider:before {
   border: none;
 }
 
-/* Auto Brightness Row */
-.auto-brightness-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: var(--spacing-s) var(--spacing-m);
-  background-color: rgba(var(--md-sys-color-primary-rgb), 0.08);
-  border-radius: var(--border-radius-s);
-}
-
-.auto-brightness-label {
-  font-size: 0.875rem;
-  color: var(--md-sys-color-on-surface);
-  font-weight: 500;
-}
-
 /* Actions */
 .unsaved-dot {
   display: inline-block;

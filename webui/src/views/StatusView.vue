@@ -1,7 +1,6 @@
 <script setup>
 import { inject, computed, ref } from 'vue'
 import Button from '@/components/ui/Button.vue'
-import Switch from '@/components/ui/Switch.vue'
 import Badge from '@/components/ui/Badge.vue'
 import {
   RefreshCw,
@@ -109,13 +108,6 @@ const statusItems = computed(() => [
           @change="onSliderChange"
         />
         <span class="brightness-label">100%</span>
-      </div>
-      <div class="auto-brightness-row">
-        <span class="auto-brightness-label">自动亮度调节</span>
-        <Switch
-          :model-value="status.autoBriMode.value"
-          @update:model-value="status.setAutoBrightness($event, showToast)"
-        />
       </div>
     </div>
   </section>

@@ -49,8 +49,6 @@ export async function runCmd(cmd) {
     // 状态模拟
     if (cmd.includes('cat') && cmd.includes('inotifyd.pid'))
       return { errno: 0, stdout: '12345', stderr: '' }
-    if (cmd.includes('settings get system screen_brightness_mode'))
-      return { errno: 0, stdout: '1', stderr: '' }
     if (cmd.includes('[ -f') && cmd.includes('stop.flag'))
       return { errno: 0, stdout: '0', stderr: '' }
     if (cmd.includes('cat') && (cmd.includes('brightness') || cmd.includes('now_bri')))
