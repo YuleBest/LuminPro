@@ -1,6 +1,7 @@
 <script setup>
 import { inject, ref, computed, onMounted, reactive } from 'vue'
 import { getPackagesInfo } from 'kernelsu'
+import { useVirtualizer } from '@tanstack/vue-virtual'
 import { useApps } from '@/composables/useApps.js'
 import { runCmd } from '../utils.js'
 import Button from '@/components/ui/Button.vue'
@@ -52,6 +53,28 @@ const {
 
 const filteredApps = computed(() => getFilteredApps())
 const appCount = computed(() => filteredApps.value.length)
+
+// 虚拟滚动：真机 500+ 应用时只渲染可视区附近的行
+const listEl = ref(null)
+const rowVirtualizer = useVirtualizer(
+  computed(() => ({
+    count: filteredApps.value.length,
+    getScrollElement: () => listEl.value,
+    estimateSize: () => 52,
+    overscan: 6,
+  })),
+)
+const virtualRows = computed(() =>
+  rowVirtualizer.value.getVirtualItems().map((row) => ({
+    ...row,
+    app: filteredApps.value[row.index],
+  })),
+)
+const totalListHeight = computed(() => rowVirtualizer.value.getTotalSize())
+
+function measureElement(el) {
+  if (el) rowVirtualizer.value.measureElement(el)
+}
 
 onMounted(() => load())
 
@@ -298,7 +321,7 @@ function retryPicker() {
       </div>
 
       <!-- 应用列表 -->
-      <div class="app-list-container" id="app-list-container">
+      <div class="app-list-container" id="app-list-container" ref="listEl">
         <div
           v-if="isLoading"
           style="text-align: center; padding: 20px; color: var(--md-sys-color-on-surface-variant)"
@@ -311,56 +334,67 @@ function retryPicker() {
         >
           加载失败: {{ loadError }}
         </div>
-        <div v-else v-for="app in filteredApps" :key="app.packageName" class="app-list-item">
-          <div class="app-item-main-row">
-            <label class="app-checkbox-label">
-              <input
-                type="checkbox"
-                class="app-checkbox"
-                :class="{ unsaved: app.checked && !savedBlacklist?.has(app.packageName) }"
-                :data-pkg="app.packageName"
-                v-model="app.checked"
-                @change="onCheckboxChange"
-              />
-              <span
-                class="app-checkbox-custom"
-                :class="{ partial: !app.checked && hasActivity(app.packageName) }"
-              ></span>
-            </label>
-            <div class="app-info">
-              <span class="app-name">
-                {{ app.appLabel }}
-                <span class="app-uid">{{ app.uid }}</span>
-              </span>
-              <span class="app-pkg">
-                {{ app.packageName }}
-                <span v-if="app.isSystem" class="app-badge">系统</span>
-              </span>
-            </div>
-            <button
-              v-if="hasActivity(app.packageName)"
-              class="app-activities-chevron"
-              :class="{ expanded: app.expanded }"
-              @click.stop="app.expanded = !app.expanded"
-            >
-              <ChevronDown :size="16" />
-            </button>
-          </div>
-          <!-- 活动列表 -->
+        <div v-else class="app-virtual-spacer" :style="{ height: `${totalListHeight}px` }">
           <div
-            v-if="hasActivity(app.packageName)"
-            class="app-activities-list"
-            :class="{ show: app.expanded }"
+            v-for="row in virtualRows"
+            :key="row.app.packageName"
+            :ref="measureElement"
+            :data-index="row.index"
+            class="app-virtual-item"
+            :style="{ transform: `translateY(${row.start}px)` }"
           >
-            <div
-              v-for="entry in getActivities(app.packageName)"
-              :key="entry"
-              class="activity-entry-item"
-            >
-              <span class="activity-entry-path">{{ entry.slice(app.packageName.length + 1) }}</span>
-              <button class="activity-entry-delete" @click="removeActivity(entry)">
-                <X :size="14" />
-              </button>
+            <div class="app-list-item">
+              <div class="app-item-main-row">
+                <label class="app-checkbox-label">
+                  <input
+                    type="checkbox"
+                    class="app-checkbox"
+                    :class="{ unsaved: row.app.checked && !savedBlacklist?.has(row.app.packageName) }"
+                    :data-pkg="row.app.packageName"
+                    v-model="row.app.checked"
+                    @change="onCheckboxChange"
+                  />
+                  <span
+                    class="app-checkbox-custom"
+                    :class="{ partial: !row.app.checked && hasActivity(row.app.packageName) }"
+                  ></span>
+                </label>
+                <div class="app-info">
+                  <span class="app-name">
+                    {{ row.app.appLabel }}
+                    <span class="app-uid">{{ row.app.uid }}</span>
+                  </span>
+                  <span class="app-pkg">
+                    {{ row.app.packageName }}
+                    <span v-if="row.app.isSystem" class="app-badge">系统</span>
+                  </span>
+                </div>
+                <button
+                  v-if="hasActivity(row.app.packageName)"
+                  class="app-activities-chevron"
+                  :class="{ expanded: row.app.expanded }"
+                  @click.stop="row.app.expanded = !row.app.expanded"
+                >
+                  <ChevronDown :size="16" />
+                </button>
+              </div>
+              <!-- 活动列表 -->
+              <div
+                v-if="hasActivity(row.app.packageName)"
+                class="app-activities-list"
+                :class="{ show: row.app.expanded }"
+              >
+                <div
+                  v-for="entry in getActivities(row.app.packageName)"
+                  :key="entry"
+                  class="activity-entry-item"
+                >
+                  <span class="activity-entry-path">{{ entry.slice(row.app.packageName.length + 1) }}</span>
+                  <button class="activity-entry-delete" @click="removeActivity(entry)">
+                    <X :size="14" />
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>

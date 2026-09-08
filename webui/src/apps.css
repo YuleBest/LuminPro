@@ -61,9 +61,6 @@
 
 /* App List */
 .app-list-container {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-s);
   max-height: 60vh;
   overflow-y: auto;
   border-radius: var(--border-radius-m);
@@ -72,6 +69,21 @@
 
 .app-list-container::-webkit-scrollbar {
   display: none;
+}
+
+/* 虚拟滚动：spacer 撑起总高度，行绝对定位；
+   行间距由 item 的 padding-bottom 提供，保证测量行高包含间距 */
+.app-virtual-spacer {
+  position: relative;
+  width: 100%;
+}
+
+.app-virtual-item {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  padding-bottom: var(--spacing-s);
 }
 
 .app-list-item {
