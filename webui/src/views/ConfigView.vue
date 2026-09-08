@@ -272,7 +272,7 @@ function handleSaveWebUI() {
                 <span class="config-name">调试模式</span>
                 <span class="config-desc">记录详细 inotify 事件到日志</span>
                 <span class="config-desc" style="color: var(--color-warning)"
-                  >需重启生效，用完请关闭</span
+                  >需重启模块生效，用完请关闭</span
                 >
               </div>
               <Switch v-model="config.debugMode.value" />
@@ -281,7 +281,7 @@ function handleSaveWebUI() {
             <div class="config-item">
               <div class="config-label">
                 <span class="config-name">lumipro 监听事件</span>
-                <span class="config-desc">默认 c，改后需重启</span>
+                <span class="config-desc">默认 c，改后需重启模块</span>
                 <button
                   class="btn-text-s"
                   style="margin-top: 6px; padding: 2px 6px"
@@ -301,7 +301,7 @@ function handleSaveWebUI() {
             <div class="config-item" id="advanced-section">
               <div class="config-label">
                 <span class="config-name">当前亮度节点</span>
-                <span class="config-desc">改后需重启</span>
+                <span class="config-desc">改后需重启模块</span>
               </div>
               <Textarea v-model="config.nowBriFile.value" class="config-textarea" />
             </div>
@@ -309,7 +309,7 @@ function handleSaveWebUI() {
             <div class="config-item">
               <div class="config-label">
                 <span class="config-name">最大亮度节点</span>
-                <span class="config-desc">改后需重启</span>
+                <span class="config-desc">改后需重启模块</span>
               </div>
               <Textarea v-model="config.sysMaxBriFile.value" class="config-textarea" />
             </div>

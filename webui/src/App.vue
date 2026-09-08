@@ -161,7 +161,7 @@ function handleViewChange(view) {
               id="btn-restart-service"
               @click="status.restartService(showToast)"
             >
-              重启
+              重启模块
             </button>
           </div>
         </div>

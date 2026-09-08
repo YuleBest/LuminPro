@@ -118,12 +118,12 @@ export function useStatus() {
   }
 
   async function restartService(toast) {
-    toast('正在重启服务...')
+    toast('正在重启模块...')
     const res = await runCmd(`sh /data/adb/modules/LuminPro/script/restart.sh`)
     setTimeout(async () => {
       await load(true)
     }, 1000)
-    toast(res.errno === 0 ? '服务已成功重启' : '重启失败: ' + res.stderr)
+    toast(res.errno === 0 ? '模块重启成功' : '模块重启失败: ' + res.stderr)
   }
 
   async function setBrightness(newBri, toast) {

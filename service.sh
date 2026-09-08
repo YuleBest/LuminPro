@@ -50,7 +50,7 @@ _log "最大亮度节点: $max_bri_file" "INFO"
 # 亮度节点不存在时不启动守护进程 (节点不可用的设备允许安装但功能保持关闭)
 if [ ! -f "$now_bri_file" ]; then
     _log "亮度节点不存在: $now_bri_file，模块功能未启用" "ERROR"
-    _log "请配置正确的亮度节点路径后，在 Web UI 中重启服务以启用" "WARN"
+    _log "请配置正确的亮度节点路径后，在 Web UI 中重启模块以启用" "WARN"
     exit 0
 fi
 

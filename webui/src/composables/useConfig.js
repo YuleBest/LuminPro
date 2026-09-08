@@ -147,7 +147,7 @@ export function useConfig() {
     const pidRes = await runCmd(`cat "${PID_FILE}"`)
     toast(
       pidRes.errno === 0 && pidRes.stdout.trim()
-        ? '配置已保存 (下次重启或触发时生效)'
+        ? '配置已保存 (下次重启模块或触发时生效)'
         : '配置已保存 (服务未运行)',
     )
     dirty.value = false
@@ -162,7 +162,7 @@ export function useConfig() {
       debug_mode: debugMode.value ? 1 : 0,
     })
     onPathsChanged?.()
-    toast('高级设置已保存，需重启服务生效')
+    toast('高级设置已保存，需重启模块生效')
     dirtyAdvanced.value = false
   }
 
