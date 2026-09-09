@@ -77,16 +77,23 @@ npm run build
 
 ### 版本号规范
 
-`versionCode = 基础号 × 100 + 段位`：
+`version` 采用语义化命名（不含 versionCode），`versionCode` 单独维护：
 
-| 段位 | 范围 | 示例 |
-| --- | --- | --- |
-| 正式 | `00` | `V2.5-2501` → `250100` |
-| beta | `51–99` | `V2.5-2501-beta.1` → `250151` |
-| dev | `01–49` | `V2.5-2501-dev.3` → `250103` |
+```
+versionCode = 主版本 × 1000000 + 次版本 × 10000 + 修订 × 100 + 段位
+```
+
+| 段位 | 段位值 | version 示例 | versionCode |
+| --- | --- | --- | --- |
+| 正式 | `00` | `V2.5.0` | `2050000` |
+| beta | `51–99` | `V2.5.0-beta.1` | `2050051` |
+| dev | `01–49` | `V2.5.0-dev.1` | `2050001` |
 
 排序恒为 `dev < beta < 下一个正式版`：dev 测试者可平滑收到 beta，beta 用户会平滑收到
 下一个正式版。同周期内从 beta/dev 回退到正式版需手动刷包（管理器不支持降级）。
+
+tag 名 = version 的小写形式（如 `v2.5.0-beta.1`），Release 资产名为
+`LuminPro_<version>.zip`。
 
 ### 发布流程
 
@@ -96,7 +103,7 @@ npm run build
 node build-module.js --channel=stable   # main 分支
 node build-module.js --channel=beta     # beta 分支
 # 3) 提交后打 tag（tag 名 = 版本号小写），推送即触发 CI 建 Release
-git tag v2.5-2501-beta.1 && git push origin v2.5-2501-beta.1
+git tag v2.5.0-beta.1 && git push origin v2.5.0-beta.1
 ```
 
 CI 会依次：跑 Go 单测 → 交叉编译 → 按通道打包 → 建 GitHub Release 并上传
