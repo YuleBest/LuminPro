@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "cd webui && vite",
     "build": "cd webui && vite build && cd .. && node build-module.js",
+    "build:webui": "cd webui && vite build",
     "preview": "cd webui && vite preview",
     "lint": "oxlint webui/",
     "lint:fix": "oxlint --fix webui/",

@@ -1,6 +1,6 @@
 {
-  "versionCode": 2401,
-  "version": "V2.4-2401",
-  "zipUrl": "https://share.yule.ink/magisk/mod/luminpro/module/LuminPro_V2.4-2401.zip",
-  "changelog": "https://raw.githubusercontent.com/YuleBest/LuminPro/main/changelog.md"
+    "versionCode": 2401,
+    "version": "V2.4-2401",
+    "zipUrl": "https://github.com/YuleBest/LuminPro/releases/download/v2.4-2401/LuminPro_V2.4-2401-f2c489e.zip",
+    "changelog": "https://raw.githubusercontent.com/YuleBest/LuminPro/main/changelog.md"
 }

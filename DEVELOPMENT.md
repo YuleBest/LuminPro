@@ -63,16 +63,48 @@ npm run build
 
 ---
 
-## 4. 自动化构建 (推荐方式)
+## 4. 分支与发布通道
 
-本项目依赖 GitHub Actions 进行稳定构建，避免本地环境差异导致的编译问题。
+| 分支 | 通道 | 包内 `updateJson` | 说明 |
+| --- | --- | --- | --- |
+| `dev` | 开发 | 无 | 日常开发；产物为 Actions artifact，手动刷入 |
+| `beta` | 预览 | `beta/update-beta.json` | 预发布版，GitHub Release 标记为 prerelease |
+| `main` | 正式 | `main/update.json` | 正式版 |
 
-### 触发流程
+通道由**刷入的包**决定：KernelSU 只读取已安装模块 `module.prop` 里的 `updateJson`，
+所以正式版用户永远不会收到 beta 包，反之亦然。`zipUrl` 必须指向 GitHub Release 资产
+（或 raw），不再使用第三方镜像。
 
-1. **推送代码**：修改代码并 `git push` 后，GitHub 会自动启动 [Build & Package Module] 工作流。
-2. **下载产物**：
-   - 流程结束后，在 GitHub Actions 运行记录的 **Artifacts** 栏目中可下载编译好的 ZIP 模块。
-   - 产物文件名格式为：`LuminPro_V2.x.x-shortsha.zip`。
+### 版本号规范
+
+`versionCode = 基础号 × 100 + 段位`：
+
+| 段位 | 范围 | 示例 |
+| --- | --- | --- |
+| 正式 | `00` | `V2.5-2501` → `250100` |
+| beta | `51–99` | `V2.5-2501-beta.1` → `250151` |
+| dev | `01–49` | `V2.5-2501-dev.3` → `250103` |
+
+排序恒为 `dev < beta < 下一个正式版`：dev 测试者可平滑收到 beta，beta 用户会平滑收到
+下一个正式版。同周期内从 beta/dev 回退到正式版需手动刷包（管理器不支持降级）。
+
+### 发布流程
+
+```bash
+# 1) 在对应分支改 module.prop 的 version / versionCode
+# 2) 生成更新清单（会写入 update.json / update-beta.json，需一并提交）
+node build-module.js --channel=stable   # main 分支
+node build-module.js --channel=beta     # beta 分支
+# 3) 提交后打 tag（tag 名 = 版本号小写），推送即触发 CI 建 Release
+git tag v2.5-2501-beta.1 && git push origin v2.5-2501-beta.1
+```
+
+CI 会依次：跑 Go 单测 → 交叉编译 → 按通道打包 → 建 GitHub Release 并上传
+`LuminPro_<version>.zip`（beta 自动标记 prerelease）。更新清单里的 `zipUrl` 精确指向该
+资产，所以**版本号与资产文件名必须一致**。
+
+分支推送（非 tag）只产出带短哈希的 artifact，不建 Release；默认通道是 `dev`，本地
+`node build-module.js` 不会改动任何清单文件。
 
 ---
 

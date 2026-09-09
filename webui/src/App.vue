@@ -26,6 +26,13 @@ const trackStyle = computed(() => {
   return { transform: `translateX(${-idx * 100}%)` }
 })
 const moduleVersion = ref('')
+// 通道徽标：版本号里带 -beta / -dev 即为对应通道（打包时写入）
+const channelBadge = computed(() => {
+  const v = moduleVersion.value.toLowerCase()
+  if (v.includes('-beta')) return 'Beta'
+  if (v.includes('-dev')) return 'Dev'
+  return ''
+})
 const status = useStatus()
 const config = useConfig()
 const log = useLog()
@@ -195,7 +202,10 @@ function handleViewChange(view) {
           <div class="header-text">
             <h1>LuminPro</h1>
             <p class="header-subtitle">日用屏幕亮度强化</p>
-            <p class="header-version">{{ moduleVersion || 'V2.2' }}</p>
+            <p class="header-version">
+              {{ moduleVersion || 'V2.2' }}
+              <span v-if="channelBadge" class="version-channel">{{ channelBadge }}</span>
+            </p>
           </div>
         </div>
         <div class="header-status-container">

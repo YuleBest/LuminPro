@@ -67,6 +67,19 @@
   text-transform: uppercase;
 }
 
+/* 版本通道徽标 (Beta / Dev) */
+.version-channel {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: var(--color-warning);
+  background: color-mix(in srgb, var(--color-warning) 18%, transparent);
+  vertical-align: middle;
+}
+
 .header-status-container {
   display: flex;
   flex-direction: column;

@@ -2,9 +2,12 @@ name: Build & Package Module
 
 on:
   push:
-    branches: [main]
+    branches: [main, beta, dev]
     tags: ['v*']
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -29,7 +32,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build WebUI
-        run: pnpm build
+        run: pnpm build:webui
 
       # ── 2. luminpro 二进制 (Go) ─────────────────────────────────────────
       - name: Setup Go
@@ -51,12 +54,55 @@ jobs:
           CGO_ENABLED=0 GOOS=android GOARCH=arm64 go build -trimpath -ldflags="-s -w" -o ../bin/luminpro ./cmd/luminpro
           chmod +x ../bin/luminpro
 
-      # ── 3. 打包模块 ──────────────────────────────────────────────────────
-      - name: Package module
-        run: node build-module.js
+      # ── 3. 判定发布通道 ─────────────────────────────────────────────────
+      # tag 含 -beta → beta 通道（prerelease）；其余 tag → stable；
+      # 分支构建：dev → dev、beta → beta、main → stable（仅出 artifact）
+      - name: Resolve release channel
+        id: channel
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            TAG="${GITHUB_REF_NAME}"
+            if [[ "$TAG" == *-beta* ]]; then
+              echo "channel=beta" >> "$GITHUB_OUTPUT"
+              echo "prerelease=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "channel=stable" >> "$GITHUB_OUTPUT"
+              echo "prerelease=false" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            case "${GITHUB_REF_NAME}" in
+              dev) echo "channel=dev" >> "$GITHUB_OUTPUT" ;;
+              beta) echo "channel=beta" >> "$GITHUB_OUTPUT" ;;
+              *) echo "channel=stable" >> "$GITHUB_OUTPUT" ;;
+            esac
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          fi
 
-      # ── 4. 重命名 zip 加入 commit 短哈希 ─────────────────────────────────
-      - name: Rename zip with commit hash
+      # ── 4. 打包模块 ─────────────────────────────────────────────────────
+      - name: Package module
+        run: node build-module.js --channel=${{ steps.channel.outputs.channel }}
+
+      # ── 5a. tag 构建：创建 GitHub Release 并上传资产 ─────────────────────
+      # Release 资产文件名必须与更新清单里的 zipUrl 完全一致
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION=$(grep '^version=' module.prop | cut -d= -f2 | tr -d '[:space:]')
+          ZIP="LuminPro_${VERSION}.zip"
+          NOTES=$(awk '/^## / { if (p) exit; p=1; next } p { print }' changelog.md)
+          [ -n "$NOTES" ] || NOTES="自动构建产物"
+          FLAGS=""
+          if [ "${{ steps.channel.outputs.prerelease }}" = "true" ]; then FLAGS="--prerelease"; fi
+          gh release create "${GITHUB_REF_NAME}" "$ZIP" \
+            --title "${GITHUB_REF_NAME}" \
+            --notes "$NOTES" \
+            $FLAGS
+
+      # ── 5b. 分支构建：重命名后作为 artifact 上传 ────────────────────────
+      - name: Rename artifact with commit hash
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
         id: names
         run: |
           VERSION=$(grep '^version=' module.prop | cut -d= -f2 | tr -d '[:space:]')
@@ -65,10 +111,8 @@ jobs:
           mv "LuminPro_${VERSION}.zip" "$FINAL"
           echo "zip=$FINAL" >> "$GITHUB_OUTPUT"
 
-      # ── 5. 上传 artifact（单个 zip 文件） ────────────────────────────────
-      # upload-artifact 上传单个文件时仍会套一层 zip；通过 gh run download 下载
-      # 后得到的即是模块 zip，直接可刷入，无需二次解压。
       - name: Upload module zip
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
         uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.names.outputs.zip }}
