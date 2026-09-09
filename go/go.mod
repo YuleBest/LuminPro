@@ -1,3 +1,5 @@
 module github.com/YuleBest/LuminPro/go
 
-go 1.24
+go 1.26.0
+
+require golang.org/x/sys v0.48.0
