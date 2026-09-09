@@ -303,3 +303,55 @@ func (c Config) toRawMap() map[string]json.RawMessage {
 func (c Config) Blacklist() []string {
 	return append([]string(nil), c.BlacklistApps...)
 }
+
+// Get 返回字段的纯文本表示（供 shell 使用）：字符串原样，数字/布尔去引号，
+// 数组与对象返回 JSON。第二个返回值表示字段是否存在。
+func (c Config) Get(key string) (string, bool) {
+	raw, ok := c.toRawMap()[key]
+	if !ok {
+		return "", false
+	}
+	var v any
+	if err := json.Unmarshal(raw, &v); err != nil {
+		return "", false
+	}
+	switch value := v.(type) {
+	case string:
+		return value, true
+	case float64:
+		return strconv.FormatFloat(value, 'f', -1, 64), true
+	case bool:
+		return strconv.FormatBool(value), true
+	case nil:
+		return "", true
+	default:
+		b, err := json.Marshal(v)
+		if err != nil {
+			return "", false
+		}
+		return string(b), true
+	}
+}
+
+// Summary 返回安装界面需要展示的字段（key=value 形式），供 shell 读取。
+func (c Config) Summary() map[string]string {
+	out := map[string]string{
+		"ui_max_bri":         strconv.Itoa(c.UIMaxBri),
+		"max_bri":            strconv.Itoa(c.MaxBri),
+		"steps_num":          strconv.Itoa(c.StepsNum),
+		"log_max_size":       strconv.Itoa(c.LogMaxSize),
+		"auto_bri_sleep":     strconv.Itoa(c.AutoBriSleep),
+		"display_hdr_sleep":  strconv.Itoa(c.DisplayHdrSleep),
+		"hdr_enter_ratio":    strconv.FormatFloat(c.HdrEnterRatio, 'f', -1, 64),
+		"hdr_exit_ratio":     strconv.FormatFloat(c.HdrExitRatio, 'f', -1, 64),
+		"compatibility_mode": strconv.Itoa(c.CompatibilityMode),
+		"sleep_time":         c.SleepTime,
+		"inotify_events":     c.InotifyEvents,
+		"now_bri_file":       c.NowBriFile,
+		"max_bri_file":       c.MaxBriFile,
+		"log_level":          c.LogLevel,
+		"debug_mode":         strconv.Itoa(c.DebugMode),
+		"blacklist_count":    strconv.Itoa(len(c.BlacklistApps)),
+	}
+	return out
+}

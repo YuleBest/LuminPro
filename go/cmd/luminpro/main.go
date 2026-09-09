@@ -109,6 +109,27 @@ func runConfig(paths daemon.Paths, args []string) error {
 			return fmt.Errorf("set 需要至少一个 key=value")
 		}
 		return config.Set(paths.ConfigFile, args[1:])
+	case "get":
+		if len(args) < 2 {
+			return fmt.Errorf("get 需要字段名")
+		}
+		cfg, err := config.Load(paths.ConfigFile)
+		if err != nil {
+			return err
+		}
+		value, ok := cfg.Get(args[1])
+		if !ok {
+			return fmt.Errorf("未知字段: %s", args[1])
+		}
+		fmt.Println(value)
+		return nil
+	case "summary":
+		cfg, err := config.Load(paths.ConfigFile)
+		if err != nil {
+			return err
+		}
+		printMap(cfg.Summary())
+		return nil
 	case "inspect":
 		if len(args) < 2 {
 			return fmt.Errorf("inspect 需要旧配置目录")
@@ -146,12 +167,17 @@ func runConfig(paths daemon.Paths, args []string) error {
 // printOld 输出 key=value 行，供安装脚本读取展示。
 func printOld(old config.OldConfig) {
 	fmt.Printf("format=%s\n", old.Format)
-	keys := make([]string, 0, len(old.Values))
-	for k := range old.Values {
+	printMap(old.Values)
+}
+
+// printMap 按键排序输出 key=value 行。
+func printMap(values map[string]string) {
+	keys := make([]string, 0, len(values))
+	for k := range values {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
 	for _, k := range keys {
-		fmt.Printf("%s=%s\n", k, old.Values[k])
+		fmt.Printf("%s=%s\n", k, values[k])
 	}
 }

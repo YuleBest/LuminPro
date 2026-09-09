@@ -5,7 +5,6 @@ export const CONFIG_DIR = `${MODULE_DIR}/config`
 export const CONFIG_FILE = `${MODULE_DIR}/config/config.json`
 export const BACKUP_CONFIG_FILE = `${MODULE_DIR}/config/.backup/config.json`
 export const PID_FILE = `${MODULE_DIR}/pid/inotifyd.pid`
-export const FLAG_FILE = `${MODULE_DIR}/pid/up.flag`
 export const STOP_FLAG_FILE = `${MODULE_DIR}/pid/stop.flag`
 export const OPLOCK_FILE = `${MODULE_DIR}/pid/oplock`
 export const LOG_FILE = `${MODULE_DIR}/service.log`

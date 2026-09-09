@@ -31,36 +31,25 @@ jobs:
       - name: Build WebUI
         run: pnpm build
 
-      # ── 2. lumipro 二进制 ────────────────────────────────────────────────
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+      # ── 2. luminpro 二进制 (Go) ─────────────────────────────────────────
+      - name: Setup Go
+        uses: actions/setup-go@v5
         with:
-          targets: aarch64-linux-android
+          go-version-file: go/go.mod
+          cache-dependency-path: go/go.sum
 
-      - name: Setup Android NDK
-        uses: nttld/setup-ndk@v1
-        id: ndk
-        with:
-          ndk-version: r27c
-
-      - name: Cache Rust dependencies
-        uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: rust
-
-      - name: Install cargo-ndk
-        run: cargo install cargo-ndk --locked
-
-      - name: Build lumipro (aarch64-linux-android)
-        working-directory: rust
-        env:
-          ANDROID_NDK_HOME: ${{ steps.ndk.outputs.ndk-path }}
-        run: cargo ndk -t arm64-v8a --platform 26 build --release
-
-      - name: Copy binary to bin/
+      - name: Test Go packages
+        working-directory: go
         run: |
-          cp rust/target/aarch64-linux-android/release/lumipro bin/lumipro
-          chmod +x bin/lumipro
+          go vet ./...
+          go test ./...
+
+      - name: Build luminpro (android/arm64)
+        working-directory: go
+        run: |
+          mkdir -p ../bin
+          CGO_ENABLED=0 GOOS=android GOARCH=arm64 go build -trimpath -ldflags="-s -w" -o ../bin/luminpro ./cmd/luminpro
+          chmod +x ../bin/luminpro
 
       # ── 3. 打包模块 ──────────────────────────────────────────────────────
       - name: Package module

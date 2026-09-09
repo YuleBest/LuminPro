@@ -3,18 +3,18 @@
 欢迎回到 LuminPro 的开发！本指南旨在帮助开发者快速找回开发节奏，了解项目结构、构建流程以及如何进行本地调试。
 
 > [!IMPORTANT]
-> **无需本地环境全套配置**：本项目已配置完善的 GitHub Actions，每次推送代码到 `main` 分支或发布标签 (`v*`)，云端会自动完成前端编译、Rust 交叉编译及模块打包，并生成可直接刷入的 ZIP 包。
+> **无需本地环境全套配置**：本项目已配置完善的 GitHub Actions，每次推送代码到 `main` 分支或发布标签 (`v*`)，云端会自动完成前端编译、Go 交叉编译、单元测试及模块打包，并生成可直接刷入的 ZIP 包。
 
 ---
 
 ## 1. 项目架构概览
 
-LuminPro 是一个基于 KernelSU WebUI 的 Android 亮度增强模块，结合了 Rust 底层监听与 Vue.js 前端控制。
+LuminPro 是一个基于 KernelSU WebUI 的 Android 亮度增强模块，底层为 Go 常驻守护进程，前端为 Vue 3。
 
+- `go/`: Go 源码。`cmd/luminpro` 是入口，`internal/` 下按职责分包（见第 5 节）。
 - `webui/`: 基于 Vite + Vue 3 的前端源码。
-- `rust/`: 负责底层文件监听的二进制程序 (`lumipro`) 源码。
-- `bin/`: 存放预编译的二进制文件（如 `jq`, `lumipro`）。
-- `script/`: 核心逻辑 shell 脚本（守护进程、逻辑触发等）。
+- `bin/`: 编译产物 `luminpro`（CI 生成，不进版本库）。
+- `script/`: 仅保留 `restart.sh` 等转发脚本。
 - `webroot/`: WebUI 编译产物存放地，模块刷入后 KernelSU 会读取此处。
 - `module.prop`: 模块基础信息。
 - `build-module.js`: 模块自动化打包脚本。
@@ -23,15 +23,16 @@ LuminPro 是一个基于 KernelSU WebUI 的 Android 亮度增强模块，结合�
 
 ## 2. 环境搭建 (本地)
 
-如果你仅进行 WebUI 界面调整或脚本逻辑修改，只需安装 Node.js：
+- **Node.js**: 推荐 v18+ (项目中使用 pnpm/npm)，用于 WebUI 与打包。
+- **Go**: 1.26+，用于守护进程开发与测试（交叉编译到 Android 无需 NDK）。
 
-- **Node.js**: 推荐 v18+ (项目中使用 pnpm/npm)
+```bash
+cd go
+go vet ./... && go test ./...          # 全部逻辑均可在 host 上测试
+CGO_ENABLED=0 GOOS=android GOARCH=arm64 go build -trimpath -ldflags="-s -w" -o ../bin/luminpro ./cmd/luminpro
+```
 
-如果你需要**在本地编译 Rust 程序**（通常不需要，建议交给云端），才需要安装以下工具：
-
-- **Rust**: 需要安装 Android Target: `rustup target add aarch64-linux-android`
-- **Android NDK**: 交叉编译所需 (推荐 r27c+)。
-- **cargo-ndk**: 安装命令: `cargo install cargo-ndk`
+守护进程支持 `LUMINPRO_MODDIR` 环境变量覆盖模块目录，配合自定义 `now_bri_file` 即可在电脑上直接跑通全流程（详见第 8 节）。
 
 ---
 
@@ -75,27 +76,39 @@ npm run build
 
 ---
 
-## 5. Rust 底层开发 (可选)
+## 5. Go 守护进程开发
 
-`lumipro` 源码位于 `rust/`。通常修改逻辑后直接推送即可，若需本地测试编译：
+`go/` 下按职责分包，判定逻辑与 IO 分离，便于在电脑上测试：
+
+| 包 | 职责 |
+| --- | --- |
+| `cmd/luminpro` | 子命令入口：`daemon` / `boost` / `restart` / `config` |
+| `internal/inotify` | 原始 inotify 封装（事件字母与 toybox 兼容，含防抖与事件排空） |
+| `internal/policy` | 纯判定逻辑：休眠时段、阈值、黑名单、HDR 迟滞状态机 |
+| `internal/brightness` | 亮度节点读写与渐变序列计算 |
+| `internal/system` | `dumpsys` / `settings` 调用，接口化以便注入假实现 |
+| `internal/config` | config.json 读写、补默认值、旧配置迁移（安装脚本用它替代 jq） |
+| `internal/logging` | service.log 写入（格式与 WebUI 过滤兼容） |
+| `internal/daemon` | 主循环、操作锁、boost / restart 实现 |
 
 ```bash
-cd rust
-cargo ndk -t arm64-v8a --platform 26 build --release
-cp target/aarch64-linux-android/release/lumipro ../bin/lumipro
+cd go
+go test ./...                # 全部单测（含真 inotify 集成测试）
+go test ./internal/policy/ -v   # 只跑判定逻辑
 ```
 
 ---
 
 ## 6. 模块打包脚本
 
-`build-module.js` 负责版本同步、生成校验和并打包。即便不在本地编译 Rust，你也可以用它临时打包当前目录文件：
+`build-module.js` 负责版本同步、生成校验和并打包。打包前需要先有 `bin/luminpro`：
 
 ```bash
-# 自动执行：前端编译 + 模块打包
+# 自动执行：前端编译 + 模块打包（不含 Go 编译）
 npm run build
 
-# 仅打包（不重编前端）：
+# 完整本地构建：
+cd go && CGO_ENABLED=0 GOOS=android GOARCH=arm64 go build -trimpath -ldflags="-s -w" -o ../bin/luminpro ./cmd/luminpro && cd ..
 node build-module.js
 ```
 
@@ -103,32 +116,44 @@ node build-module.js
 
 ## 7. 核心逻辑说明
 
-- **service.sh**: 模块启动入口，负责拉起守护进程。
-- **script/daemon.sh**: 持续监控 `lumipro` 进程，并处理亮度提升逻辑。
-- **script/up.sh**: 亮度提升核心逻辑（阈值判断、黑名单、HDR、渐变写入）。
-- **script/restart.sh**: 重启守护进程与监听。
-- **boost.sh**: 一键提升至峰值亮度 / 恢复原亮度。
-- **customize.sh**: 刷入时的安装逻辑，处理初次校准与文件权限。
-- **action.sh**: 快捷操作逻辑（音量键或管理器按钮触发）。
+- **service.sh**: 开机入口，等待系统就绪后拉起 `luminpro daemon`。
+- **luminpro daemon**: 常驻进程，负责监听、判定、渐变写入、状态文件维护。
+- **luminpro boost** / **boost.sh**: 一键提升至峰值亮度 / 恢复原亮度。
+- **luminpro restart** / **script/restart.sh**: 通知守护进程重建监听；未运行时按需拉起。
+- **customize.sh**: 刷入时的安装逻辑（校准向导、旧配置迁移），配置读写全部调用
+  `luminpro config ...`，模块内不再需要 jq。
+- **action.sh**: 快捷启停（管理器操作按钮），仅切换 `pid/stop.flag`。
 
 ### 操作锁 (oplock)
 
-`pid/oplock` 是脚本与 WebUI 之间的约定文件：任何会写亮度节点或重建监听的操作
-（`up.sh` 渐变期间、`boost.sh` 全程、`restart.sh` 全程）都会把自己的 PID 写入该文件，
-结束时删除。WebUI 轮询此文件，发现持锁时暂停状态刷新并禁用写操作入口（配置保存、
-黑名单保存、亮度滑条、重启模块），顶部显示提示横幅。
+`pid/oplock` 是守护进程与 WebUI 之间的约定文件：任何会写亮度节点或重建监听的操作
+（渐变期间、`boost` 全程、`restart` 全程）都会把自己的 PID 写入该文件，结束时删除。
+WebUI 轮询此文件，发现持锁时暂停状态刷新并禁用写操作入口（配置保存、黑名单保存、
+亮度滑条、重启模块），顶部显示提示横幅。
 
 - 查询约定：文件存在且其中的 PID 在 `/proc` 中存活 → 锁定中；否则视为遗留锁，由查询方
-  就地清理（避免脚本被 SIGKILL 后 WebUI 永久卡在锁定态）。
+  就地清理（避免进程被 SIGKILL 后 WebUI 永久卡在锁定态）。
 - `service.sh` 开机时清理该文件；WebUI 侧的实现见 `webui/src/composables/useOplock.js`。
 
 ---
 
 ## 8. 调试技巧
 
-- **查看日志**: 在 WebUI 界面、日志页，或执行 `tail -f /data/adb/modules/luminpro/luminpro.log`。
-- **手动触发逻辑**: 执行 `/data/adb/modules/luminpro/boost.sh`。
-- **配置文件**: `/data/adb/modules/luminpro/config/config.json`。
+- **查看日志**: WebUI 日志页，或 `tail -f /data/adb/modules/LuminPro/service.log`。
+- **手动触发**: `/data/adb/modules/LuminPro/boost.sh`。
+- **配置文件**: `/data/adb/modules/LuminPro/config/config.json`。
+- **在电脑上跑守护进程**（无需真机）：
+
+```bash
+mkdir -p /tmp/lp/{config,pid} && printf 1200 > /tmp/lp/brightness
+cp bin/luminpro /tmp/lp/   # 或用 go build 出的 host 版二进制
+LUMINPRO_MODDIR=/tmp/lp ./luminpro config init
+LUMINPRO_MODDIR=/tmp/lp ./luminpro config set now_bri_file=/tmp/lp/brightness ui_max_bri=1000 max_bri=3000
+LUMINPRO_MODDIR=/tmp/lp ./luminpro daemon &
+printf 1500 > /tmp/lp/brightness   # 模拟用户调高亮度，观察日志与节点变化
+```
+
+`dumpsys` / `settings` 在电脑上不存在时按「无数据」降级，不影响验证监听与渐变主流程。
 
 ---
 

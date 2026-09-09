@@ -47,7 +47,9 @@ const excludes = [
   'build.ps1',
   'build-module.js',
   'webui', // webui 目录已经构建到 webroot
-  'rust', // Rust 源码，编译产物已复制到 bin/
+  'go', // Go 源码，编译产物已复制到 bin/
+  'dist', // 本地下载的构建产物
+  '.zcode', // 编辑器/会话临时文件
   zipName,
 ]
 

@@ -281,7 +281,7 @@ function handleSaveWebUI() {
 
             <div class="config-item">
               <div class="config-label">
-                <span class="config-name">lumipro 监听事件</span>
+                <span class="config-name">监听事件</span>
                 <span class="config-desc">默认 c，改后需重启模块</span>
                 <button
                   class="btn-text-s"

@@ -9,8 +9,8 @@ dist/
 webroot/*
 !webroot/.gitkeep
 
-# rust
-rust/target/
+# Go 编译产物（CI/本地构建生成）
+bin/luminpro
 
 # 本地脚本
 deploy.js

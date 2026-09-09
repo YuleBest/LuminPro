@@ -6,7 +6,6 @@ import {
   updateConfig,
   BACKUP_CONFIG_FILE,
   PID_FILE,
-  FLAG_FILE,
   DEFAULT_NOW_BRI_FILE,
   DEFAULT_SYS_MAX_BRI_FILE,
 } from '../utils.js'
@@ -147,7 +146,6 @@ export function useConfig() {
       compatibility_mode: compatibilityMode.value ? 1 : 0,
       sleep_time: getSleepTimeStr(),
     })
-    await runCmd(`rm -f "${FLAG_FILE}"`)
     const pidRes = await runCmd(`cat "${PID_FILE}"`)
     toast(
       pidRes.errno === 0 && pidRes.stdout.trim()
