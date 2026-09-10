@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/YuleBest/LuminPro/go/internal/api"
 	"github.com/YuleBest/LuminPro/go/internal/config"
 	"github.com/YuleBest/LuminPro/go/internal/logging"
 	"github.com/YuleBest/LuminPro/go/internal/system"
@@ -298,21 +299,21 @@ func TestBoostRejectsMissingNode(t *testing.T) {
 
 func TestReadDaemonPID(t *testing.T) {
 	dir := t.TempDir()
-	pidFile := filepath.Join(dir, "inotifyd.pid")
+	pidFile := filepath.Join(dir, "daemon.pid")
 
-	if _, alive := readDaemonPID(pidFile); alive {
+	if _, alive := api.DaemonPID(pidFile); alive {
 		t.Fatal("文件不存在应视为未运行")
 	}
 	_ = os.WriteFile(pidFile, []byte("notanumber"), 0o644)
-	if _, alive := readDaemonPID(pidFile); alive {
+	if _, alive := api.DaemonPID(pidFile); alive {
 		t.Fatal("非法内容应视为未运行")
 	}
 	_ = os.WriteFile(pidFile, []byte("999999"), 0o644)
-	if _, alive := readDaemonPID(pidFile); alive {
+	if _, alive := api.DaemonPID(pidFile); alive {
 		t.Fatal("不存在的 PID 应视为未运行")
 	}
 	_ = os.WriteFile(pidFile, []byte(strconv.Itoa(os.Getpid())), 0o644)
-	if pid, alive := readDaemonPID(pidFile); !alive || pid != os.Getpid() {
+	if pid, alive := api.DaemonPID(pidFile); !alive || pid != os.Getpid() {
 		t.Fatal("当前进程 PID 应视为存活")
 	}
 }

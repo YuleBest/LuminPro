@@ -227,8 +227,38 @@ func parseValue(s string) any {
 }
 
 // applyRaw 用原始键值填充强类型字段，未识别的键留在 extra。
+// 单个字段损坏时保留默认值，不阻断整体加载（与旧 get_cfg 的降级一致）。
 func (c *Config) applyRaw(raw map[string]json.RawMessage) {
-	known := map[string]any{
+	_ = c.apply(raw, false)
+}
+
+// apply 填充字段；strict=true 时字段类型不匹配直接报错（用于写路径）。
+func (c *Config) apply(raw map[string]json.RawMessage, strict bool) error {
+	known := fieldTargets(c)
+
+	c.extra = nil
+	for key, value := range raw {
+		dst, ok := known[key]
+		if !ok {
+			if c.extra == nil {
+				c.extra = map[string]json.RawMessage{}
+			}
+			c.extra[key] = value
+			continue
+		}
+		if err := json.Unmarshal(value, dst); err != nil && strict {
+			return fmt.Errorf("字段 %s 的值类型不正确: %w", key, err)
+		}
+	}
+	if c.BlacklistApps == nil {
+		c.BlacklistApps = []string{}
+	}
+	return nil
+}
+
+// fieldTargets 返回已知字段名到目标字段指针的映射。
+func fieldTargets(c *Config) map[string]any {
+	return map[string]any{
 		"ui_max_bri":         &c.UIMaxBri,
 		"max_bri":            &c.MaxBri,
 		"steps_num":          &c.StepsNum,
@@ -246,22 +276,30 @@ func (c *Config) applyRaw(raw map[string]json.RawMessage) {
 		"debug_mode":         &c.DebugMode,
 		"blacklist_apps":     &c.BlacklistApps,
 	}
+}
 
-	c.extra = nil
-	for key, value := range raw {
-		if dst, ok := known[key]; ok {
-			// 单个字段损坏时保留默认值，不阻断整体加载。
-			_ = json.Unmarshal(value, dst)
-			continue
-		}
-		if c.extra == nil {
-			c.extra = map[string]json.RawMessage{}
-		}
-		c.extra[key] = value
+// JSON 返回完整配置（含全部已知字段，缺失项已补默认值）。
+func (c Config) JSON() ([]byte, error) {
+	return json.Marshal(c.toRawMap())
+}
+
+// Patch 用一份 JSON 对象浅合并配置并原子保存。
+// 与 Load 不同，这里对已知字段做严格类型校验，避免写坏配置。
+func Patch(path string, patch map[string]json.RawMessage) error {
+	c, err := Load(path)
+	if err != nil {
+		return err
 	}
-	if c.BlacklistApps == nil {
-		c.BlacklistApps = []string{}
+	raw := c.toRawMap()
+	for key, value := range patch {
+		raw[key] = value
 	}
+
+	probe := Default()
+	if err := probe.apply(raw, true); err != nil {
+		return err
+	}
+	return probe.Save(path)
 }
 
 // toRawMap 导出为原始键值表（含未知键）。

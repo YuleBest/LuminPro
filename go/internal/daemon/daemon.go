@@ -8,13 +8,13 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
 	"syscall"
 	"time"
 
+	"github.com/YuleBest/LuminPro/go/internal/api"
 	"github.com/YuleBest/LuminPro/go/internal/brightness"
 	"github.com/YuleBest/LuminPro/go/internal/config"
 	"github.com/YuleBest/LuminPro/go/internal/inotify"
@@ -24,33 +24,10 @@ import (
 )
 
 // Paths 是模块内的文件布局（与 WebUI 的契约，不可随意改名）。
-type Paths struct {
-	ModuleDir  string
-	PIDDir     string
-	ConfigFile string
-	LogFile    string
-	PIDFile    string
-	StopFlag   string
-	PauseFlag  string
-	Oplock     string
-	BoostFlag  string
-}
+type Paths = api.Paths
 
 // DefaultPaths 按模块目录推导全部路径。
-func DefaultPaths(moduleDir string) Paths {
-	pidDir := filepath.Join(moduleDir, "pid")
-	return Paths{
-		ModuleDir:  moduleDir,
-		PIDDir:     pidDir,
-		ConfigFile: filepath.Join(moduleDir, "config", "config.json"),
-		LogFile:    filepath.Join(moduleDir, "service.log"),
-		PIDFile:    filepath.Join(pidDir, "inotifyd.pid"),
-		StopFlag:   filepath.Join(pidDir, "stop.flag"),
-		PauseFlag:  filepath.Join(pidDir, "daemon.pause"),
-		Oplock:     filepath.Join(pidDir, "oplock"),
-		BoostFlag:  filepath.Join(pidDir, "boost.flag"),
-	}
-}
+func DefaultPaths(moduleDir string) Paths { return api.DefaultPaths(moduleDir) }
 
 // Deps 是守护进程的外部依赖，测试时可注入假实现。
 type Deps struct {
@@ -99,17 +76,30 @@ type Daemon struct {
 	ratioCache        float64
 	haveRatioCache    bool
 	nodeMissingLogged bool
+
+	// 运行状态（供 WebUI 的 status 读取，避免前端反复调用 dumpsys）
+	stateMu sync.Mutex
+	state   api.DaemonState
 }
 
 // New 创建守护进程并加载初始配置。
 func New(paths Paths, deps Deps) (*Daemon, error) {
 	deps.withDefaults()
-	d := &Daemon{paths: paths, deps: deps}
+	d := &Daemon{
+		paths: paths,
+		deps:  deps,
+		state: api.DaemonState{
+			PID:       os.Getpid(),
+			StartedAt: time.Now().Unix(),
+			Mode:      "event",
+		},
+	}
 	cfg, err := config.Load(paths.ConfigFile)
 	if err != nil {
 		return nil, err
 	}
 	d.setConfig(cfg)
+	d.state.Node = cfg.NowBriFile
 	return d, nil
 }
 
@@ -132,6 +122,7 @@ func (d *Daemon) Run() error {
 	defer d.cleanup()
 
 	d.log().Info("守护进程已启动")
+	d.flushState()
 
 	sigCh := make(chan os.Signal, 4)
 	signal.Notify(sigCh, syscall.SIGHUP, syscall.SIGTERM, syscall.SIGINT)
@@ -197,8 +188,10 @@ func (d *Daemon) serve(sigCh chan os.Signal, cfgCh chan struct{}) exitReason {
 
 	if cfg.CompatibilityMode == 1 {
 		d.log().Warn("兼容模式已开启 (轮询驱动)")
+		d.setStateMode("polling")
 		go d.compatLoop(stop)
 	} else {
+		d.setStateMode("event")
 		w, err := inotify.New()
 		if err != nil {
 			d.log().Error("初始化 inotify 失败: " + err.Error())
@@ -223,6 +216,7 @@ func (d *Daemon) serve(sigCh chan os.Signal, cfgCh chan struct{}) exitReason {
 					}
 					return
 				}
+				d.recordEvent(ev.Letters)
 				d.evaluate()
 			}, runStop)
 		}()
@@ -267,16 +261,20 @@ func (d *Daemon) compatLoop(stop <-chan struct{}) {
 
 // evaluate 执行一次完整判定；满足条件时执行亮度提升。
 func (d *Daemon) evaluate() {
+	defer d.flushState()
+
 	// 服务暂停 / 守护进程挂起：静默跳过（与旧脚本一致）
-	if fileExists(d.paths.StopFlag) || fileExists(d.paths.PauseFlag) {
+	if api.FileExists(d.paths.StopFlag) || api.FileExists(d.paths.PauseFlag) {
+		d.setStatePaused(api.FileExists(d.paths.StopFlag))
 		return
 	}
+	d.setStatePaused(false)
 
 	cfg := d.currentConfig()
 	if cfg.UIMaxBri <= 0 || cfg.MaxBri <= 0 {
 		return // 未校准，等价于旧脚本的 `now >= 0 && now < 0`
 	}
-	if !fileExists(cfg.NowBriFile) {
+	if !api.FileExists(cfg.NowBriFile) {
 		return // 节点缺失由外层循环负责记录与重试，这里静默
 	}
 
@@ -284,9 +282,13 @@ func (d *Daemon) evaluate() {
 		d.log().Info(fmt.Sprintf("处于休眠时段 (%s)，跳过提升", cfg.SleepTime))
 		return
 	}
-	if cfg.AutoBriSleep == 1 && d.deps.AutoBrightness.Enabled() {
-		d.log().Info("自动亮度已启用，跳过提升")
-		return
+	if cfg.AutoBriSleep == 1 {
+		autoBri := d.deps.AutoBrightness.Enabled()
+		d.setStateAutoBrightness(autoBri)
+		if autoBri {
+			d.log().Info("自动亮度已启用，跳过提升")
+			return
+		}
 	}
 	if len(cfg.BlacklistApps) > 0 {
 		focus := d.deps.Focus.CurrentFocus()
@@ -311,6 +313,7 @@ func (d *Daemon) evaluateHdr(cfg config.Config) bool {
 	}
 	if ok {
 		d.ratioCache, d.haveRatioCache = ratio, true
+		d.setStateRatio(ratio)
 	}
 
 	decision := d.hdr.Evaluate(ratio, ok, cfg.HdrEnterRatio, cfg.HdrExitRatio)
@@ -322,6 +325,7 @@ func (d *Daemon) evaluateHdr(cfg config.Config) bool {
 	case decision.Skip:
 		d.log().Info("HDR 休眠中，跳过提升")
 	}
+	d.setStateHdrSleep(d.hdr.InSleep())
 	return !decision.Skip
 }
 
@@ -337,6 +341,7 @@ func (d *Daemon) boost(cfg config.Config) {
 			d.log().Error("读取亮度节点失败: " + err.Error())
 			return
 		}
+		d.setStateBrightness(now)
 		if policy.ShouldBoost(now, cfg.UIMaxBri, cfg.MaxBri) {
 			d.log().Info(fmt.Sprintf("触发提升: 当前亮度 %d ≥ 阈值 %d，目标 %d", now, cfg.UIMaxBri, cfg.MaxBri))
 			if err := d.ramp(cfg, now); err != nil {
@@ -357,11 +362,15 @@ func (d *Daemon) boost(cfg config.Config) {
 // ramp 执行渐变写入，期间持操作锁。
 func (d *Daemon) ramp(cfg config.Config, start int) error {
 	d.log().Info(fmt.Sprintf("开始渐变调整: %d → %d (%d 步)", start, cfg.MaxBri, cfg.StepsNum))
-	if err := d.writeOplock(); err != nil {
+	if err := api.WriteOplock(d.paths.Oplock, api.KindRamp); err != nil {
 		d.log().Warn("写入操作锁失败: " + err.Error())
 	}
-	defer d.removeOplock()
-	return brightness.Ramp(cfg.NowBriFile, start, cfg.MaxBri, cfg.StepsNum, d.deps.StepDelay, nil)
+	defer api.RemoveOplock(d.paths.Oplock)
+
+	err := brightness.Ramp(cfg.NowBriFile, start, cfg.MaxBri, cfg.StepsNum, d.deps.StepDelay, nil)
+	d.setStateAction(api.KindRamp, start, cfg.MaxBri)
+	d.setStateBrightness(cfg.MaxBri)
+	return err
 }
 
 // pollConfig 定期比对 config.json 的 mtime/大小，变更时通知主循环。
@@ -459,23 +468,73 @@ func (d *Daemon) writePID() error {
 	return os.WriteFile(d.paths.PIDFile, []byte(strconv.Itoa(os.Getpid())), 0o644)
 }
 
-func (d *Daemon) writeOplock() error {
-	if err := os.MkdirAll(d.paths.PIDDir, 0o755); err != nil {
-		return err
-	}
-	return os.WriteFile(d.paths.Oplock, []byte(strconv.Itoa(os.Getpid())), 0o644)
-}
-
-func (d *Daemon) removeOplock() {
-	_ = os.Remove(d.paths.Oplock)
-}
-
 func (d *Daemon) cleanup() {
 	_ = os.Remove(d.paths.PIDFile)
 	_ = os.Remove(d.paths.Oplock)
+	_ = os.Remove(d.paths.StateFile)
 }
 
-func fileExists(path string) bool {
-	info, err := os.Stat(path)
-	return err == nil && !info.IsDir()
+// ── 运行状态维护（供 WebUI 的 status 子命令读取）────────────────────────────
+
+func (d *Daemon) updateState(fn func(s *api.DaemonState)) {
+	d.stateMu.Lock()
+	defer d.stateMu.Unlock()
+	fn(&d.state)
+}
+
+func (d *Daemon) flushState() {
+	d.stateMu.Lock()
+	snapshot := d.state
+	d.stateMu.Unlock()
+	if err := api.WriteState(d.paths.StateFile, snapshot); err != nil {
+		d.log().Warn("写入运行状态失败: " + err.Error())
+	}
+}
+
+func (d *Daemon) recordEvent(letters string) {
+	now := time.Now().Unix()
+	d.updateState(func(s *api.DaemonState) {
+		s.LastEvent = &api.EventInfo{Letters: letters, At: now}
+	})
+}
+
+func (d *Daemon) setStateMode(mode string) {
+	d.updateState(func(s *api.DaemonState) { s.Mode = mode })
+	d.flushState()
+}
+
+func (d *Daemon) setStatePaused(paused bool) {
+	d.updateState(func(s *api.DaemonState) { s.Paused = paused })
+}
+
+func (d *Daemon) setStateRatio(ratio float64) {
+	now := time.Now().Unix()
+	d.updateState(func(s *api.DaemonState) {
+		s.Ratio = &api.RatioInfo{Value: ratio, At: now}
+	})
+}
+
+func (d *Daemon) setStateAutoBrightness(on bool) {
+	now := time.Now().Unix()
+	d.updateState(func(s *api.DaemonState) {
+		s.AutoBrightness = &api.BoolInfo{Value: on, At: now}
+	})
+}
+
+func (d *Daemon) setStateHdrSleep(asleep bool) {
+	d.updateState(func(s *api.DaemonState) { s.HdrSleep = asleep })
+}
+
+func (d *Daemon) setStateBrightness(value int) {
+	now := time.Now().Unix()
+	d.updateState(func(s *api.DaemonState) {
+		s.Brightness = &api.IntInfo{Value: value, At: now}
+	})
+}
+
+func (d *Daemon) setStateAction(kind string, from, to int) {
+	now := time.Now().Unix()
+	d.updateState(func(s *api.DaemonState) {
+		s.LastAction = &api.ActionInfo{Kind: kind, From: from, To: to, At: now}
+	})
 }
