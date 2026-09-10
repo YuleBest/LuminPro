@@ -113,7 +113,7 @@ async function confirmReset() {
       <ShieldCheck :size="16" aria-hidden="true" /> 执行策略
     </div>
     <AppSwitch v-model="config.sleepEnabled.value" name="定时休眠" support="设定时段内不提升亮度" />
-    <div class="collapse" :class="{ open: config.sleepEnabled.value }">
+    <div class="collapse collapse--gap" :class="{ open: config.sleepEnabled.value }">
       <div class="sleep-row">
         <AppTextField
           :model-value="sleepStart"
@@ -133,7 +133,7 @@ async function confirmReset() {
       name="显示 HDR 内容时休眠"
       support="比率 ≥ 进入阈值休眠，≤ 退出阈值恢复"
     />
-    <div class="collapse" :class="{ open: form.display_hdr_sleep === '1' }">
+    <div class="collapse collapse--gap" :class="{ open: form.display_hdr_sleep === '1' }">
       <div class="sleep-row">
         <AppTextField
           v-model="form.hdr_enter_ratio"
@@ -185,7 +185,7 @@ async function confirmReset() {
       <ChevronDown :size="18" class="chevron" :class="{ open: advancedOpen }" />
     </button>
 
-    <div class="collapse" :class="{ open: advancedOpen }">
+    <div class="collapse collapse--gap" :class="{ open: advancedOpen }">
       <div class="collapse-inner">
         <div class="group-title ts-title-sm supporting">
           <Wrench :size="16" aria-hidden="true" /> 运行环境
@@ -263,7 +263,7 @@ async function confirmReset() {
       <ChevronDown :size="18" class="chevron" :class="{ open: webuiOpen }" />
     </button>
 
-    <div class="collapse" :class="{ open: webuiOpen }">
+    <div class="collapse collapse--gap" :class="{ open: webuiOpen }">
       <div class="collapse-inner">
         <div class="group-title ts-title-sm supporting">
           <Palette :size="16" aria-hidden="true" /> 界面设置
@@ -352,14 +352,12 @@ async function confirmReset() {
   display: flex;
   flex-direction: column;
   gap: var(--md-sys-spacing-3);
-  padding-top: var(--md-sys-spacing-3);
 }
 
 .sleep-row {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--md-sys-spacing-2);
-  padding-bottom: var(--md-sys-spacing-2);
 }
 
 .field-row {

@@ -65,6 +65,8 @@
 }
 
 /* ── 折叠区（grid-template-rows 动画）────────────────────────────── */
+/* 注意：折叠时子元素自身的 padding 仍会撑出高度，所以间距必须由本组件统一
+   控制（--collapse-gap），子元素上不要再写上下 padding。 */
 .collapse {
   display: grid;
   grid-template-rows: 0fr;
@@ -79,6 +81,19 @@
 .collapse > * {
   overflow: hidden;
   min-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  transition: padding var(--md-sys-motion-duration-medium2)
+    var(--md-sys-motion-easing-emphasized);
+}
+
+.collapse.open > * {
+  padding-top: var(--collapse-gap, 0px);
+  padding-bottom: var(--collapse-gap, 0px);
+}
+
+.collapse--gap {
+  --collapse-gap: var(--md-sys-spacing-3);
 }
 
 /* ── 空状态 ───────────────────────────────────────────────────────── */
