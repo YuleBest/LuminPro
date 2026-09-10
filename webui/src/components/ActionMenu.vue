@@ -32,9 +32,14 @@ function pick(item) {
   <md-icon-button ref="anchorEl" :title="title" :disabled="disabled" @click="toggle">
     <MoreVertical :size="20" />
   </md-icon-button>
-  <md-menu ref="menuEl" :open="open" @closed="open = false">
-    <md-menu-item v-for="item in items" :key="item.key" @click="pick(item)">
-      <span slot="headline">{{ item.label }}</span>
-    </md-menu-item>
-  </md-menu>
+  <!-- 菜单挂到 body 并用窗口定位：
+       页面滑轨带 transform，若菜单留在原地，包含块会变成 .page-track，
+       再被 .page-viewport 的 overflow:hidden 裁掉（表现为点了没反应） -->
+  <Teleport to="body">
+    <md-menu ref="menuEl" positioning="fixed" :open="open" @closed="open = false">
+      <md-menu-item v-for="item in items" :key="item.key" @click="pick(item)">
+        <span slot="headline">{{ item.label }}</span>
+      </md-menu-item>
+    </md-menu>
+  </Teleport>
 </template>
