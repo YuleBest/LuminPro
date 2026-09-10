@@ -166,11 +166,9 @@ md-navigation-tab {
 
 /* ── 操作锁横幅 ───────────────────────────────────────────────────── */
 .oplock-banner {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 5;
+  /* 参与正常流（并排在顶栏之前）：出现时把内容整体下推，而不是盖住顶栏 */
+  order: -1;
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   gap: var(--md-sys-spacing-2);
