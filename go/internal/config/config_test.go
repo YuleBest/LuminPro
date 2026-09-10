@@ -166,6 +166,111 @@ func TestInitCreatesAndEnsureFills(t *testing.T) {
 	}
 }
 
+func TestPatchMergesShallowly(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.json")
+	if err := Set(path, []string{"ui_max_bri=1000", "max_bri=3000", "sleep_time=2200-0700"}); err != nil {
+		t.Fatal(err)
+	}
+	// 注入一个未知字段，验证 patch 后仍保留
+	raw, _ := os.ReadFile(path)
+	var withUnknown map[string]json.RawMessage
+	_ = json.Unmarshal(raw, &withUnknown)
+	withUnknown["future_field"] = json.RawMessage(`"keep-me"`)
+	merged, _ := json.Marshal(withUnknown)
+	if err := os.WriteFile(path, merged, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	patch := map[string]json.RawMessage{
+		"ui_max_bri":     json.RawMessage(`1500`),
+		"blacklist_apps": json.RawMessage(`["com.a","com.b"]`),
+	}
+	if err := Patch(path, patch); err != nil {
+		t.Fatal(err)
+	}
+
+	c, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.UIMaxBri != 1500 {
+		t.Fatalf("patch 未生效: %d", c.UIMaxBri)
+	}
+	if c.MaxBri != 3000 || c.SleepTime != "2200-0700" {
+		t.Fatalf("未 patch 的字段被改动: %+v", c)
+	}
+	if len(c.BlacklistApps) != 2 {
+		t.Fatalf("数组字段未写入: %v", c.BlacklistApps)
+	}
+
+	// 未知字段保留
+	data, _ := os.ReadFile(path)
+	var check map[string]json.RawMessage
+	_ = json.Unmarshal(data, &check)
+	if _, ok := check["future_field"]; !ok {
+		t.Fatal("patch 后未知字段丢失")
+	}
+}
+
+func TestPatchRejectsWrongTypeAndKeepsFile(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.json")
+	if err := Set(path, []string{"ui_max_bri=1000"}); err != nil {
+		t.Fatal(err)
+	}
+	before, _ := os.ReadFile(path)
+
+	err := Patch(path, map[string]json.RawMessage{
+		"ui_max_bri": json.RawMessage(`"不是数字"`),
+	})
+	if err == nil {
+		t.Fatal("类型错误应被拒绝")
+	}
+	after, _ := os.ReadFile(path)
+	if string(before) != string(after) {
+		t.Fatal("校验失败时不应改动配置文件")
+	}
+
+	if err := Patch(path, map[string]json.RawMessage{
+		"blacklist_apps": json.RawMessage(`{"not":"an array"}`),
+	}); err == nil {
+		t.Fatal("数组字段类型错误应被拒绝")
+	}
+}
+
+func TestConfigJSONIsComplete(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.json")
+	if err := os.WriteFile(path, []byte(`{"ui_max_bri":800}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	c, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, err := c.JSON()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		t.Fatal(err)
+	}
+	for _, key := range []string{
+		"ui_max_bri", "max_bri", "steps_num", "log_max_size", "auto_bri_sleep",
+		"display_hdr_sleep", "hdr_enter_ratio", "hdr_exit_ratio", "compatibility_mode",
+		"sleep_time", "inotify_events", "now_bri_file", "max_bri_file", "log_level",
+		"debug_mode", "blacklist_apps",
+	} {
+		if _, ok := raw[key]; !ok {
+			t.Errorf("JSON 缺少字段 %s", key)
+		}
+	}
+	var ui int
+	_ = json.Unmarshal(raw["ui_max_bri"], &ui)
+	if ui != 800 {
+		t.Fatalf("已有值未保留: %d", ui)
+	}
+}
+
 func TestInspectAndMigrateOldTxt(t *testing.T) {
 	oldDir := t.TempDir()
 	write := func(name, content string) {

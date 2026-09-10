@@ -1,8 +1,21 @@
-import { ref, reactive } from 'vue'
+import { ref, reactive, computed } from 'vue'
 import { listPackages, getPackagesInfo } from 'kernelsu'
-import PinyinMatch from 'pinyin-match'
-import { readConfig, updateConfig } from '../utils.js'
+import { fetchConfig, patchConfig } from '../api/luminpro.js'
 
+/** 拼音匹配库体积较大，进入黑名单页后再按需加载 */
+let PinyinMatch = null
+const pinyinReady = ref(false)
+async function ensurePinyin() {
+  if (PinyinMatch || pinyinReady.value) return
+  try {
+    PinyinMatch = (await import('pinyin-match')).default
+  } catch {
+    PinyinMatch = null
+  }
+  pinyinReady.value = true
+}
+
+/** 黑名单管理：应用列表来自 KernelSU API，黑名单本身存在 config.json */
 export function useApps() {
   const apps = ref([])
   const isLoading = ref(false)
@@ -12,13 +25,14 @@ export function useApps() {
   const savedBlacklist = ref(new Set())
   const activityEntries = ref(new Set())
 
-  /** 每个 app 条目结构: { packageName, appLabel, isSystem, uid, checked, hasActivities } */
+  /** 条目结构: { packageName, appLabel, isSystem, uid, checked, expanded } */
 
   async function load() {
     isLoading.value = true
     loadError.value = ''
+    ensurePinyin() // 后台加载拼音库，不阻塞列表
     try {
-      const cfg = await readConfig()
+      const cfg = await fetchConfig()
       const allSaved = Array.isArray(cfg.blacklist_apps) ? cfg.blacklist_apps : []
       savedBlacklist.value = new Set(allSaved)
       const savedPkgSet = new Set(allSaved.filter((e) => !e.includes('/')))
@@ -30,7 +44,6 @@ export function useApps() {
         if (pkgs && pkgs.length > 0) infoList = await getPackagesInfo(pkgs)
         else throw new Error('no pkgs')
       } catch {
-        console.log('[DEBUG] 使用模拟数据')
         infoList = Array.from({ length: 150 }, (_, i) => ({
           packageName: `com.mock.app${i}`,
           appLabel: i % 10 === 0 ? `测试应用 ${i} (含抖音关键字)` : `模拟应用 ${i}`,
@@ -64,8 +77,7 @@ export function useApps() {
           expanded: false,
         }),
       )
-
-      _reorder()
+      reorder()
     } catch (e) {
       loadError.value = e.message || String(e)
     } finally {
@@ -73,7 +85,7 @@ export function useApps() {
     }
   }
 
-  function _reorder() {
+  function reorder() {
     apps.value.sort((a, b) => {
       const stateA = a.checked ? 2 : hasActivity(a.packageName) ? 1 : 0
       const stateB = b.checked ? 2 : hasActivity(b.packageName) ? 1 : 0
@@ -82,7 +94,10 @@ export function useApps() {
   }
 
   function hasActivity(pkg) {
-    return [...activityEntries.value].some((e) => e.startsWith(pkg + '/'))
+    for (const entry of activityEntries.value) {
+      if (entry.startsWith(pkg + '/')) return true
+    }
+    return false
   }
 
   function getActivities(pkg) {
@@ -91,29 +106,24 @@ export function useApps() {
 
   function addActivity(entry) {
     activityEntries.value.add(entry)
-    _reorder()
+    reorder()
   }
 
   function removeActivity(entry) {
     activityEntries.value.delete(entry)
-    _reorder()
+    reorder()
   }
 
-  async function save(toast) {
-    toast('保存中...')
-    const selectedPkgs = apps.value.filter((a) => a.checked).map((a) => a.packageName)
-    const allEntries = [...selectedPkgs, ...activityEntries.value]
-    const res = await updateConfig({ blacklist_apps: allEntries })
-    if (res.errno === 0) {
-      savedBlacklist.value = new Set(allEntries)
-      toast('黑名单保存成功')
-    } else {
-      toast('保存失败: ' + res.stderr)
+  async function save(snackbar) {
+    const selected = apps.value.filter((a) => a.checked).map((a) => a.packageName)
+    const all = [...selected, ...activityEntries.value]
+    try {
+      await patchConfig({ blacklist_apps: all })
+      savedBlacklist.value = new Set(all)
+      snackbar?.('黑名单已保存')
+    } catch (e) {
+      snackbar?.(`保存失败: ${e.message}`)
     }
-  }
-
-  function onCheckboxChange() {
-    _reorder()
   }
 
   function toggleSystemApps() {
@@ -122,22 +132,18 @@ export function useApps() {
   }
 
   function selectAll() {
-    apps.value.forEach((a) => {
-      a.checked = true
-    })
-    _reorder()
+    for (const app of apps.value) app.checked = true
+    reorder()
   }
+
   function selectNone() {
-    apps.value.forEach((a) => {
-      a.checked = false
-    })
-    _reorder()
+    for (const app of apps.value) app.checked = false
+    reorder()
   }
+
   function invertSelection() {
-    apps.value.forEach((a) => {
-      a.checked = !a.checked
-    })
-    _reorder()
+    for (const app of apps.value) app.checked = !app.checked
+    reorder()
   }
 
   const smartKeywords = [
@@ -166,34 +172,52 @@ export function useApps() {
     'x',
   ]
 
-  function smartSelect() {
-    apps.value.forEach((a) => {
-      const name = (a.appLabel || '').toLowerCase()
-      const pkg = (a.packageName || '').toLowerCase()
-      for (const kw of smartKeywords) {
-        if (kw === 'x') {
+  function smartSelect(snackbar) {
+    let count = 0
+    for (const app of apps.value) {
+      const name = (app.appLabel || '').toLowerCase()
+      const pkg = (app.packageName || '').toLowerCase()
+      for (const keyword of smartKeywords) {
+        if (keyword === 'x') {
           if (name === 'x' || name === 'x (twitter)') {
-            a.checked = true
+            if (!app.checked) count++
+            app.checked = true
             break
           }
-        } else if (name.includes(kw) || pkg.includes(kw)) {
-          a.checked = true
+        } else if (name.includes(keyword) || pkg.includes(keyword)) {
+          if (!app.checked) count++
+          app.checked = true
           break
         }
       }
-    })
-    _reorder()
+    }
+    reorder()
+    snackbar?.(count > 0 ? `已智能勾选 ${count} 个应用` : '没有匹配到可勾选的应用')
   }
 
-  // 过滤后的列表
+  /** 过滤后的列表（供虚拟滚动使用） */
   function getFilteredApps() {
-    const kw = searchKeyword.value.trim().toLowerCase()
-    if (!kw) return apps.value
+    const keyword = searchKeyword.value.trim().toLowerCase()
+    if (!keyword) return apps.value
     return apps.value.filter((a) => {
       const pkg = a.packageName.toLowerCase()
-      return pkg.includes(kw) || PinyinMatch.match(a.appLabel, kw)
+      if (pkg.includes(keyword)) return true
+      // 拼音库未就绪时退化为普通子串匹配
+      if (!pinyinReady.value || !PinyinMatch) {
+        return (a.appLabel || '').toLowerCase().includes(keyword)
+      }
+      return !!PinyinMatch.match(a.appLabel, keyword)
     })
   }
+
+  const unsavedCount = computed(() => {
+    const selected = apps.value.filter((a) => a.checked).map((a) => a.packageName)
+    const all = [...selected, ...activityEntries.value]
+    const saved = [...savedBlacklist.value]
+    if (all.length !== saved.length) return 1
+    const savedSet = new Set(saved)
+    return all.some((e) => !savedSet.has(e)) ? 1 : 0
+  })
 
   return {
     apps,
@@ -203,13 +227,14 @@ export function useApps() {
     showingSystemApps,
     savedBlacklist,
     activityEntries,
+    unsavedCount,
     load,
     save,
     hasActivity,
     getActivities,
     addActivity,
     removeActivity,
-    onCheckboxChange,
+    reorder,
     toggleSystemApps,
     selectAll,
     selectNone,

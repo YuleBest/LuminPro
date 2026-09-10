@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/YuleBest/LuminPro/go/internal/api"
 	"github.com/YuleBest/LuminPro/go/internal/brightness"
 	"github.com/YuleBest/LuminPro/go/internal/config"
 	"github.com/YuleBest/LuminPro/go/internal/logging"
@@ -21,7 +22,7 @@ func Boost(paths Paths, log *logging.Logger) error {
 	if err != nil {
 		return err
 	}
-	if !fileExists(cfg.NowBriFile) {
+	if !api.FileExists(cfg.NowBriFile) {
 		return fmt.Errorf("亮度节点不存在: %s", cfg.NowBriFile)
 	}
 
@@ -57,10 +58,10 @@ func Boost(paths Paths, log *logging.Logger) error {
 // writeWithOplock 在持操作锁的前提下写一次亮度节点。
 func writeWithOplock(paths Paths, log *logging.Logger, node string, value int) {
 	_ = os.MkdirAll(paths.PIDDir, 0o755)
-	if err := os.WriteFile(paths.Oplock, []byte(strconv.Itoa(os.Getpid())), 0o644); err != nil && log != nil {
+	if err := api.WriteOplock(paths.Oplock, api.KindBoost); err != nil && log != nil {
 		log.Warn("写入操作锁失败: " + err.Error())
 	}
-	defer func() { _ = os.Remove(paths.Oplock) }()
+	defer api.RemoveOplock(paths.Oplock)
 	if err := brightness.WriteInt(node, value); err != nil && log != nil {
 		log.Error("写入亮度节点失败: " + err.Error())
 	}
@@ -73,12 +74,12 @@ func Restart(paths Paths, selfPath string, log *logging.Logger) error {
 		return err
 	}
 	// 整个重启窗口持操作锁，WebUI 会据此暂停刷新
-	if err := os.WriteFile(paths.Oplock, []byte(strconv.Itoa(os.Getpid())), 0o644); err != nil {
+	if err := api.WriteOplock(paths.Oplock, api.KindRestart); err != nil {
 		return err
 	}
-	defer func() { _ = os.Remove(paths.Oplock) }()
+	defer api.RemoveOplock(paths.Oplock)
 
-	if pid, alive := readDaemonPID(paths.PIDFile); alive {
+	if pid, alive := api.DaemonPID(paths.PIDFile); alive {
 		start := time.Now()
 		if err := syscall.Kill(pid, syscall.SIGHUP); err != nil {
 			return fmt.Errorf("通知守护进程失败: %w", err)
@@ -92,7 +93,7 @@ func Restart(paths Paths, selfPath string, log *logging.Logger) error {
 	if err != nil {
 		return err
 	}
-	if !fileExists(cfg.NowBriFile) {
+	if !api.FileExists(cfg.NowBriFile) {
 		return fmt.Errorf("亮度节点不存在: %s，无法启动服务，请先在配置页填写正确路径", cfg.NowBriFile)
 	}
 
@@ -103,22 +104,6 @@ func Restart(paths Paths, selfPath string, log *logging.Logger) error {
 		return fmt.Errorf("启动守护进程失败: %w", err)
 	}
 	return cmd.Process.Release()
-}
-
-// readDaemonPID 读取 PID 文件并确认进程存活（/proc 检测，等价于旧脚本的 [ -d /proc/$pid ]）。
-func readDaemonPID(pidFile string) (int, bool) {
-	data, err := os.ReadFile(pidFile)
-	if err != nil {
-		return 0, false
-	}
-	pid, err := strconv.Atoi(strings.TrimSpace(string(data)))
-	if err != nil || pid <= 0 {
-		return 0, false
-	}
-	if _, err := os.Stat(fmt.Sprintf("/proc/%d", pid)); err != nil {
-		return 0, false
-	}
-	return pid, true
 }
 
 // waitForPIDRewrite 等待 PID 文件在 start 之后被重写。

@@ -38,27 +38,49 @@ CGO_ENABLED=0 GOOS=android GOARCH=arm64 go build -trimpath -ldflags="-s -w" -o .
 
 ## 3. WebUI 开发
 
-WebUI 负责所有可视化配置与状态显示。
+WebUI 是 Vue 3 + Vite 单页应用，UI 基于 **Material Design 3**（`@material/web` 组件 + 自有 MD3 token）。
+
+### 目录结构
+
+```
+webui/src/
+  mwc.js              @material/web 按需引入清单（唯一入口，勿在别处 import）
+  theme/tokens.css    MD3 令牌：颜色全角色 / 字阶 / 形状 / 动效 / 状态层
+  theme/base.css      字体、重置、insets、缩放、排版与表面工具类
+  theme/components.css 跨视图模式（设置行、状态徽标、折叠区、状态网格、列表行）
+  theme/app.css       壳层布局（顶栏、页面轨、导航栏、操作锁横幅、snackbar）
+  api/ksu.js          exec 封装 + shellQuote + 开发环境 mock
+  api/luminpro.js     Go JSON API 客户端
+  composables/        useStatus / useConfig / useLog / useApps / useSnackbar
+  components/         顶栏、导航栏、对话框、菜单、snackbar、操作锁横幅
+  views/              状态 / 配置 / 黑名单 / 日志 / 关于（样式写在各自的 <style scoped>）
+```
+
+### 数据层规则
+
+- 所有模块读写都走 Go 的 JSON API（`luminpro status|oplock|brightness|config|log|focus`），
+  **不要新增 `cat` / `echo >` / `printf >` 这类直接读写文件的命令**——参数校验与原子写都在 Go 侧
+- 传给 Go 的参数一律用 `shellQuote()` 包装，禁止把未校验输入直接拼进命令
+- 模块状态放 `config.json`（由 Go 管理）；`localStorage` 只放主题、缩放、刷新频率等纯前端偏好
 
 ### 本地预览
 
 ```bash
-# 安装依赖
-npm install
-
-# 启动开发服务器
-npm run dev
+pnpm install
+pnpm dev
 ```
 
 > [!TIP]
-> 由于 WebUI 依赖 `kernelsu` JavaScript API，在普通浏览器中预览时，部分 API 调用（如 `exec`）会失效。建议配合 KernelSU 管理器的「自定义页面」功能进行实机调试。
+> 普通浏览器没有 KernelSU bridge，`exec` 会失败；此时 `api/devMock.js` 会返回模拟数据（仅 DEV 构建），
+> 界面可以正常调试。真机行为请在 KernelSU 管理器的「自定义页面」中验证。
 
 ### 编译前端
 
 生成的静态文件会自动同步到根目录的 `webroot/`。
 
 ```bash
-npm run build
+pnpm build:webui   # 仅编译前端
+pnpm build         # 前端 + 模块打包（需要 bin/luminpro 已存在）
 ```
 
 ---
@@ -80,17 +102,21 @@ npm run build
 `version` 采用语义化命名（不含 versionCode），`versionCode` 单独维护：
 
 ```
-versionCode = 主版本 × 1000000 + 次版本 × 10000 + 修订 × 100 + 段位
+versionCode = 基础号 × 100 + 段位
+基础号     = 主版本 × 10000 + 次版本 × 100 + 修订
 ```
+
+以 `V2.5.0` 为例，基础号为 `20500`，末两位即段位：
 
 | 段位 | 段位值 | version 示例 | versionCode |
 | --- | --- | --- | --- |
-| 正式 | `00` | `V2.5.0` | `2050000` |
-| beta | `51–99` | `V2.5.0-beta.1` | `2050051` |
 | dev | `01–49` | `V2.5.0-dev.1` | `2050001` |
+| beta | `51–59` | `V2.5.0-beta.1` | `2050051` |
+| 正式 | `90`（9x） | `V2.5.0` | `2050090` |
 
-排序恒为 `dev < beta < 下一个正式版`：dev 测试者可平滑收到 beta，beta 用户会平滑收到
-下一个正式版。同周期内从 beta/dev 回退到正式版需手动刷包（管理器不支持降级）。
+末两位约定：**`5x` 表示 beta，`9x` 表示正式版**。排序恒为
+`dev < beta < 同周期正式版`：dev 测试者可平滑收到 beta，beta 用户会平滑收到同周期的
+正式版。只有从 beta/dev 回退到已发布的正式版才需要手动刷包（管理器不支持降级）。
 
 tag 名 = version 的小写形式（如 `v2.5.0-beta.1`），Release 资产名为
 `LuminPro_<version>.zip`。
@@ -128,7 +154,19 @@ CI 会依次：跑 Go 单测 → 交叉编译 → 按通道打包 → 建 GitHub
 | `internal/system` | `dumpsys` / `settings` 调用，接口化以便注入假实现 |
 | `internal/config` | config.json 读写、补默认值、旧配置迁移（安装脚本用它替代 jq） |
 | `internal/logging` | service.log 写入（格式与 WebUI 过滤兼容） |
+| `internal/api` | WebUI 的 JSON API：状态聚合、操作锁、daemon 状态文件、日志解析 |
 | `internal/daemon` | 主循环、操作锁、boost / restart 实现 |
+
+WebUI 使用的子命令（全部输出 JSON）：
+
+| 子命令 | 用途 |
+| --- | --- |
+| `status [--no-display]` | 聚合状态；`--no-display` 跳过 dumpsys/settings 供高频刷新 |
+| `oplock` | 操作锁状态（含类型文案，供横幅显示） |
+| `focus` | 当前前台 Activity（黑名单的活动抓取向导） |
+| `brightness set <值>` | 设置亮度（校验范围后持锁写入） |
+| `config read \| patch <json>` | 读取 / 浅合并写入配置（patch 走 argv 或 stdin，严格校验类型） |
+| `log tail [-n N] [--raw] \| clear \| export [目录]` | 日志读取与导出 |
 
 ```bash
 cd go
@@ -165,13 +203,16 @@ node build-module.js
 
 ### 操作锁 (oplock)
 
-`pid/oplock` 是守护进程与 WebUI 之间的约定文件：任何会写亮度节点或重建监听的操作
-（渐变期间、`boost` 全程、`restart` 全程）都会把自己的 PID 写入该文件，结束时删除。
-WebUI 轮询此文件，发现持锁时暂停状态刷新并禁用写操作入口（配置保存、黑名单保存、
-亮度滑条、重启模块），顶部显示提示横幅。
+`pid/oplock` 是守护进程与 WebUI 之间的约定文件，内容是 JSON：
+`{"pid":…,"kind":"ramp|boost|restart|manual","startedAt":…}`。
+
+任何会写亮度节点或重建监听的操作（渐变期间、`boost` 全程、`restart` 全程、WebUI 手动设置亮度）
+都会在开始时写入、结束时删除。WebUI 通过 `luminpro oplock` 查询，锁定时暂停状态刷新并禁用
+写操作入口（配置保存、黑名单保存、亮度滑条、重启模块），顶部按 `kind` 显示具体提示。
 
 - 查询约定：文件存在且其中的 PID 在 `/proc` 中存活 → 锁定中；否则视为遗留锁，由查询方
   就地清理（避免进程被 SIGKILL 后 WebUI 永久卡在锁定态）。
+- 兼容旧版裸 PID 格式的锁文件。
 - `service.sh` 开机时清理该文件；WebUI 侧的实现见 `webui/src/composables/useOplock.js`。
 
 ---

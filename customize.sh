@@ -246,7 +246,7 @@ CHECK_DEVICE_COMPATIBILITY() {
     if [ "$prefix" = "25128PNA1" ] || [ "$prefix" = "2512BPNDA" ]; then
         echo ""
         echo "  ✿ 您可能是 Xiaomi 17 Ultra 用户，建议使用 '0' 事件作为监测对象"
-        echo "  ✿ 是否将 inotifyd 监测事件修改为 '0'? (音量 + 确认，音量 - 跳过)"
+        echo "  ✿ 是否将监听事件修改为 '0'? (音量 + 确认，音量 - 跳过)"
         if [ "$(btn)" = "0" ]; then
             "$BIN" config set inotify_events=0 >/dev/null 2>&1
             echo " ✦ 已设置为 0 事件监测"
@@ -327,7 +327,7 @@ END() {
     else
         echo " - 休眠时段:       未配置"
     fi
-    echo " - inotifyd 事件:  $inotify"
+    echo " - 监听事件:  $inotify"
     echo " - 当前亮度节点:   $now_path"
     echo " - 最大亮度节点:   $max_path"
     [ ! -f "$now_path" ] && echo " ⚠ 当前亮度节点不存在, 重启后功能将不会启用"

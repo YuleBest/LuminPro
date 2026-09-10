@@ -1,150 +1,108 @@
 import { ref, computed } from 'vue'
 import {
-  runCmd,
-  readConfig,
-  PID_FILE,
-  STOP_FLAG_FILE,
-  DEFAULT_NOW_BRI_FILE,
-  DEFAULT_SYS_MAX_BRI_FILE,
-} from '../utils.js'
+  fetchStatus,
+  fetchOplock,
+  setBrightness as apiSetBrightness,
+  boost as apiBoost,
+  restart as apiRestart,
+  toggleService as apiToggleService,
+} from '../api/luminpro.js'
 
+/** 守护进程与亮度状态：数据来自 Go 侧 `luminpro status` */
 export function useStatus() {
-  // 亮度
-  const currentBri = ref(null)
-  const sysMaxBri = ref(null)
+  const status = ref(null)
+  const oplock = ref({ locked: false })
+  const error = ref('')
 
-  // 服务状态
-  const inotifydPid = ref('—')
-  const inotifydState = ref('—')
-  const isRunning = ref(false)
-  const isPaused = ref(false)
-  const statusClass = computed(() => {
-    if (isPaused.value) return 'status-paused'
-    if (isRunning.value) return 'status-running'
-    return 'status-loading'
+  const moduleInfo = computed(() => status.value?.module ?? {})
+  const daemon = computed(() => status.value?.daemon ?? {})
+  const brightness = computed(() => status.value?.brightness ?? { current: 0, max: 0, percent: 0 })
+  const display = computed(() => status.value?.display ?? null)
+  const sleep = computed(() => status.value?.sleep ?? { window: '', active: false })
+  const cfg = computed(() => status.value?.config ?? {})
+
+  const isPaused = computed(() => !!daemon.value.paused)
+  const isRunning = computed(() => !!daemon.value.running && !daemon.value.paused)
+  const statusText = computed(() => (isPaused.value ? '已暂停' : isRunning.value ? '运行中' : '未运行'))
+  const statusClass = computed(() =>
+    isPaused.value ? 'paused' : isRunning.value ? 'running' : 'stopped',
+  )
+  const sleepText = computed(() => {
+    if (!sleep.value.window) return '未配置'
+    return sleep.value.active ? '休眠中' : '非休眠'
   })
-  const statusText = computed(() => {
-    if (isPaused.value) return '已暂停'
-    if (isRunning.value) return '运行中'
-    return '未运行'
+  const hdrText = computed(() => {
+    const d = display.value
+    if (!d || !d.hdrKnown) return '—'
+    return `${d.hdrRatio.toFixed(2)}${d.hdrStale ? '*' : ''}`
   })
 
-  // HDR / 睡眠状态
-  const hdrRatio = ref('—')
-  const sleepStatus = ref('—')
-
-  // 缓存配置字段（避免每次刷新都 readConfig）
-  let _nowBriFile = null
-  let _sysMaxBriFile = null
-  let _sleepTime = null
-
-  async function _ensurePaths() {
-    if (_nowBriFile && _sysMaxBriFile) return
-    const cfg = await readConfig()
-    _nowBriFile = cfg.now_bri_file || DEFAULT_NOW_BRI_FILE
-    _sysMaxBriFile = cfg.max_bri_file || DEFAULT_SYS_MAX_BRI_FILE
-    _sleepTime = cfg.sleep_time || ''
-  }
-
-  function invalidatePaths() {
-    _nowBriFile = null
-    _sysMaxBriFile = null
-    _sleepTime = null
-  }
-
-  async function load(forceFull = false) {
-    await _ensurePaths()
-
-    const needBri = forceFull || currentBri.value === null || sysMaxBri.value === null
-
-    // 所有 Shell 命令一次并发，消除多轮顺序等待
-    // PID + 进程状态合并为一条命令以减少 exec 次数
-    const [pidStateRes, stopRes, hdrRes, cBriRes, sBriRes] = await Promise.all([
-      runCmd(
-        `PID=$(cat "${PID_FILE}" 2>/dev/null || true); printf '%s\\n' "$PID"; [ -n "$PID" ] && grep '^State:' "/proc/$PID/status" 2>/dev/null | awk '{print $2}' || true`,
-      ),
-      runCmd(`[ -f "${STOP_FLAG_FILE}" ] && echo "1" || echo "0"`),
-      runCmd(
-        `dumpsys display 2>/dev/null | sed -n 's/.*hdrSdrRatio \\([0-9.]*\\).*/\\1/p' | head -n 1`,
-      ),
-      needBri ? runCmd(`cat "${_nowBriFile}"`) : Promise.resolve({ errno: -1, stdout: '' }),
-      needBri ? runCmd(`cat "${_sysMaxBriFile}"`) : Promise.resolve({ errno: -1, stdout: '' }),
-    ])
-
-    if (needBri) {
-      currentBri.value = cBriRes.errno === 0 ? cBriRes.stdout.trim() : '0'
-      sysMaxBri.value = sBriRes.errno === 0 ? sBriRes.stdout.trim() : '255'
+  async function load({ display = true } = {}) {
+    try {
+      const next = await fetchStatus({ display })
+      // --no-display 时后端不返回 display 字段，沿用上一次的结果避免界面闪烁
+      if (!display && !next.display && status.value?.display) {
+        next.display = status.value.display
+      }
+      status.value = next
+      error.value = ''
+    } catch (e) {
+      error.value = e.message
     }
-
-    const psLines = (pidStateRes.errno === 0 ? pidStateRes.stdout : '').split('\n')
-    const pidStr = psLines[0]?.trim() || ''
-    const stateChar = psLines[1]?.trim() || ''
-
-    isPaused.value = stopRes.errno === 0 && stopRes.stdout.trim() === '1'
-    isRunning.value = !isPaused.value && !!pidStr
-    inotifydPid.value = pidStr || '离线'
-    inotifydState.value = isRunning.value ? stateChar || '已退出' : '离线'
-
-    const hdrRaw = hdrRes.errno === 0 ? hdrRes.stdout.trim() : ''
-    hdrRatio.value = hdrRaw && /^\d+(\.\d+)?$/.test(hdrRaw) ? parseFloat(hdrRaw).toFixed(2) : '-'
-
-    sleepStatus.value = _calcSleep(_sleepTime)
   }
 
-  function _calcSleep(sleepTime) {
-    if (!sleepTime || !sleepTime.includes('-')) return '非休眠'
-    const [s, e] = sleepTime.split('-')
-    if (s.length !== 4 || e.length !== 4) return '非休眠'
-    const now = new Date()
-    const nV = now.getHours() * 100 + now.getMinutes()
-    const sNum = parseInt(s.slice(0, 2), 10) * 100 + parseInt(s.slice(2), 10)
-    const eNum = parseInt(e.slice(0, 2), 10) * 100 + parseInt(e.slice(2), 10)
-    if (sNum > eNum) {
-      return nV >= sNum || nV < eNum ? '休眠中' : '非休眠'
+  async function refreshOplock() {
+    try {
+      oplock.value = await fetchOplock()
+    } catch {
+      /* 忽略：下次轮询会重试 */
     }
-    return nV >= sNum && nV < eNum ? '休眠中' : '非休眠'
   }
 
-  async function toggleService(toast) {
-    const res = await runCmd(`sh /data/adb/modules/LuminPro/action.sh`)
-    toast(res.errno === 0 ? res.stdout.trim() || '状态已切换' : '操作失败: ' + res.stderr)
-    await load(true)
+  async function setBrightness(value) {
+    await apiSetBrightness(value)
+    await load({ display: false })
   }
 
-  async function restartService(toast) {
-    toast('正在重启模块...')
-    const res = await runCmd(`sh /data/adb/modules/LuminPro/script/restart.sh`)
-    setTimeout(async () => {
-      await load(true)
-    }, 1000)
-    toast(res.errno === 0 ? '模块重启成功' : '模块重启失败: ' + res.stderr)
+  async function toggleService(snackbar) {
+    const res = await apiToggleService()
+    snackbar?.(res.ok ? res.stdout.trim() || '状态已切换' : '操作失败: ' + res.stderr)
+    await load({ display: false })
   }
 
-  async function setBrightness(newBri, toast) {
-    currentBri.value = String(newBri)
-    const cmd = `echo -n '${newBri}' > '${_nowBriFile}' 2>/dev/null && echo 'OK'`
-    const res = await runCmd(cmd)
-    if (!(res.errno === 0 && res.stdout.includes('OK'))) {
-      toast('亮度设置失败，已恢复')
-      await load(true)
-    }
+  async function boost(snackbar) {
+    const res = await apiBoost()
+    snackbar?.(res.ok ? '已切换峰值亮度' : '操作失败: ' + res.stderr)
+    await load({ display: false })
+  }
+
+  async function restart(snackbar) {
+    const res = await apiRestart()
+    snackbar?.(res.ok ? '模块已重启' : '模块重启失败: ' + res.stderr)
+    setTimeout(() => load({ display: false }), 600)
   }
 
   return {
-    currentBri,
-    sysMaxBri,
-    inotifydPid,
-    inotifydState,
+    status,
+    oplock,
+    error,
+    moduleInfo,
+    daemon,
+    brightness,
+    display,
+    sleep,
+    cfg,
     isRunning,
     isPaused,
-    statusClass,
     statusText,
-    hdrRatio,
-    sleepStatus,
+    statusClass,
+    sleepText,
+    hdrText,
     load,
-    invalidatePaths,
-    toggleService,
-    restartService,
+    refreshOplock,
     setBrightness,
+    toggleService,
+    boost,
+    restart,
   }
 }
