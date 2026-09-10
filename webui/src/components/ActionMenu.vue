@@ -1,8 +1,8 @@
 <script setup>
-import { ref, watch, nextTick } from 'vue'
+import { ref } from 'vue'
 import { MoreVertical } from 'lucide-vue-next'
 
-const props = defineProps({
+defineProps({
   items: { type: Array, default: () => [] }, // [{ key, label }]
   title: { type: String, default: '更多' },
   disabled: { type: Boolean, default: false },
@@ -13,13 +13,13 @@ const open = ref(false)
 const anchorEl = ref(null)
 const menuEl = ref(null)
 
-async function toggle() {
+function toggle() {
+  const menu = menuEl.value
+  if (!menu) return
+  // 注意：md-menu 的 anchor 是 idref 字符串，元素引用必须用 anchorElement；
+  // 且必须在打开前设置——菜单打开时会立刻按锚点定位
+  if (anchorEl.value) menu.anchorElement = anchorEl.value
   open.value = !open.value
-  if (open.value) {
-    await nextTick()
-    // MWC 菜单需要通过属性接收锚点元素（不能用 attribute 绑定）
-    if (menuEl.value && anchorEl.value) menuEl.value.anchor = anchorEl.value
-  }
 }
 
 function pick(item) {

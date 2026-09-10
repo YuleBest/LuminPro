@@ -63,17 +63,19 @@ const ok = (obj) => ({ ok: true, errno: 0, stdout: JSON.stringify(obj), stderr: 
 
 /** 依据命令内容返回模拟响应；无法识别时返回 null */
 export function devMock(command) {
-  if (command.includes(' config read')) return ok(mockConfig())
-  if (command.includes(' config patch') || command.includes(' config set')) return ok({ ok: true })
-  if (command.includes(' status')) return ok(mockStatus(!command.includes('--no-display')))
-  if (command.includes(' oplock')) return ok({ locked: false, seconds: 0 })
-  if (command.includes(' focus')) return ok({ focus: 'com.example.video/.MainActivity' })
-  if (command.includes(' brightness set')) return ok({ ok: true, value: 2000 })
-  if (command.includes(' log tail')) {
+  // 参数经 shellQuote 包装过，比较前先去掉单引号
+  const plain = command.replace(/'/g, '')
+  if (plain.includes(' config read')) return ok(mockConfig())
+  if (plain.includes(' config patch') || plain.includes(' config set')) return ok({ ok: true })
+  if (plain.includes(' status')) return ok(mockStatus(!plain.includes('--no-display')))
+  if (plain.includes(' oplock')) return ok({ locked: false, seconds: 0 })
+  if (plain.includes(' focus')) return ok({ focus: 'com.example.video/.MainActivity' })
+  if (plain.includes(' brightness set')) return ok({ ok: true, value: 2000 })
+  if (plain.includes(' log tail')) {
     return ok({ entries: mockLogEntries, sizeKB: 12, total: mockLogEntries.length })
   }
-  if (command.includes(' log clear') || command.includes(' log export')) return ok({ ok: true })
-  if (command.includes('boost') || command.includes('restart') || command.includes('action.sh')) {
+  if (plain.includes(' log clear') || plain.includes(' log export')) return ok({ ok: true })
+  if (plain.includes('boost') || plain.includes('restart') || plain.includes('action.sh')) {
     return { ok: true, errno: 0, stdout: 'LuminPro: 服务已启用', stderr: '' }
   }
   return null
