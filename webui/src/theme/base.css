@@ -33,8 +33,8 @@ body {
 body {
   /* 全局 0.95 视觉缩放；用户自定义缩放叠加在 html 上（沿用既有策略） */
   zoom: 0.95;
-  padding-top: var(--safe-area-inset-top, 0);
-  padding-bottom: var(--safe-area-inset-bottom, 0);
+  /* edge-to-edge：安全区由顶栏/底部导航栏各自内缩处理，
+     这样系统栏区域的背景色能延伸到屏幕边缘（参考 FontMM） */
   background-color: var(--md-sys-color-background);
   color: var(--md-sys-color-on-background);
   font-family: var(--md-sys-typescale-font);

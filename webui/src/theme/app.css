@@ -22,8 +22,8 @@
   align-items: center;
   gap: var(--md-sys-spacing-1);
   min-height: 64px;
-  padding: var(--md-sys-spacing-2) var(--md-sys-spacing-1) var(--md-sys-spacing-2)
-    var(--md-sys-spacing-4);
+  padding: calc(var(--md-sys-spacing-2) + var(--safe-area-inset-top, var(--window-inset-top, 0px)))
+    var(--md-sys-spacing-1) var(--md-sys-spacing-2) var(--md-sys-spacing-4);
   background-color: var(--md-sys-color-background);
   transition: background-color var(--md-sys-motion-duration-medium2)
     var(--md-sys-motion-easing-standard);
@@ -133,14 +133,15 @@
   display: flex;
   flex-direction: column;
   gap: var(--md-sys-spacing-3);
-  padding: var(--md-sys-spacing-3) var(--md-sys-spacing-3)
-    calc(var(--md-sys-spacing-5) + var(--safe-area-inset-bottom, 0px));
+  padding: var(--md-sys-spacing-3) var(--md-sys-spacing-3) var(--md-sys-spacing-5);
   scrollbar-width: none;
 }
 
 /* ── M3 导航栏 ────────────────────────────────────────────────────── */
 md-navigation-bar {
   flex: 0 0 auto;
+  /* 背景延伸到屏幕底部，内容抬到手势条之上 */
+  padding-bottom: var(--safe-area-inset-bottom, var(--window-inset-bottom, 0px));
   --md-navigation-bar-container-color: var(--md-sys-color-surface-container);
   --md-navigation-bar-active-indicator-color: var(--md-sys-color-secondary-container);
   --md-navigation-bar-active-icon-color: var(--md-sys-color-on-secondary-container);
@@ -215,7 +216,7 @@ md-navigation-tab {
   position: absolute;
   left: var(--md-sys-spacing-3);
   right: var(--md-sys-spacing-3);
-  bottom: calc(96px + var(--safe-area-inset-bottom, 0px));
+  bottom: calc(96px + var(--safe-area-inset-bottom, var(--window-inset-bottom, 0px)));
   z-index: 7;
   display: flex;
   flex-direction: column;
