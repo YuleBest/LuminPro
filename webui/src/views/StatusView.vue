@@ -83,7 +83,7 @@ async function confirmLow() {
           <component :is="item.icon" :size="14" aria-hidden="true" />
           {{ item.label }}
         </span>
-        <span class="status-item__value mono">{{ item.value }}</span>
+        <span class="status-item__value tabular">{{ item.value }}</span>
       </div>
     </div>
 

@@ -132,6 +132,11 @@ body::-webkit-scrollbar,
   font-variant-numeric: tabular-nums;
 }
 
+/* 中英混排的数值：用页面字体 + 等宽数字，避免中文落到等宽栈的 CJK 兜底字体 */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
 /* ── 表面：MD3 用色调层级而非阴影表达层级 ─────────────────────────── */
 .section {
   background-color: var(--md-sys-color-surface-container-low);
