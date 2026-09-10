@@ -22,9 +22,9 @@
   align-items: center;
   gap: var(--md-sys-spacing-1);
   min-height: 64px;
-  padding: var(--md-sys-spacing-2) var(--md-sys-spacing-1) var(--md-sys-spacing-2)
-    var(--md-sys-spacing-4);
-  background-color: var(--md-sys-color-surface);
+  padding: calc(var(--md-sys-spacing-2) + var(--safe-area-inset-top, var(--window-inset-top, 0px)))
+    var(--md-sys-spacing-1) var(--md-sys-spacing-2) var(--md-sys-spacing-4);
+  background-color: var(--md-sys-color-background);
   transition: background-color var(--md-sys-motion-duration-medium2)
     var(--md-sys-motion-easing-standard);
 }
@@ -49,8 +49,33 @@
   gap: var(--md-sys-spacing-2);
 }
 
-.app-bar__subtitle {
+.app-bar__meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   color: var(--md-sys-color-on-surface-variant);
+}
+
+.status-dot {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--md-sys-color-outline);
+}
+
+.status-dot.running {
+  background-color: var(--lp-color-success);
+  animation: status-pulse 2.4s var(--md-sys-motion-easing-standard) infinite;
+}
+
+.status-dot.paused {
+  background-color: var(--lp-color-warning);
+}
+
+.status-dot.stopped {
+  background-color: var(--md-sys-color-error);
+  animation: status-pulse 2s var(--md-sys-motion-easing-standard) infinite;
 }
 
 /* 发布通道徽标（Beta / Dev） */
@@ -64,42 +89,6 @@
   line-height: var(--md-sys-typescale-label-small-line-height);
   font-weight: 700;
   text-transform: uppercase;
-}
-
-/* 守护进程状态胶囊 */
-.status-pill {
-  flex: 0 0 auto;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  border-radius: var(--md-sys-shape-corner-full);
-  background-color: var(--md-sys-color-surface-container-high);
-  color: var(--md-sys-color-on-surface-variant);
-  font-size: var(--md-sys-typescale-label-small-size);
-  font-weight: 600;
-}
-
-.status-pill__dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background-color: var(--md-sys-color-outline);
-}
-
-.status-pill.running .status-pill__dot {
-  background-color: var(--lp-color-success);
-  box-shadow: 0 0 8px var(--lp-color-success-container);
-  animation: status-pulse 2.4s var(--md-sys-motion-easing-standard) infinite;
-}
-
-.status-pill.paused .status-pill__dot {
-  background-color: var(--lp-color-warning);
-}
-
-.status-pill.stopped .status-pill__dot {
-  background-color: var(--md-sys-color-error);
-  animation: status-pulse 2s var(--md-sys-motion-easing-standard) infinite;
 }
 
 @keyframes status-pulse {
@@ -144,14 +133,15 @@
   display: flex;
   flex-direction: column;
   gap: var(--md-sys-spacing-3);
-  padding: var(--md-sys-spacing-3) var(--md-sys-spacing-3)
-    calc(var(--md-sys-spacing-5) + var(--safe-area-inset-bottom, 0px));
+  padding: var(--md-sys-spacing-3) var(--md-sys-spacing-3) var(--md-sys-spacing-5);
   scrollbar-width: none;
 }
 
 /* ── M3 导航栏 ────────────────────────────────────────────────────── */
 md-navigation-bar {
   flex: 0 0 auto;
+  /* 背景延伸到屏幕底部，内容抬到手势条之上 */
+  padding-bottom: var(--safe-area-inset-bottom, var(--window-inset-bottom, 0px));
   --md-navigation-bar-container-color: var(--md-sys-color-surface-container);
   --md-navigation-bar-active-indicator-color: var(--md-sys-color-secondary-container);
   --md-navigation-bar-active-icon-color: var(--md-sys-color-on-secondary-container);
@@ -166,11 +156,9 @@ md-navigation-tab {
 
 /* ── 操作锁横幅 ───────────────────────────────────────────────────── */
 .oplock-banner {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 5;
+  /* 参与正常流（并排在顶栏之前）：出现时把内容整体下推，而不是盖住顶栏 */
+  order: -1;
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   gap: var(--md-sys-spacing-2);
@@ -228,7 +216,7 @@ md-navigation-tab {
   position: absolute;
   left: var(--md-sys-spacing-3);
   right: var(--md-sys-spacing-3);
-  bottom: calc(96px + var(--safe-area-inset-bottom, 0px));
+  bottom: calc(96px + var(--safe-area-inset-bottom, var(--window-inset-bottom, 0px)));
   z-index: 7;
   display: flex;
   flex-direction: column;

@@ -1,6 +1,6 @@
 <script setup>
 import { inject, computed, ref } from 'vue'
-import { SunMedium, Smartphone, Activity, Clock, Moon, Layers, Gauge } from 'lucide-vue-next'
+import { SunMedium, Smartphone, Activity, Clock, Moon, Layers, Gauge, RefreshCw } from 'lucide-vue-next'
 import ConfirmDialog from '../components/ConfirmDialog.vue'
 
 const status = inject('status')
@@ -39,6 +39,11 @@ const thresholdPercent = computed(() =>
 const autoBrightness = computed(() => status.display.value?.autoBrightness ?? null)
 const nodeError = computed(() => status.brightness.value.error || '')
 
+async function refresh() {
+  await status.load({ display: true })
+  snackbar('已刷新')
+}
+
 async function applyBrightness(value) {
   try {
     await status.setBrightness(value)
@@ -75,6 +80,9 @@ async function confirmLow() {
     <div class="section-header">
       <h2 class="section-title ts-title-md">实时状态</h2>
       <span v-if="status.error.value" class="state-badge is-unsaved">读取失败</span>
+      <md-icon-button title="刷新" @click="refresh">
+        <RefreshCw :size="20" />
+      </md-icon-button>
     </div>
 
     <div class="status-grid">
@@ -83,7 +91,7 @@ async function confirmLow() {
           <component :is="item.icon" :size="14" aria-hidden="true" />
           {{ item.label }}
         </span>
-        <span class="status-item__value mono">{{ item.value }}</span>
+        <span class="status-item__value tabular">{{ item.value }}</span>
       </div>
     </div>
 

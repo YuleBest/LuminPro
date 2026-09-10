@@ -94,6 +94,13 @@ const levelClass = (level) => `log-line--${(level || 'plain').toLowerCase()}`
   line-height: 1.55;
 }
 
+/* UA 样式表给 code 单独设了 font-family: monospace（不继承 pre），
+   必须显式 inherit，否则中文回落到宋体 */
+.log-output code {
+  font-family: inherit;
+  font-size: inherit;
+}
+
 .log-line {
   display: block;
   white-space: pre-wrap;

@@ -89,6 +89,21 @@ export function useConfig() {
     return patch
   }
 
+  /** 整型开关字段（0/1）与布尔值之间的桥接：md-switch 给出的是布尔值 */
+  function intBool(key) {
+    return computed({
+      get: () => Number(form[key]) === 1,
+      set: (on) => {
+        form[key] = on ? '1' : '0'
+      },
+    })
+  }
+
+  const autoBriSleep = intBool('auto_bri_sleep')
+  const displayHdrSleep = intBool('display_hdr_sleep')
+  const compatibilityMode = intBool('compatibility_mode')
+  const debugMode = intBool('debug_mode')
+
   const diffMain = computed(() => changedKeys(MAIN_KEYS))
   const diffAdvanced = computed(() => changedKeys(ADVANCED_KEYS))
   const dirtyMain = computed(() => Object.keys(diffMain.value).length > 0)
@@ -157,6 +172,10 @@ export function useConfig() {
     error,
     dirtyMain,
     dirtyAdvanced,
+    autoBriSleep,
+    displayHdrSleep,
+    compatibilityMode,
+    debugMode,
     load,
     saveMain,
     saveAdvanced,

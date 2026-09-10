@@ -264,9 +264,13 @@ onUnmounted(stopPolling)
             <div class="app-row__main">
               <md-checkbox
                 :checked="row.app.checked"
+                :class="{
+                  'is-unsaved':
+                    row.app.checked && !appsApi.savedBlacklist.value.has(row.app.packageName),
+                }"
                 @change="row.app.checked = $event.target.checked; appsApi.reorder()"
               ></md-checkbox>
-              <div class="app-row__text">
+              <div class="app-row__text" @click="row.app.checked = !row.app.checked; appsApi.reorder()">
                 <span class="app-row__name">
                   {{ row.app.appLabel }}
                   <span class="app-row__uid ts-body-sm supporting">{{ row.app.uid }}</span>
@@ -432,16 +436,33 @@ onUnmounted(stopPolling)
   display: flex;
   align-items: center;
   gap: var(--md-sys-spacing-2);
-  padding: var(--md-sys-spacing-2) var(--md-sys-spacing-3) var(--md-sys-spacing-2) 0;
+  padding: var(--md-sys-spacing-2) var(--md-sys-spacing-3);
   min-height: 64px;
 }
 
+/* 选中但尚未保存：绿色提示；保存后回到默认主色 */
+md-checkbox.is-unsaved {
+  --md-checkbox-selected-container-color: var(--lp-color-success);
+  --md-checkbox-selected-hover-container-color: var(--lp-color-success);
+  --md-checkbox-selected-focus-container-color: var(--lp-color-success);
+  --md-checkbox-selected-pressed-container-color: var(--lp-color-success);
+  --md-checkbox-selected-hover-state-layer-color: var(--lp-color-success);
+  --md-checkbox-selected-pressed-state-layer-color: var(--lp-color-success);
+  --md-checkbox-selected-icon-color: var(--md-sys-color-surface);
+  --md-checkbox-selected-hover-icon-color: var(--md-sys-color-surface);
+  --md-checkbox-selected-focus-icon-color: var(--md-sys-color-surface);
+  --md-checkbox-selected-pressed-icon-color: var(--md-sys-color-surface);
+}
+
+/* 名称/包名区域也可点击切换（复选框本身只有 18px，触控偏小） */
 .app-row__text {
   flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 2px;
+  cursor: pointer;
+  padding: var(--md-sys-spacing-1) 0;
 }
 
 .app-row__name {

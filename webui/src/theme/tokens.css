@@ -66,7 +66,17 @@
   --md-sys-typescale-label-small-tracking: 0.0313em;
 
   --md-sys-typescale-font: 'Geist', system-ui, -apple-system, sans-serif;
-  --md-sys-typescale-font-mono: 'Geist Mono', ui-monospace, monospace;
+  /* 等宽栈要带上 CJK 无衬线兜底：Geist Mono 无中文字形，直接落到通用 monospace
+     会在 Windows 上显示为宋体 */
+  --md-sys-typescale-font-mono:
+    'Geist Mono', ui-monospace, 'Microsoft YaHei', 'PingFang SC', 'Noto Sans CJK SC', monospace;
+
+  /* @material/web 组件内部的字体族取自 ref typeface（默认回退 Roboto），
+     必须显式指向项目字体，否则组件内文字与页面字体不一致 */
+  --md-ref-typeface-brand: 'Geist', system-ui, -apple-system, sans-serif;
+  --md-ref-typeface-plain: 'Geist', system-ui, -apple-system, sans-serif;
+  --md-ref-typeface-weight-regular: 400;
+  --md-ref-typeface-weight-medium: 500;
 
   /* ── 形状 shape ─────────────────────────────────────────────────── */
   --md-sys-shape-corner-none: 0;

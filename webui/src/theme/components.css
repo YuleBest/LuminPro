@@ -70,8 +70,11 @@
 .collapse {
   display: grid;
   grid-template-rows: 0fr;
-  transition: grid-template-rows var(--md-sys-motion-duration-medium2)
-    var(--md-sys-motion-easing-emphasized);
+  margin-top: 0;
+  transition:
+    grid-template-rows var(--md-sys-motion-duration-medium2)
+      var(--md-sys-motion-easing-emphasized),
+    margin-top var(--md-sys-motion-duration-medium2) var(--md-sys-motion-easing-emphasized);
 }
 
 .collapse.open {
@@ -90,6 +93,11 @@
 .collapse.open > * {
   padding-top: var(--collapse-gap, 0px);
   padding-bottom: var(--collapse-gap, 0px);
+}
+
+/* 收起时高度为 0 但仍参与父容器 gap，会多留一段空白；抵消其中一次间距 */
+.collapse:not(.open) {
+  margin-top: calc(-1 * var(--md-sys-spacing-3));
 }
 
 .collapse--gap {
