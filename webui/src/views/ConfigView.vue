@@ -127,13 +127,13 @@ async function confirmReset() {
         />
       </div>
     </div>
-    <AppSwitch v-model="form.auto_bri_sleep" name="自动亮度时休眠" support="系统自动亮度开启时不提升" />
+    <AppSwitch v-model="config.autoBriSleep.value" name="自动亮度时休眠" support="系统自动亮度开启时不提升" />
     <AppSwitch
-      v-model="form.display_hdr_sleep"
+      v-model="config.displayHdrSleep.value"
       name="显示 HDR 内容时休眠"
       support="比率 ≥ 进入阈值休眠，≤ 退出阈值恢复"
     />
-    <div class="collapse collapse--gap" :class="{ open: form.display_hdr_sleep === '1' }">
+    <div class="collapse collapse--gap" :class="{ open: config.displayHdrSleep.value }">
       <div class="sleep-row">
         <AppTextField
           v-model="form.hdr_enter_ratio"
@@ -156,7 +156,7 @@ async function confirmReset() {
       </div>
     </div>
     <AppSwitch
-      v-model="form.compatibility_mode"
+      v-model="config.compatibilityMode.value"
       name="兼容模式（轮询驱动）"
       support="不使用事件监听，改为 2 秒一次轮询"
       warning="仅在事件驱动失效时开启，会略微增加耗电"
@@ -191,7 +191,7 @@ async function confirmReset() {
           <Wrench :size="16" aria-hidden="true" /> 运行环境
         </div>
         <AppSwitch
-          v-model="form.debug_mode"
+          v-model="config.debugMode.value"
           name="调试模式"
           support="记录详细事件到日志"
           warning="需重启模块生效，用完请关闭"
