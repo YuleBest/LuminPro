@@ -68,6 +68,13 @@
   --md-sys-typescale-font: 'Geist', system-ui, -apple-system, sans-serif;
   --md-sys-typescale-font-mono: 'Geist Mono', ui-monospace, monospace;
 
+  /* @material/web 组件内部的字体族取自 ref typeface（默认回退 Roboto），
+     必须显式指向项目字体，否则组件内文字与页面字体不一致 */
+  --md-ref-typeface-brand: 'Geist', system-ui, -apple-system, sans-serif;
+  --md-ref-typeface-plain: 'Geist', system-ui, -apple-system, sans-serif;
+  --md-ref-typeface-weight-regular: 400;
+  --md-ref-typeface-weight-medium: 500;
+
   /* ── 形状 shape ─────────────────────────────────────────────────── */
   --md-sys-shape-corner-none: 0;
   --md-sys-shape-corner-extra-small: 4px;
