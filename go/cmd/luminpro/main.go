@@ -63,6 +63,9 @@ func run(args []string) error {
 		return runStatus(paths, args[1:])
 	case "oplock":
 		return emitJSON(api.ReadOplock(paths.Oplock))
+	case "focus":
+		focus := system.Focus{Runner: system.ExecRunner{}}
+		return emitJSON(map[string]any{"focus": focus.CurrentFocus()})
 	case "brightness":
 		return runBrightness(paths, args[1:])
 	case "config":
@@ -86,6 +89,7 @@ func usage() error {
 
   luminpro status [--no-display]    聚合状态（JSON）
   luminpro oplock                   操作锁状态（JSON）
+  luminpro focus                    当前前台 Activity（JSON）
   luminpro brightness set <值>       设置亮度（JSON）
 
   luminpro config <操作>            配置管理（JSON）
@@ -245,9 +249,16 @@ func runConfig(paths api.Paths, args []string) error {
 		_, err = os.Stdout.Write(append(data, '\n'))
 		return err
 	case "patch":
-		input, err := io.ReadAll(os.Stdin)
-		if err != nil {
-			return err
+		// 支持两种传参：命令行参数（WebUI 用，exec 无 stdin）或标准输入（脚本用）
+		var input []byte
+		var err error
+		if len(args) >= 2 {
+			input = []byte(args[1])
+		} else {
+			input, err = io.ReadAll(os.Stdin)
+			if err != nil {
+				return err
+			}
 		}
 		var patch map[string]json.RawMessage
 		if err := json.Unmarshal(input, &patch); err != nil {

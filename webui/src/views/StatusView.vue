@@ -1,116 +1,148 @@
 <script setup>
 import { inject, computed, ref } from 'vue'
-import Button from '@/components/ui/Button.vue'
-import Badge from '@/components/ui/Badge.vue'
-import {
-  RefreshCw,
-  Play,
-  RotateCcw,
-  SunMedium,
-  Smartphone,
-  Activity,
-  Clock,
-  Moon,
-  Layers,
-} from 'lucide-vue-next'
+import { SunMedium, Smartphone, Activity, Clock, Moon, Layers, Gauge } from 'lucide-vue-next'
+import ConfirmDialog from '../components/ConfirmDialog.vue'
 
 const status = inject('status')
-const showToast = inject('showToast')
-const config = inject('config')
-const oplock = inject('oplock')
+const snackbar = inject('snackbar')
 
-const confirmedLowBri = ref(false)
+const sliderEl = ref(null)
+const confirmLowOpen = ref(false)
+const pendingValue = ref(0)
 
-// --------- 亮度滑条渐变 ----------
-const sliderStyle = computed(() => {
-  const sysMax = parseInt(status.sysMaxBri.value) || 255
-  const curr = parseInt(status.currentBri.value) || 0
-  const uiMax = parseInt(config.uiMaxBri.value) || sysMax
-  const c = (curr / sysMax) * 100
-  const u = (uiMax / sysMax) * 100
-  const pri = '#a8c7fa'
-  const bst = '#fb8c00'
-  const trk = 'var(--md-sys-color-surface-container-high)'
-  const btrk = 'rgba(251,140,0,0.15)'
-  if (c <= u) {
-    return `background: linear-gradient(to right, ${pri} 0%, ${pri} ${c}%, ${trk} ${c}%, ${trk} ${u}%, ${btrk} ${u}%, ${btrk} 100%)`
-  }
-  return `background: linear-gradient(to right, ${pri} 0%, ${pri} ${u}%, ${bst} ${u}%, ${bst} ${c}%, ${btrk} ${c}%, ${btrk} 100%)`
+const DAEMON_STATES = { S: '休眠中', R: '运行中', D: '等待中', T: '已停止', Z: '异常' }
+
+const items = computed(() => {
+  const daemon = status.daemon.value
+  const brightness = status.brightness.value
+  return [
+    { label: '当前亮度', value: brightness.current ?? '—', icon: SunMedium },
+    { label: '系统最大亮度', value: brightness.max || '—', icon: Smartphone },
+    { label: '守护进程 PID', value: daemon.running ? daemon.pid : '离线', icon: Activity },
+    {
+      label: '守护进程状态',
+      value: daemon.running ? DAEMON_STATES[daemon.state] || daemon.state || '运行中' : '未运行',
+      icon: Clock,
+    },
+    { label: '休眠状态', value: status.sleepText.value, icon: Moon },
+    { label: 'HDR/SDR 比率', value: status.hdrText.value, icon: Layers },
+  ]
 })
 
-const brightnessPercent = computed(() => {
-  const sysMax = parseInt(status.sysMaxBri.value) || 255
-  const curr = parseInt(status.currentBri.value) || 0
-  return Math.round((curr / sysMax) * 100) + '%'
-})
+const maxBrightness = computed(() => status.brightness.value.max || 255)
+const currentBrightness = computed(() => status.brightness.value.current || 0)
+const percent = computed(() => status.brightness.value.percent ?? 0)
+const uiThreshold = computed(() => status.cfg.value.uiMaxBri ?? 0)
+const thresholdPercent = computed(() =>
+  Math.round((uiThreshold.value / maxBrightness.value) * 100),
+)
+const autoBrightness = computed(() => status.display.value?.autoBrightness ?? null)
+const nodeError = computed(() => status.brightness.value.error || '')
 
-async function onSliderChange(e) {
-  const newBri = parseInt(e.target.value, 10)
-  const sysMax = parseInt(status.sysMaxBri.value) || 255
-  const pct = Math.round((newBri / sysMax) * 100)
-  if (pct < 5 && !confirmedLowBri.value) {
-    const ok = confirm('⚠️ 警告：亮度低于 5% 可能导致屏幕近似黑屏。\n\n确定要继续吗？')
-    if (!ok) {
-      const safe = Math.ceil(sysMax * 0.05)
-      e.target.value = safe
-      return
-    }
-    confirmedLowBri.value = true
+async function applyBrightness(value) {
+  try {
+    await status.setBrightness(value)
+    snackbar(`亮度已设为 ${value}`)
+  } catch (e) {
+    snackbar(`设置失败: ${e.message}`)
   }
-  if (pct >= 5) confirmedLowBri.value = false
-  await status.setBrightness(newBri, showToast)
 }
 
-const statusItems = computed(() => [
-  { label: '当前亮度', value: status.currentBri.value || '—', icon: SunMedium },
-  { label: '系统最大亮度', value: status.sysMaxBri.value || '—', icon: Smartphone },
-  { label: '守护进程 PID', value: status.inotifydPid.value, icon: Activity },
-  { label: '守护进程状态', value: status.inotifydState.value, icon: Clock },
-  { label: '休眠状态', value: status.sleepStatus.value, icon: Moon },
-  { label: 'HDR/SDR 比率', value: status.hdrRatio.value, icon: Layers },
-])
+async function onSliderChange(event) {
+  const value = Number(event.target.value)
+  const pct = Math.round((value / maxBrightness.value) * 100)
+  if (pct < 5) {
+    pendingValue.value = value
+    confirmLowOpen.value = true
+    return
+  }
+  await applyBrightness(value)
+}
+
+function cancelLow() {
+  confirmLowOpen.value = false
+  if (sliderEl.value) sliderEl.value.value = currentBrightness.value
+}
+
+async function confirmLow() {
+  confirmLowOpen.value = false
+  await applyBrightness(pendingValue.value)
+}
 </script>
 
 <template>
-  <section class="card" id="status-section" data-nav-group="status">
-    <div class="card-header">
-      <h2>实时状态</h2>
-      <Button variant="ghost" size="icon" @click="status.load(true)">
-        <RefreshCw :size="18" />
-      </Button>
+  <section class="section">
+    <div class="section-header">
+      <h2 class="section-title ts-title-md">实时状态</h2>
+      <span v-if="status.error.value" class="state-badge is-unsaved">读取失败</span>
     </div>
 
-    <!-- 状态网格 -->
     <div class="status-grid">
-      <div v-for="item in statusItems" :key="item.label" class="status-item">
-        <div class="status-item-header">
+      <div v-for="item in items" :key="item.label" class="status-item">
+        <span class="status-item__label">
           <component :is="item.icon" :size="14" aria-hidden="true" />
-          <span class="status-label">{{ item.label }}</span>
-        </div>
-        <span class="status-value">{{ item.value }}</span>
+          {{ item.label }}
+        </span>
+        <span class="status-item__value mono">{{ item.value }}</span>
       </div>
     </div>
 
-    <!-- 亮度控制 -->
-    <div class="brightness-section">
-      <div class="brightness-header">
-        <span class="brightness-title">亮度</span>
-        <span class="brightness-percent">{{ brightnessPercent }}</span>
-      </div>
-      <div class="brightness-container">
-        <span class="brightness-label">0%</span>
-        <input
-          type="range"
-          class="brightness-slider"
-          min="0"
-          :max="status.sysMaxBri.value || 255"
-          :value="status.currentBri.value || 0"
-          :style="sliderStyle"
-          :disabled="oplock.isLocked.value"
-          @change="onSliderChange"
-        />
-        <span class="brightness-label">100%</span>
-      </div>
-    </div>
+    <p v-if="nodeError" class="ts-body-sm supporting">
+      亮度节点不可用：{{ nodeError }}
+    </p>
+    <p v-else-if="autoBrightness" class="ts-body-sm supporting">
+      系统自动亮度已开启，模块会跳过亮度提升
+    </p>
   </section>
+
+  <section class="section">
+    <div class="section-header">
+      <h2 class="section-title ts-title-md">亮度</h2>
+      <span class="ts-title-md mono">{{ percent }}%</span>
+    </div>
+
+    <div class="slider-row">
+      <Gauge :size="18" aria-hidden="true" />
+      <md-slider
+        ref="sliderEl"
+        class="brightness-slider"
+        :min="0"
+        :max="maxBrightness"
+        :value="currentBrightness"
+        labeled
+        @change="onSliderChange"
+      ></md-slider>
+    </div>
+
+    <p class="ts-body-sm supporting">
+      触发阈值 {{ uiThreshold }}（约 {{ thresholdPercent }}%）：亮度达到该值后模块会平滑提升到峰值。
+    </p>
+  </section>
+
+  <ConfirmDialog
+    :open="confirmLowOpen"
+    headline="亮度低于 5%"
+    description="继续可能让屏幕接近黑屏，确定要设置吗？"
+    confirm-text="仍然设置"
+    danger
+    @confirm="confirmLow"
+    @cancel="cancelLow"
+  />
 </template>
+
+<style scoped>
+.slider-row {
+  display: flex;
+  align-items: center;
+  gap: var(--md-sys-spacing-3);
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.brightness-slider {
+  flex: 1;
+  --md-slider-active-track-color: var(--md-sys-color-primary);
+  --md-slider-handle-color: var(--md-sys-color-primary);
+  --md-slider-inactive-track-color: var(--md-sys-color-surface-variant);
+  --md-slider-label-container-color: var(--md-sys-color-primary);
+}
+</style>

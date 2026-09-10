@@ -1,0 +1,160 @@
+/* ==========================================================================
+   跨视图复用的模式：设置行 / 状态徽标 / 空状态 / 折叠区 / 状态网格 / 列表行
+   视图专属样式放在各自的 <style scoped> 中。
+   ========================================================================== */
+
+/* ── 设置行（标签 + 控件）─────────────────────────────────────────── */
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--md-sys-spacing-4);
+  padding: var(--md-sys-spacing-2) 0;
+  min-height: 48px;
+}
+
+.row__labels {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.row__name {
+  color: var(--md-sys-color-on-surface);
+  font-size: var(--md-sys-typescale-body-large-size);
+  line-height: var(--md-sys-typescale-body-large-line-height);
+  font-weight: 500;
+}
+
+.row__support {
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: var(--md-sys-typescale-body-small-size);
+  line-height: var(--md-sys-typescale-body-small-line-height);
+}
+
+.row__support.warning {
+  color: var(--lp-color-warning);
+}
+
+.row__control {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: var(--md-sys-spacing-2);
+}
+
+/* ── 状态徽标（已保存 / 未保存、计数等）───────────────────────────── */
+.state-badge {
+  flex: 0 0 auto;
+  padding: 2px 10px;
+  border-radius: var(--md-sys-shape-corner-full);
+  font-size: var(--md-sys-typescale-label-small-size);
+  line-height: var(--md-sys-typescale-label-small-line-height);
+  font-weight: 700;
+}
+
+.state-badge.is-saved {
+  background-color: var(--lp-color-success-container);
+  color: var(--lp-color-success);
+}
+
+.state-badge.is-unsaved {
+  background-color: var(--lp-color-warning-container);
+  color: var(--lp-color-warning);
+}
+
+/* ── 折叠区（grid-template-rows 动画）────────────────────────────── */
+.collapse {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--md-sys-motion-duration-medium2)
+    var(--md-sys-motion-easing-emphasized);
+}
+
+.collapse.open {
+  grid-template-rows: 1fr;
+}
+
+.collapse > * {
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* ── 空状态 ───────────────────────────────────────────────────────── */
+.empty-state {
+  padding: var(--md-sys-spacing-6) var(--md-sys-spacing-4);
+  text-align: center;
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: var(--md-sys-typescale-body-medium-size);
+}
+
+.empty-state.error {
+  color: var(--md-sys-color-error);
+}
+
+/* ── 状态网格（实时状态页）────────────────────────────────────────── */
+.status-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--md-sys-spacing-2);
+}
+
+.status-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--md-sys-spacing-3);
+  border-radius: var(--md-sys-shape-corner-medium);
+  background-color: var(--md-sys-color-surface-container);
+}
+
+.status-item__label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: var(--md-sys-typescale-label-medium-size);
+  line-height: var(--md-sys-typescale-label-medium-line-height);
+}
+
+.status-item__value {
+  color: var(--md-sys-color-on-surface);
+  font-size: var(--md-sys-typescale-title-medium-size);
+  line-height: var(--md-sys-typescale-title-medium-line-height);
+  font-weight: var(--md-sys-typescale-title-medium-weight);
+  word-break: break-all;
+}
+
+/* ── 列表行（黑名单 / 文档 / 菜单项）──────────────────────────────── */
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-sys-spacing-2);
+}
+
+.list-item {
+  display: flex;
+  align-items: center;
+  gap: var(--md-sys-spacing-3);
+  padding: var(--md-sys-spacing-3) var(--md-sys-spacing-4);
+  border-radius: var(--md-sys-shape-corner-medium);
+  background-color: var(--md-sys-color-surface-container);
+  color: var(--md-sys-color-on-surface);
+}
+
+/* ── 扫描/进行中 的脉冲文字 ───────────────────────────────────────── */
+.pulse-text {
+  color: var(--lp-color-warning);
+  animation: status-pulse 1.6s var(--md-sys-motion-easing-standard) infinite;
+}
+
+@keyframes status-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}

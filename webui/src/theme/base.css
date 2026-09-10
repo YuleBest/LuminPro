@@ -1,0 +1,214 @@
+/* ==========================================================================
+   基础层：字体、重置、insets、缩放、滚动条与通用排版/表面类
+   ========================================================================== */
+
+@font-face {
+  font-family: 'Geist';
+  src: url('/Geist[wght].woff2') format('woff2-variations');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Geist Mono';
+  src: url('/GeistMono[wght].woff2') format('woff2-variations');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  /* 全局 0.95 视觉缩放；用户自定义缩放叠加在 html 上（沿用既有策略） */
+  zoom: 0.95;
+  padding-top: var(--safe-area-inset-top, 0);
+  padding-bottom: var(--safe-area-inset-bottom, 0);
+  background-color: var(--md-sys-color-background);
+  color: var(--md-sys-color-on-background);
+  font-family: var(--md-sys-typescale-font);
+  font-size: var(--md-sys-typescale-body-medium-size);
+  line-height: var(--md-sys-typescale-body-medium-line-height);
+  font-weight: var(--md-sys-typescale-body-medium-weight);
+  letter-spacing: var(--md-sys-typescale-body-medium-tracking);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+/* 隐藏滚动条（保持移动端观感） */
+html,
+body,
+.scroll-area {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+.scroll-area::-webkit-scrollbar {
+  display: none;
+}
+
+/* ── 排版工具类（直接映射 typescale）───────────────────────────────── */
+.ts-display {
+  font-size: var(--md-sys-typescale-display-small-size);
+  line-height: var(--md-sys-typescale-display-small-line-height);
+  font-weight: var(--md-sys-typescale-display-small-weight);
+}
+.ts-headline {
+  font-size: var(--md-sys-typescale-headline-small-size);
+  line-height: var(--md-sys-typescale-headline-small-line-height);
+  font-weight: var(--md-sys-typescale-headline-small-weight);
+}
+.ts-title-lg {
+  font-size: var(--md-sys-typescale-title-large-size);
+  line-height: var(--md-sys-typescale-title-large-line-height);
+  font-weight: var(--md-sys-typescale-title-large-weight);
+}
+.ts-title-md {
+  font-size: var(--md-sys-typescale-title-medium-size);
+  line-height: var(--md-sys-typescale-title-medium-line-height);
+  font-weight: var(--md-sys-typescale-title-medium-weight);
+  letter-spacing: var(--md-sys-typescale-title-medium-tracking);
+}
+.ts-title-sm {
+  font-size: var(--md-sys-typescale-title-small-size);
+  line-height: var(--md-sys-typescale-title-small-line-height);
+  font-weight: var(--md-sys-typescale-title-small-weight);
+  letter-spacing: var(--md-sys-typescale-title-small-tracking);
+}
+.ts-body-lg {
+  font-size: var(--md-sys-typescale-body-large-size);
+  line-height: var(--md-sys-typescale-body-large-line-height);
+}
+.ts-body {
+  font-size: var(--md-sys-typescale-body-medium-size);
+  line-height: var(--md-sys-typescale-body-medium-line-height);
+  letter-spacing: var(--md-sys-typescale-body-medium-tracking);
+}
+.ts-body-sm {
+  font-size: var(--md-sys-typescale-body-small-size);
+  line-height: var(--md-sys-typescale-body-small-line-height);
+  letter-spacing: var(--md-sys-typescale-body-small-tracking);
+}
+.ts-label {
+  font-size: var(--md-sys-typescale-label-large-size);
+  line-height: var(--md-sys-typescale-label-large-line-height);
+  font-weight: var(--md-sys-typescale-label-large-weight);
+  letter-spacing: var(--md-sys-typescale-label-large-tracking);
+}
+.ts-label-sm {
+  font-size: var(--md-sys-typescale-label-small-size);
+  line-height: var(--md-sys-typescale-label-small-line-height);
+  font-weight: var(--md-sys-typescale-label-small-weight);
+  letter-spacing: var(--md-sys-typescale-label-small-tracking);
+}
+
+.supporting {
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.mono {
+  font-family: var(--md-sys-typescale-font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── 表面：MD3 用色调层级而非阴影表达层级 ─────────────────────────── */
+.section {
+  background-color: var(--md-sys-color-surface-container-low);
+  border-radius: var(--md-sys-shape-corner-large);
+  padding: var(--md-sys-spacing-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-sys-spacing-3);
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: var(--md-sys-spacing-2);
+  min-height: 40px;
+}
+
+.section-header .section-title {
+  flex: 1;
+  margin: 0;
+  color: var(--md-sys-color-on-surface);
+}
+
+.divider {
+  height: 1px;
+  background-color: var(--md-sys-color-outline-variant);
+  border: 0;
+  margin: 0;
+}
+
+/* 可点击行：用状态层表达交互反馈（MD3 state layer） */
+.state-layer {
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  transition: background-color var(--md-sys-motion-duration-short4)
+    var(--md-sys-motion-easing-standard);
+}
+
+.state-layer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-color: currentColor;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--md-sys-motion-duration-short2)
+    var(--md-sys-motion-easing-standard);
+}
+
+.state-layer:hover::after {
+  opacity: var(--md-sys-state-hover-opacity);
+}
+
+.state-layer:focus-visible::after {
+  opacity: var(--md-sys-state-focus-opacity);
+}
+
+.state-layer:active::after {
+  opacity: var(--md-sys-state-pressed-opacity);
+}
+
+/* 焦点环（不做全局关闭，保证键盘/无障碍可见） */
+:focus-visible {
+  outline: 2px solid var(--md-sys-color-primary);
+  outline-offset: 2px;
+}
+
+/* 屏幕阅读器专用文本 */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

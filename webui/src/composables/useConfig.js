@@ -1,286 +1,168 @@
-import { ref, watch } from 'vue'
-import {
-  runCmd,
-  readConfig,
-  writeConfig,
-  updateConfig,
-  BACKUP_CONFIG_FILE,
-  PID_FILE,
-  DEFAULT_NOW_BRI_FILE,
-  DEFAULT_SYS_MAX_BRI_FILE,
-} from '../utils.js'
+import { ref, reactive, computed } from 'vue'
+import { fetchConfig, patchConfig, readModuleFile } from '../api/luminpro.js'
+
+/** 主配置卡片负责的字段 */
+const MAIN_KEYS = [
+  'ui_max_bri',
+  'max_bri',
+  'steps_num',
+  'auto_bri_sleep',
+  'display_hdr_sleep',
+  'hdr_enter_ratio',
+  'hdr_exit_ratio',
+  'compatibility_mode',
+  'sleep_time',
+]
+
+/** 高级设置负责的字段 */
+const ADVANCED_KEYS = ['now_bri_file', 'max_bri_file', 'inotify_events', 'debug_mode', 'log_max_size', 'log_level']
+
+const INT_KEYS = new Set([
+  'ui_max_bri',
+  'max_bri',
+  'steps_num',
+  'log_max_size',
+  'auto_bri_sleep',
+  'display_hdr_sleep',
+  'compatibility_mode',
+  'debug_mode',
+])
+const FLOAT_KEYS = new Set(['hdr_enter_ratio', 'hdr_exit_ratio'])
+
+/** 配置改动的类型还原：表单里统一用字符串，写回时按字段类型转换 */
+function toTyped(key, value) {
+  if (INT_KEYS.has(key)) return parseInt(value, 10) || 0
+  if (FLOAT_KEYS.has(key)) return parseFloat(value) || 0
+  return value
+}
+
+/** 配置对象 -> 表单字符串（数组字段保持数组） */
+function toForm(cfg, keys) {
+  const out = {}
+  for (const key of keys) {
+    const value = cfg[key]
+    if (Array.isArray(value)) out[key] = value
+    else if (value === null || value === undefined) out[key] = ''
+    else out[key] = String(value)
+  }
+  return out
+}
 
 export function useConfig() {
-  // 亮度配置
-  const uiMaxBri = ref('')
-  const maxBri = ref('')
-  const stepsNum = ref('50')
+  const saved = ref({})
+  const loading = ref(false)
+  const error = ref('')
 
-  // 执行策略
-  const autoBriSleep = ref(false)
-  const displayHdrSleep = ref(false)
-  const hdrEnterRatio = ref('1.15')
-  const hdrExitRatio = ref('1.05')
-  const compatibilityMode = ref(false)
-  const sleepMode = ref(false)
-  const sleepStartH = ref('19')
-  const sleepStartM = ref('00')
-  const sleepEndH = ref('06')
-  const sleepEndM = ref('00')
-
-  // 高级设置
-  const nowBriFile = ref(DEFAULT_NOW_BRI_FILE)
-  const sysMaxBriFile = ref(DEFAULT_SYS_MAX_BRI_FILE)
-  const inotifyEvents = ref('c')
-  const debugMode = ref(false)
-  const logLevel = ref('info')
-  const logMaxSize = ref('500')
-
-  // 脸污标记
-  const dirty = ref(false)
-  const dirtyAdvanced = ref(false)
-  let _silent = false
-
-  // Web UI 配置 (localStorage 持久化)
-  const autoRefresh = ref(localStorage.getItem('autoRefresh') !== 'false')
-  const statusRefreshInterval = ref(
-    Math.max(100, parseInt(localStorage.getItem('statusLogRefreshInterval') || '1000', 10)),
-  )
-  const uiZoom = ref(
-    Math.min(150, Math.max(50, parseInt(localStorage.getItem('uiZoom') || '100', 10))),
-  )
-  const themeMode = ref(localStorage.getItem('themeMode') || 'system')
-
-  // 监听主配置字段
-  watch(
-    [
-      uiMaxBri,
-      maxBri,
-      stepsNum,
-      autoBriSleep,
-      displayHdrSleep,
-      hdrEnterRatio,
-      hdrExitRatio,
-      compatibilityMode,
-      sleepMode,
-      sleepStartH,
-      sleepStartM,
-      sleepEndH,
-      sleepEndM,
-    ],
-    () => {
-      if (!_silent) dirty.value = true
-    },
-  )
-  // 监听高级设置字段 (系统管理的日志项也随「保存设置」写入)
-  watch([nowBriFile, sysMaxBriFile, inotifyEvents, debugMode, logLevel, logMaxSize], () => {
-    if (!_silent) dirtyAdvanced.value = true
+  const form = reactive({
+    ...toForm({}, [...MAIN_KEYS, ...ADVANCED_KEYS]),
+    blacklist_apps: [],
   })
 
+  function hydrate(cfg) {
+    saved.value = { ...cfg }
+    Object.assign(form, toForm(cfg, [...MAIN_KEYS, ...ADVANCED_KEYS]))
+    form.blacklist_apps = Array.isArray(cfg.blacklist_apps) ? [...cfg.blacklist_apps] : []
+  }
+
   async function load() {
-    _silent = true
-    const cfg = await readConfig()
-    if (!cfg || Object.keys(cfg).length === 0) {
-      _silent = false
+    loading.value = true
+    try {
+      hydrate(await fetchConfig())
+      error.value = ''
+    } catch (e) {
+      error.value = e.message
+    } finally {
+      loading.value = false
+    }
+  }
+
+  /** 某组字段中相对已保存配置发生变化的项（已按类型还原） */
+  function changedKeys(keys) {
+    const patch = {}
+    for (const key of keys) {
+      const current = key === 'blacklist_apps' ? JSON.stringify(form[key]) : String(form[key])
+      const original = Array.isArray(saved.value[key])
+        ? JSON.stringify(saved.value[key])
+        : String(saved.value[key] ?? '')
+      if (current !== original) patch[key] = toTyped(key, form[key])
+    }
+    return patch
+  }
+
+  const diffMain = computed(() => changedKeys(MAIN_KEYS))
+  const diffAdvanced = computed(() => changedKeys(ADVANCED_KEYS))
+  const dirtyMain = computed(() => Object.keys(diffMain.value).length > 0)
+  const dirtyAdvanced = computed(() => Object.keys(diffAdvanced.value).length > 0)
+
+  async function save(patch, snackbar, message) {
+    if (Object.keys(patch).length === 0) {
+      snackbar?.('没有需要保存的改动')
       return
     }
-
-    uiMaxBri.value = cfg.ui_max_bri != null ? String(cfg.ui_max_bri) : ''
-    maxBri.value = cfg.max_bri != null ? String(cfg.max_bri) : ''
-    stepsNum.value = cfg.steps_num != null ? String(cfg.steps_num) : '50'
-    logMaxSize.value = cfg.log_max_size != null ? String(cfg.log_max_size) : '500'
-    autoBriSleep.value = cfg.auto_bri_sleep === 1
-    displayHdrSleep.value = cfg.display_hdr_sleep === 1
-    hdrEnterRatio.value = cfg.hdr_enter_ratio != null ? String(cfg.hdr_enter_ratio) : '1.15'
-    hdrExitRatio.value = cfg.hdr_exit_ratio != null ? String(cfg.hdr_exit_ratio) : '1.05'
-    compatibilityMode.value = cfg.compatibility_mode === 1
-    nowBriFile.value = cfg.now_bri_file || DEFAULT_NOW_BRI_FILE
-    sysMaxBriFile.value = cfg.max_bri_file || DEFAULT_SYS_MAX_BRI_FILE
-    inotifyEvents.value = cfg.inotify_events || 'c'
-    debugMode.value = cfg.debug_mode === 1
-    logLevel.value = cfg.log_level || 'info'
-
-    const st = cfg.sleep_time || ''
-    if (st && st.includes('-')) {
-      sleepMode.value = true
-      const [s, e] = st.split('-')
-      if (s.length === 4) {
-        sleepStartH.value = s.slice(0, 2)
-        sleepStartM.value = s.slice(2)
-      }
-      if (e.length === 4) {
-        sleepEndH.value = e.slice(0, 2)
-        sleepEndM.value = e.slice(2)
-      }
-    } else {
-      sleepMode.value = false
+    try {
+      await patchConfig(patch)
+      await load()
+      snackbar?.(message)
+    } catch (e) {
+      snackbar?.(`保存失败: ${e.message}`)
     }
-    dirty.value = false
-    dirtyAdvanced.value = false
-    _silent = false
   }
 
-  function getSleepTimeStr() {
-    if (!sleepMode.value) return ''
-    const pad = (v) => String(v).padStart(2, '0')
-    return `${pad(sleepStartH.value)}${pad(sleepStartM.value)}-${pad(sleepEndH.value)}${pad(sleepEndM.value)}`
-  }
+  const saveMain = (snackbar) => save(diffMain.value, snackbar, '配置已保存')
+  const saveAdvanced = (snackbar) => save(diffAdvanced.value, snackbar, '高级设置已保存，需重启模块生效')
 
-  async function save(toast) {
-    if (!uiMaxBri.value || !maxBri.value) {
-      toast('亮度値不能为空')
-      return
-    }
-    toast('保存中...')
-    // 读取当前配置（保留 blacklist_apps 等其他字段）
-    const current = await readConfig()
-    await writeConfig({
-      ...current,
-      ui_max_bri: parseInt(uiMaxBri.value) || 0,
-      max_bri: parseInt(maxBri.value) || 0,
-      steps_num: parseInt(stepsNum.value) || 50,
-      auto_bri_sleep: autoBriSleep.value ? 1 : 0,
-      display_hdr_sleep: displayHdrSleep.value ? 1 : 0,
-      hdr_enter_ratio: parseFloat(hdrEnterRatio.value) || 1.15,
-      hdr_exit_ratio: parseFloat(hdrExitRatio.value) || 1.05,
-      compatibility_mode: compatibilityMode.value ? 1 : 0,
-      sleep_time: getSleepTimeStr(),
-    })
-    const pidRes = await runCmd(`cat "${PID_FILE}"`)
-    toast(
-      pidRes.errno === 0 && pidRes.stdout.trim()
-        ? '配置已保存 (下次重启模块或触发时生效)'
-        : '配置已保存 (服务未运行)',
-    )
-    dirty.value = false
-  }
-
-  async function saveAdvanced(toast, onPathsChanged) {
-    toast('保存中...')
-    await updateConfig({
-      now_bri_file: nowBriFile.value || DEFAULT_NOW_BRI_FILE,
-      max_bri_file: sysMaxBriFile.value || DEFAULT_SYS_MAX_BRI_FILE,
-      inotify_events: inotifyEvents.value || 'c',
-      debug_mode: debugMode.value ? 1 : 0,
-      log_max_size: parseInt(logMaxSize.value) || 500,
-      log_level: logLevel.value,
-    })
-    onPathsChanged?.()
-    toast('高级设置已保存，需重启模块生效')
-    dirtyAdvanced.value = false
-  }
-
-  async function resetToDefaults(toast) {
-    toast('正在恢复默认配置...')
-    const backupRes = await runCmd(`cat "${BACKUP_CONFIG_FILE}"`)
-    if (backupRes.errno !== 0 || !backupRes.stdout.trim()) {
-      toast('备份文件不存在，无法恢复')
+  /** 从安装时备份恢复默认值（只改表单，需再点保存） */
+  async function restoreBackup(snackbar) {
+    const raw = await readModuleFile('config/.backup/config.json')
+    if (!raw.trim()) {
+      snackbar?.('备份文件不存在，无法恢复')
       return
     }
     let backup
     try {
-      backup = JSON.parse(backupRes.stdout)
+      backup = JSON.parse(raw)
     } catch {
-      toast('备份文件损坏')
+      snackbar?.('备份文件损坏')
       return
     }
-
-    uiMaxBri.value = backup.ui_max_bri != null ? String(backup.ui_max_bri) : ''
-    maxBri.value = backup.max_bri != null ? String(backup.max_bri) : ''
-    autoBriSleep.value = backup.auto_bri_sleep === 1
-    displayHdrSleep.value = backup.display_hdr_sleep === 1
-    hdrEnterRatio.value = backup.hdr_enter_ratio != null ? String(backup.hdr_enter_ratio) : '1.15'
-    hdrExitRatio.value = backup.hdr_exit_ratio != null ? String(backup.hdr_exit_ratio) : '1.05'
-    compatibilityMode.value = backup.compatibility_mode === 1
-    stepsNum.value = backup.steps_num != null ? String(backup.steps_num) : '50'
-    logMaxSize.value = backup.log_max_size != null ? String(backup.log_max_size) : '500'
-    nowBriFile.value = backup.now_bri_file || DEFAULT_NOW_BRI_FILE
-    sysMaxBriFile.value = backup.max_bri_file || DEFAULT_SYS_MAX_BRI_FILE
-    inotifyEvents.value = backup.inotify_events || 'c'
-
-    const st = backup.sleep_time || ''
-    if (st && st.includes('-')) {
-      sleepMode.value = true
-      const [s, e] = st.split('-')
-      if (s.length === 4) {
-        sleepStartH.value = s.slice(0, 2)
-        sleepStartM.value = s.slice(2)
-      }
-      if (e.length === 4) {
-        sleepEndH.value = e.slice(0, 2)
-        sleepEndM.value = e.slice(2)
-      }
-    } else {
-      sleepMode.value = true
-      sleepStartH.value = '19'
-      sleepStartM.value = '00'
-      sleepEndH.value = '06'
-      sleepEndM.value = '00'
-    }
-    await save(toast)
-    await saveAdvanced(toast)
+    hydrate({ ...saved.value, ...backup })
+    snackbar?.('已载入安装时的配置，点击保存生效')
   }
 
-  function saveWebUIConfig(toast, newAutoRefresh, newInterval, newZoom, newTheme, onRestart) {
-    const interval = Math.max(100, parseInt(newInterval, 10) || 1000)
-    const zoom = Math.min(150, Math.max(50, parseInt(newZoom, 10) || 100))
-    localStorage.setItem('autoRefresh', newAutoRefresh)
-    localStorage.setItem('statusLogRefreshInterval', interval)
-    localStorage.setItem('uiZoom', zoom)
-    localStorage.setItem('themeMode', newTheme)
-    autoRefresh.value = newAutoRefresh
-    statusRefreshInterval.value = interval
-    uiZoom.value = zoom
-    themeMode.value = newTheme
-    document.documentElement.style.zoom = zoom / 100
-    applyTheme(newTheme)
-    onRestart?.(newAutoRefresh, interval)
-    toast('Web UI 配置已保存')
-  }
+  // ── 定时休眠：字符串 <-> 开关 + 四个时间输入 ──────────────────────
+  const sleepEnabled = computed({
+    get: () => !!form.sleep_time,
+    set: (on) => {
+      form.sleep_time = on ? form.sleep_time || '2300-0700' : ''
+    },
+  })
 
-  function applyZoom() {
-    document.documentElement.style.zoom = uiZoom.value / 100
-  }
+  const sleepParts = computed(() => {
+    const text = String(form.sleep_time || '')
+    const match = /^(\d{2})(\d{2})-(\d{2})(\d{2})$/.exec(text)
+    if (!match) return ['23', '00', '07', '00']
+    return [match[1], match[2], match[3], match[4]]
+  })
 
-  function applyTheme(mode) {
-    const html = document.documentElement
-    html.classList.remove('light', 'dark')
-    if (mode === 'light') html.classList.add('light')
-    else if (mode === 'dark') html.classList.add('dark')
+  function setSleepPart(index, value) {
+    const parts = [...sleepParts.value]
+    parts[index] = String(value).padStart(2, '0').slice(-2)
+    form.sleep_time = `${parts[0]}${parts[1]}-${parts[2]}${parts[3]}`
   }
 
   return {
-    uiMaxBri,
-    maxBri,
-    stepsNum,
-    logMaxSize,
-    autoBriSleep,
-    displayHdrSleep,
-    hdrEnterRatio,
-    hdrExitRatio,
-    compatibilityMode,
-    sleepMode,
-    sleepStartH,
-    sleepStartM,
-    sleepEndH,
-    sleepEndM,
-    nowBriFile,
-    sysMaxBriFile,
-    inotifyEvents,
-    debugMode,
-    logLevel,
-    dirty,
+    saved,
+    form,
+    loading,
+    error,
+    dirtyMain,
     dirtyAdvanced,
-    autoRefresh,
-    statusRefreshInterval,
-    uiZoom,
-    themeMode,
     load,
-    save,
+    saveMain,
     saveAdvanced,
-    resetToDefaults,
-    saveWebUIConfig,
-    applyZoom,
-    applyTheme,
+    restoreBackup,
+    sleepEnabled,
+    sleepParts,
+    setSleepPart,
   }
 }

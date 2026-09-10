@@ -1,105 +1,233 @@
 <script setup>
-import { ref } from 'vue'
-import MarkdownIt from 'markdown-it'
-import Button from '@/components/ui/Button.vue'
-import { BookOpen, ScrollText, StickyNote, X, Github } from 'lucide-vue-next'
-import { runCmd } from '../utils.js'
+import { inject, ref, computed, nextTick } from 'vue'
+import { BookOpen, ScrollText, StickyNote, Github, ExternalLink } from 'lucide-vue-next'
+import { readModuleFile } from '../api/luminpro.js'
+import { runCmd, shellQuote } from '../api/ksu.js'
 
-const MODULE_DIR = '/data/adb/modules/LuminPro'
+const status = inject('status')
+const snackbar = inject('snackbar')
 
-const sheetOpen = ref(false)
-const sheetTitle = ref('')
-const sheetContent = ref('')
-const sheetLoading = ref(false)
-
-const md = new MarkdownIt({ html: true, linkify: true, typographer: true })
-
-const moduleDocs = [
-  { title: 'README', file: `${MODULE_DIR}/README.md`, icon: BookOpen, md: true },
-  { title: 'README (EN)', file: `${MODULE_DIR}/README_en.md`, icon: BookOpen, md: true },
-  { title: '更新日志', file: `${MODULE_DIR}/changelog.md`, icon: ScrollText, md: true },
-  { title: 'NOTE', file: `${MODULE_DIR}/NOTE.txt`, icon: StickyNote, md: false },
-]
-
-async function openModuleDoc(doc) {
-  sheetTitle.value = doc.title
-  sheetContent.value = ''
-  sheetLoading.value = true
-  sheetOpen.value = true
-  try {
-    const res = await runCmd(`cat "${doc.file}" 2>/dev/null`)
-    if (res.errno !== 0 || !res.stdout.trim()) throw new Error('文件不存在或为空')
-    sheetContent.value = doc.md
-      ? md.render(res.stdout)
-      : res.stdout
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;')
-          .replace(/\n/g, '<br>')
-  } catch (e) {
-    sheetContent.value = `加载失败: ${e.message}`
-  } finally {
-    sheetLoading.value = false
-  }
+/** markdown-it 体积较大且只有文档页用得到，打开文档时再按需加载 */
+let renderMarkdown = null
+async function ensureMarkdown() {
+  if (renderMarkdown) return renderMarkdown
+  const { default: MarkdownIt } = await import('markdown-it')
+  const md = new MarkdownIt({ html: false, linkify: true, breaks: true })
+  renderMarkdown = (text) => md.render(text)
+  return renderMarkdown
 }
 
-function closeSheet() {
-  sheetOpen.value = false
+const docs = [
+  { key: 'README.md', label: '模块说明', icon: BookOpen },
+  { key: 'changelog.md', label: '更新日志', icon: ScrollText },
+  { key: 'NOTE.txt', label: '注意事项', icon: StickyNote },
+]
+
+const docOpen = ref(false)
+const docTitle = ref('')
+const docHtml = ref('')
+const docDialog = ref(null)
+const loading = ref(false)
+
+const module = computed(() => status.moduleInfo.value)
+const version = computed(() => module.value.version || '—')
+const channel = computed(() => {
+  const value = module.value.channel
+  if (!value || value === 'stable') return ''
+  return value === 'beta' ? 'Beta' : 'Dev'
+})
+
+async function openDoc(doc) {
+  loading.value = true
+  docTitle.value = doc.label
+  docHtml.value = ''
+  docOpen.value = true
+  await nextTick()
+  docDialog.value?.show()
+
+  const text = await readModuleFile(doc.key)
+  loading.value = false
+  if (!text.trim()) {
+    docHtml.value = '<p>无法读取该文档。</p>'
+    return
+  }
+  docHtml.value = doc.key.endsWith('.md')
+    ? (await ensureMarkdown())(text)
+    : `<pre class="plain">${text.replace(/</g, '&lt;')}</pre>`
+}
+
+function closeDoc() {
+  docOpen.value = false
+  docDialog.value?.close()
+}
+
+async function openLink(url) {
+  const res = await runCmd(`am start -a android.intent.action.VIEW -d ${shellQuote(url)}`)
+  if (!res.ok) snackbar('无法打开链接')
 }
 </script>
 
 <template>
-  <div style="display: contents">
-    <section class="card" id="about-section">
-      <!-- 模块文档 -->
-      <div class="about-section-title">模块文档</div>
-      <div class="about-list">
-        <button
-          v-for="doc in moduleDocs"
-          :key="doc.file"
-          class="about-list-item"
-          @click="openModuleDoc(doc)"
-        >
-          <component :is="doc.icon" :size="18" class="about-list-icon" />
-          <span>{{ doc.title }}</span>
-        </button>
-      </div>
+  <section class="section">
+    <div class="section-header">
+      <h2 class="section-title ts-title-md">关于 LuminPro</h2>
+      <span v-if="channel" class="channel-badge">{{ channel }}</span>
+    </div>
 
-      <!-- 链接列表 -->
-      <div class="about-section-title">链接</div>
-      <div class="about-list">
-        <button
-          class="about-list-item"
-          @click="
-            runCmd(
-              'am start -a android.intent.action.VIEW -d \'https://github.com/YuleBest/LuminPro\'',
-            )
-          "
-        >
-          <Github :size="18" class="about-list-icon" />
-          <span>GitHub 项目主页</span>
-        </button>
+    <div class="about-meta">
+      <div class="about-meta__item">
+        <span class="ts-body-sm supporting">版本</span>
+        <span class="ts-body mono">{{ version }}</span>
       </div>
-
-      <p class="about-footer">Made with ❤ by Yule</p>
-    </section>
-
-    <!-- 文档底部弹出抽屉 -->
-    <Teleport to="body">
-      <div class="doc-sheet-backdrop" :class="{ show: sheetOpen }" @click="closeSheet"></div>
-      <div class="doc-sheet" :class="{ show: sheetOpen }">
-        <div class="doc-sheet-header">
-          <span class="doc-sheet-title">{{ sheetTitle }}</span>
-          <button class="doc-sheet-close" @click="closeSheet">
-            <X :size="20" />
-          </button>
-        </div>
-        <div class="doc-sheet-body">
-          <div v-if="sheetLoading" class="doc-sheet-loading">加载中...</div>
-          <!-- eslint-disable-next-line vue/no-v-html -->
-          <div v-else class="doc-sheet-content" v-html="sheetContent"></div>
-        </div>
+      <div class="about-meta__item">
+        <span class="ts-body-sm supporting">作者</span>
+        <span class="ts-body">酷安 @于乐yule</span>
       </div>
-    </Teleport>
-  </div>
+      <div class="about-meta__item">
+        <span class="ts-body-sm supporting">状态</span>
+        <span class="ts-body">{{ status.statusText.value }}</span>
+      </div>
+    </div>
+
+    <p class="ts-body-sm supporting">
+      模块在亮度达到设定阈值时平滑提升到硬件峰值亮度，并支持休眠时段、应用黑名单与 HDR 内容避让。
+    </p>
+  </section>
+
+  <section class="section">
+    <h2 class="section-title ts-title-md">文档</h2>
+    <div class="list">
+      <button
+        v-for="doc in docs"
+        :key="doc.key"
+        class="list-item state-layer"
+        @click="openDoc(doc)"
+      >
+        <component :is="doc.icon" :size="18" />
+        <span class="ts-body">{{ doc.label }}</span>
+      </button>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2 class="section-title ts-title-md">链接</h2>
+    <div class="list">
+      <button
+        class="list-item state-layer"
+        @click="openLink('https://github.com/YuleBest/LuminPro')"
+      >
+        <Github :size="18" />
+        <span class="ts-body">GitHub 仓库</span>
+        <ExternalLink :size="16" class="link-trail" />
+      </button>
+      <button
+        class="list-item state-layer"
+        @click="openLink('https://github.com/YuleBest/LuminPro/releases')"
+      >
+        <ExternalLink :size="18" />
+        <span class="ts-body">版本发布与更新通道</span>
+        <ExternalLink :size="16" class="link-trail" />
+      </button>
+    </div>
+  </section>
+
+  <md-dialog ref="docDialog" @closed="docOpen = false">
+    <div slot="headline">{{ docTitle }}</div>
+    <div slot="content" class="doc-content">
+      <div v-if="loading" class="ts-body supporting">加载中…</div>
+      <div v-else class="markdown" v-html="docHtml"></div>
+    </div>
+    <div slot="actions">
+      <md-filled-button @click="closeDoc">关闭</md-filled-button>
+    </div>
+  </md-dialog>
 </template>
+
+<style scoped>
+.about-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--md-sys-spacing-4);
+}
+
+.about-meta__item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.list-item {
+  border: 0;
+  text-align: left;
+  font: inherit;
+  width: 100%;
+}
+
+.link-trail {
+  margin-left: auto;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.doc-content {
+  max-height: 60vh;
+  overflow-y: auto;
+  min-width: min(360px, 78vw);
+}
+
+.markdown {
+  color: var(--md-sys-color-on-surface);
+  font-size: var(--md-sys-typescale-body-medium-size);
+  line-height: 1.7;
+}
+
+.markdown :deep(h1),
+.markdown :deep(h2),
+.markdown :deep(h3) {
+  font-size: var(--md-sys-typescale-title-medium-size);
+  line-height: var(--md-sys-typescale-title-medium-line-height);
+  margin: var(--md-sys-spacing-4) 0 var(--md-sys-spacing-2);
+}
+
+.markdown :deep(h1) {
+  font-size: var(--md-sys-typescale-title-large-size);
+}
+
+.markdown :deep(p),
+.markdown :deep(li) {
+  margin: 0 0 var(--md-sys-spacing-2);
+}
+
+.markdown :deep(code) {
+  font-family: var(--md-sys-typescale-font-mono);
+  background-color: var(--md-sys-color-surface-container-high);
+  padding: 1px 4px;
+  border-radius: var(--md-sys-shape-corner-extra-small);
+}
+
+.markdown :deep(pre) {
+  background-color: var(--md-sys-color-surface-container-high);
+  padding: var(--md-sys-spacing-3);
+  border-radius: var(--md-sys-shape-corner-small);
+  overflow-x: auto;
+}
+
+.markdown :deep(a) {
+  color: var(--md-sys-color-primary);
+}
+
+.markdown :deep(.plain) {
+  white-space: pre-wrap;
+}
+
+.markdown :deep(table) {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.markdown :deep(th),
+.markdown :deep(td) {
+  border-bottom: 1px solid var(--md-sys-color-outline-variant);
+  padding: 6px 8px;
+  text-align: left;
+}
+</style>
