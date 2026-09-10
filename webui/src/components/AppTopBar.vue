@@ -1,10 +1,9 @@
 <script setup>
 import { computed } from 'vue'
-import { RefreshCw, Pause, Play, RotateCw } from 'lucide-vue-next'
+import { Pause, Play } from 'lucide-vue-next'
+import ActionMenu from './ActionMenu.vue'
 
 const props = defineProps({
-  title: { type: String, default: 'LuminPro' },
-  subtitle: { type: String, default: '' },
   version: { type: String, default: '' },
   statusText: { type: String, default: '—' },
   statusClass: { type: String, default: 'stopped' },
@@ -13,7 +12,7 @@ const props = defineProps({
   scrolled: { type: Boolean, default: false },
 })
 
-const emit = defineEmits(['refresh', 'toggle-service', 'restart'])
+const emit = defineEmits(['toggle-service', 'refresh', 'restart'])
 
 /** 通道徽标：版本号里带 -beta / -dev 即为对应通道 */
 const channel = computed(() => {
@@ -22,27 +21,34 @@ const channel = computed(() => {
   if (v.includes('-dev')) return 'Dev'
   return ''
 })
+
+// 刷新与重启都收进「更多」：文字标签比图标更不容易混淆
+const menuItems = [
+  { key: 'refresh', label: '刷新状态' },
+  { key: 'restart', label: '重启模块' },
+]
+
+function onMenuSelect(key) {
+  if (key === 'refresh') emit('refresh')
+  else if (key === 'restart') emit('restart')
+}
 </script>
 
 <template>
   <header class="app-bar" :class="{ scrolled }">
     <div class="app-bar__text">
       <h1 class="app-bar__title ts-title-lg">
-        {{ title }}
+        LuminPro
         <span v-if="channel" class="channel-badge">{{ channel }}</span>
       </h1>
-      <span class="app-bar__subtitle ts-body-sm">{{ subtitle || version || '—' }}</span>
+      <span class="app-bar__meta ts-body-sm">
+        <span class="status-dot" :class="statusClass"></span>
+        {{ statusText }}
+        <template v-if="version"> · {{ version }}</template>
+      </span>
     </div>
 
-    <span class="status-pill" :class="statusClass">
-      <span class="status-pill__dot"></span>
-      {{ statusText }}
-    </span>
-
     <div class="app-bar__actions">
-      <md-icon-button title="刷新" @click="emit('refresh')">
-        <RefreshCw :size="20" />
-      </md-icon-button>
       <md-icon-button
         :title="paused ? '启用' : '暂停'"
         :disabled="locked"
@@ -51,9 +57,7 @@ const channel = computed(() => {
         <Play v-if="paused" :size="20" />
         <Pause v-else :size="20" />
       </md-icon-button>
-      <md-icon-button title="重启模块" :disabled="locked" @click="emit('restart')">
-        <RotateCw :size="20" />
-      </md-icon-button>
+      <ActionMenu :items="menuItems" :disabled="locked" title="更多操作" @select="onMenuSelect" />
     </div>
   </header>
 </template>

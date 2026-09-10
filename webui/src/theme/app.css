@@ -24,7 +24,7 @@
   min-height: 64px;
   padding: var(--md-sys-spacing-2) var(--md-sys-spacing-1) var(--md-sys-spacing-2)
     var(--md-sys-spacing-4);
-  background-color: var(--md-sys-color-surface);
+  background-color: var(--md-sys-color-background);
   transition: background-color var(--md-sys-motion-duration-medium2)
     var(--md-sys-motion-easing-standard);
 }
@@ -49,8 +49,33 @@
   gap: var(--md-sys-spacing-2);
 }
 
-.app-bar__subtitle {
+.app-bar__meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   color: var(--md-sys-color-on-surface-variant);
+}
+
+.status-dot {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--md-sys-color-outline);
+}
+
+.status-dot.running {
+  background-color: var(--lp-color-success);
+  animation: status-pulse 2.4s var(--md-sys-motion-easing-standard) infinite;
+}
+
+.status-dot.paused {
+  background-color: var(--lp-color-warning);
+}
+
+.status-dot.stopped {
+  background-color: var(--md-sys-color-error);
+  animation: status-pulse 2s var(--md-sys-motion-easing-standard) infinite;
 }
 
 /* 发布通道徽标（Beta / Dev） */
@@ -64,42 +89,6 @@
   line-height: var(--md-sys-typescale-label-small-line-height);
   font-weight: 700;
   text-transform: uppercase;
-}
-
-/* 守护进程状态胶囊 */
-.status-pill {
-  flex: 0 0 auto;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  border-radius: var(--md-sys-shape-corner-full);
-  background-color: var(--md-sys-color-surface-container-high);
-  color: var(--md-sys-color-on-surface-variant);
-  font-size: var(--md-sys-typescale-label-small-size);
-  font-weight: 600;
-}
-
-.status-pill__dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background-color: var(--md-sys-color-outline);
-}
-
-.status-pill.running .status-pill__dot {
-  background-color: var(--lp-color-success);
-  box-shadow: 0 0 8px var(--lp-color-success-container);
-  animation: status-pulse 2.4s var(--md-sys-motion-easing-standard) infinite;
-}
-
-.status-pill.paused .status-pill__dot {
-  background-color: var(--lp-color-warning);
-}
-
-.status-pill.stopped .status-pill__dot {
-  background-color: var(--md-sys-color-error);
-  animation: status-pulse 2s var(--md-sys-motion-easing-standard) infinite;
 }
 
 @keyframes status-pulse {
