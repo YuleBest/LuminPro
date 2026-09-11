@@ -156,6 +156,26 @@ function stopPolling() {
   }
 }
 
+/**
+ * 需要忽略的前台活动：WebUI 自身、系统桌面（切换应用的瞬间会被抓到）、
+ * 输入法、权限弹窗等系统界面。
+ */
+const IGNORED_ACTIVITY_PATTERNS = [
+  /webui/i,
+  // 系统桌面（各厂商 launcher）
+  /(^|\.)launcher/i,
+  /com\.android\.systemui/i,
+  /\/com\.android\.internal\.app\.Launcher/i,
+  // 输入法与系统弹窗
+  /\.inputmethod\./i,
+  /com\.android\.permissioncontroller/i,
+  /com\.android\.settings\/com\.android\.settings\.(FallbackHome|Settings)/i,
+]
+
+function isIgnoredActivity(activity) {
+  return IGNORED_ACTIVITY_PATTERNS.some((pattern) => pattern.test(activity))
+}
+
 function startPolling() {
   pickerPolling.value = true
   pickerStatus.value = '检测中，请切换到目标界面...'
@@ -164,7 +184,8 @@ function startPolling() {
     try {
       const res = await fetchFocus()
       const activity = (res.focus || '').trim()
-      if (!activity || activity.toLowerCase().includes('webui')) return
+      // 空值、WebUI 自身、桌面等系统界面都继续等待
+      if (!activity || isIgnoredActivity(activity)) return
       stopPolling()
       pickerPolling.value = false
       pickerResult.value = activity

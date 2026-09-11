@@ -12,9 +12,56 @@ let renderMarkdown = null
 async function ensureMarkdown() {
   if (renderMarkdown) return renderMarkdown
   const { default: MarkdownIt } = await import('markdown-it')
-  const md = new MarkdownIt({ html: false, linkify: true, breaks: true })
+  // README 使用了 HTML 与 GitHub 提示块（> [!TIP]），需要一并支持
+  const md = new MarkdownIt({ html: true, linkify: true, breaks: true })
+
+  md.core.ruler.push('github-alerts', (state) => {
+    const tokens = state.tokens
+    for (let i = 0; i < tokens.length; i++) {
+      const token = tokens[i]
+      if (token.type !== 'blockquote_open') continue
+      const inline = tokens[i + 2]
+      if (!inline || inline.type !== 'inline') continue
+      const match = /^\[!([A-Z]+)\]\s*/.exec(inline.content)
+      if (!match) continue
+      const kind = match[1].toLowerCase()
+      const label = ALERT_LABELS[kind]
+      if (!label) continue
+      token.attrJoin('class', `md-alert md-alert--${kind}`)
+      inline.content = inline.content.replace(match[0], '')
+      inline.children[0].content = inline.children[0].content.replace(match[0], '')
+      const marker = new state.Token('html_block', '', 0)
+      marker.content = `<p class="md-alert__title">${label}</p>`
+      const closeIdx = findBlockquoteClose(tokens, i)
+      if (closeIdx > 0) tokens.splice(closeIdx, 0, marker)
+    }
+    return true
+  })
+
   renderMarkdown = (text) => md.render(text)
   return renderMarkdown
+}
+
+/** GitHub 提示块的标题文案 */
+const ALERT_LABELS = {
+  note: '备注',
+  tip: '提示',
+  important: '重要',
+  warning: '警告',
+  caution: '注意',
+}
+
+/** 找到与 openIdx 配对的 blockquote_close 下标 */
+function findBlockquoteClose(tokens, openIdx) {
+  let depth = 0
+  for (let i = openIdx; i < tokens.length; i++) {
+    if (tokens[i].type === 'blockquote_open') depth++
+    else if (tokens[i].type === 'blockquote_close') {
+      depth--
+      if (depth === 0) return i
+    }
+  }
+  return -1
 }
 
 const docs = [
@@ -144,6 +191,57 @@ async function openLink(url) {
 </template>
 
 <style scoped>
+/* GitHub 提示块（> [!TIP] 等） */
+.markdown :deep(.md-alert) {
+  margin: 0 0 var(--md-sys-spacing-3);
+  padding: var(--md-sys-spacing-3);
+  border-radius: var(--md-sys-shape-corner-small);
+  border-inline-start: 4px solid var(--md-sys-color-primary);
+  background-color: var(--md-sys-color-surface-container);
+}
+
+.markdown :deep(.md-alert__title) {
+  margin: 0 0 4px;
+  font-weight: 600;
+  color: var(--md-sys-color-primary);
+}
+
+.markdown :deep(.md-alert--tip) {
+  border-inline-start-color: var(--lp-color-success);
+}
+
+.markdown :deep(.md-alert--tip .md-alert__title) {
+  color: var(--lp-color-success);
+}
+
+.markdown :deep(.md-alert--warning),
+.markdown :deep(.md-alert--caution) {
+  border-inline-start-color: var(--lp-color-warning);
+}
+
+.markdown :deep(.md-alert--warning .md-alert__title),
+.markdown :deep(.md-alert--caution .md-alert__title) {
+  color: var(--lp-color-warning);
+}
+
+.markdown :deep(.md-alert--important) {
+  border-inline-start-color: var(--md-sys-color-error);
+}
+
+.markdown :deep(.md-alert--important .md-alert__title) {
+  color: var(--md-sys-color-error);
+}
+
+/* README 的居中容器与徽章 */
+.markdown :deep([align='center']) {
+  text-align: center;
+}
+
+.markdown :deep(img) {
+  max-width: 100%;
+  height: auto;
+}
+
 .about-meta {
   display: flex;
   flex-wrap: wrap;

@@ -1,4 +1,4 @@
-import { exec, moduleInfo } from 'kernelsu'
+import { exec, moduleInfo, enableEdgeToEdge } from 'kernelsu'
 import { devMock } from './devMock.js'
 
 export const MODULE_DIR = '/data/adb/modules/LuminPro'
@@ -39,6 +39,19 @@ export async function runCmd(command) {
 /** 把任意字符串安全地包成 shell 单引号参数 */
 export function shellQuote(value) {
   return `'${String(value).replace(/'/g, "'\\''")}'`
+}
+
+/**
+ * 启用 edge-to-edge：内容延伸至状态栏/手势条区域，
+ * insets.css 的 --window-inset-* 随之生效，顶栏/底栏据此避让。
+ * 不同 KernelSU 版本的命名不同，逐个尝试，全部不可用则忽略。
+ */
+export function applyEdgeToEdge() {
+  try {
+    enableEdgeToEdge(true)
+  } catch {
+    /* 老版本没有该 API：布局仍可用，只是安全区取 0 */
+  }
 }
 
 /** 读取模块版本（module.prop 的 version） */
