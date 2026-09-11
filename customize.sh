@@ -20,12 +20,12 @@ DEFAULT_MAX_BRI_FILE="/sys/class/backlight/panel0-backlight/max_brightness"
 mod_config="$MODPATH/config"
 old_config="/data/adb/modules/LuminPro/config"
 
-# jq 二进制（已随模块提取）
-JQ="$MODPATH/bin/jq"
+# Go 二进制（已随模块提取），负责全部 JSON 配置读写
+BIN="$MODPATH/bin/luminpro"
 CONFIG_FILE="$mod_config/config.json"
 
 mkdir -p "$mod_config"
-chmod 755 "$JQ" 2>/dev/null
+chmod 755 "$BIN" 2>/dev/null
 
 # 亮度节点校验结果: 1 = 默认节点不可用 (安装继续, 但功能不启用)
 NODE_MISSING=0
@@ -34,65 +34,35 @@ NODE_MISSING=0
 # 工具函数
 # ==========================
 
-# 从当前 config.json 读取字段值
+# 读取配置字段，缺失或为空时返回默认值
 cfg_get() {
-    local key="$1" default="$2"
-    local val
-    if val=$("$JQ" -re ".${key}" "$CONFIG_FILE" 2>/dev/null); then
+    local key="$1" default="$2" val
+    val="$("$BIN" config get "$key" 2>/dev/null)"
+    if [ -n "$val" ]; then
         echo "$val"
     else
         echo "$default"
     fi
 }
 
-# 从旧 txt 文件读取值（迁移用）
-read_old_txt() {
-    local file="$old_config/$1"
-    local default="$2"
-    if [ -f "$file" ]; then
-        local val
-        val="$(cat "$file" 2>/dev/null | tr -d ' \n')"
-        [ -n "$val" ] && echo "$val" || echo "$default"
-    else
-        echo "$default"
-    fi
+# 取正值字段（0 视为未配置，输出空）
+cfg_pos() {
+    local v
+    v="$(cfg_get "$1" 0)"
+    case "$v" in
+    '' | 0) echo "" ;;
+    *) echo "$v" ;;
+    esac
 }
 
-# 用 cfg_* 变量写入 config.json
-write_config_json() {
-    "$JQ" -n \
-        --arg ui_max_bri "${cfg_ui_max_bri:-0}" \
-        --arg max_bri "${cfg_max_bri:-0}" \
-        --arg steps_num "${cfg_steps_num:-50}" \
-        --arg log_max_size "${cfg_log_max_size:-512}" \
-        --arg auto_bri_sleep "${cfg_auto_bri_sleep:-1}" \
-        --arg display_hdr_sleep "${cfg_display_hdr_sleep:-0}" \
-        --arg hdr_enter_ratio "${cfg_hdr_enter_ratio:-1.15}" \
-        --arg hdr_exit_ratio "${cfg_hdr_exit_ratio:-1.05}" \
-        --arg compatibility_mode "${cfg_compatibility_mode:-0}" \
-        --arg sleep_time "${cfg_sleep_time:-}" \
-        --arg inotify_events "${cfg_inotify_events:-c}" \
-        --arg now_bri_file "${cfg_now_bri_file:-$DEFAULT_NOW_BRI_FILE}" \
-        --arg max_bri_file "${cfg_max_bri_file:-$DEFAULT_MAX_BRI_FILE}" \
-        --arg log_level "${cfg_log_level:-info}" \
-        --argjson blacklist_apps "${cfg_blacklist_apps:-[]}" \
-        '{
-            ui_max_bri:        ($ui_max_bri        | tonumber),
-            max_bri:           ($max_bri           | tonumber),
-            steps_num:         ($steps_num         | tonumber),
-            log_max_size:      ($log_max_size       | tonumber),
-            auto_bri_sleep:    ($auto_bri_sleep     | tonumber),
-            display_hdr_sleep: ($display_hdr_sleep  | tonumber),
-            hdr_enter_ratio:   ($hdr_enter_ratio   | tonumber),
-            hdr_exit_ratio:    ($hdr_exit_ratio    | tonumber),
-            compatibility_mode:($compatibility_mode | tonumber),
-            sleep_time:        $sleep_time,
-            inotify_events:    $inotify_events,
-            now_bri_file:      $now_bri_file,
-            max_bri_file:      $max_bri_file,
-            log_level:         $log_level,
-            blacklist_apps:    $blacklist_apps
-        }' >"$CONFIG_FILE"
+# 从 key=value 输出中提取字段（供 config inspect / summary 使用）
+field() {
+    sed -n "s/^$1=//p" | head -n 1
+}
+
+# 0/1 转中文
+onoff() {
+    [ "$1" = "1" ] && echo "开启" || echo "关闭"
 }
 
 # ==========================
@@ -188,9 +158,7 @@ TEST_UI_MAX_BRI() {
     echo " ✦ 峰值最大亮度由节点文件获得: [ $measured_max ]"
     echo " ✦ 若不符合预期，请稍后到 Web UI 更改"
 
-    # 写入 JSON
-    "$JQ" ".ui_max_bri = ($measured_ui | tonumber) | .max_bri = ($measured_max | tonumber)" \
-        "$CONFIG_FILE" >"$CONFIG_FILE.tmp" && mv "$CONFIG_FILE.tmp" "$CONFIG_FILE"
+    "$BIN" config set "ui_max_bri=$measured_ui" "max_bri=$measured_max" >/dev/null 2>&1
 
     echo ""
     echo " ✦ 测试完成"
@@ -200,92 +168,59 @@ TEST_UI_MAX_BRI() {
 
 # 导入旧配置（支持 JSON 格式和旧 txt 格式）
 IMPORT_OLD_CONFIG() {
+    local out format v
+
+    # 让 Go 侧判断是否存在可用旧配置并输出字段
+    out="$("$BIN" config inspect "$old_config" 2>/dev/null)" || return 1
+    format="$(echo "$out" | field format)"
+
     # 1. 已有 JSON 格式
-    if [ -f "$old_config/config.json" ]; then
-        local old_ui
-        old_ui=$("$JQ" -re '.ui_max_bri' "$old_config/config.json" 2>/dev/null || echo "0")
-        if [ "${old_ui:-0}" -gt 0 ] 2>/dev/null; then
-            echo ""
-            sleep 1
-            echo " ✦ 检测到已有 JSON 配置:"
-            echo "    - 前台最大亮度: $old_ui"
-            echo "    - 峰值最大亮度: $("$JQ" -re '.max_bri' "$old_config/config.json" 2>/dev/null)"
-            local old_st
-            old_st=$("$JQ" -re '.sleep_time // empty' "$old_config/config.json" 2>/dev/null)
-            [ -n "$old_st" ] && echo "    - 休眠时间: $old_st"
-            echo ""
-            echo " ❆ 按音量 + 沿用旧配置, 按音量 - 重新测试"
-            if [ "$(btn)" = "0" ]; then
-                cp -f "$old_config/config.json" "$CONFIG_FILE"
-                # 若旧 JSON 缺少 blacklist_apps 字段，尝试从 blacklist_apps.txt 补入
-                if ! "$JQ" -e '.blacklist_apps' "$CONFIG_FILE" >/dev/null 2>&1; then
-                    local bl_arr
-                    if [ -s "$old_config/blacklist_apps.txt" ]; then
-                        bl_arr=$("$JQ" -Rs 'split("\n") | map(select(length > 0))' \
-                            "$old_config/blacklist_apps.txt" 2>/dev/null || echo '[]')
-                    else
-                        bl_arr='[]'
-                    fi
-                    local tmp_cfg="$CONFIG_FILE.tmp"
-                    "$JQ" --argjson bl "$bl_arr" '. + {blacklist_apps: $bl}' \
-                        "$CONFIG_FILE" >"$tmp_cfg" && mv -f "$tmp_cfg" "$CONFIG_FILE"
-                fi
-                echo " ✦ 已导入 JSON 配置"
-                return 0
-            else
-                echo " ❆ 将重新测试"
-                return 1
-            fi
+    if [ "$format" = "json" ]; then
+        echo ""
+        sleep 1
+        echo " ✦ 检测到已有 JSON 配置:"
+        echo "    - 前台最大亮度: $(echo "$out" | field ui_max_bri)"
+        echo "    - 峰值最大亮度: $(echo "$out" | field max_bri)"
+        v="$(echo "$out" | field sleep_time)"
+        [ -n "$v" ] && echo "    - 休眠时间: $v"
+        echo ""
+        echo " ❆ 按音量 + 沿用旧配置, 按音量 - 重新测试"
+        if [ "$(btn)" = "0" ]; then
+            "$BIN" config migrate "$old_config" >/dev/null 2>&1
+            echo " ✦ 已导入 JSON 配置"
+            return 0
         fi
+        echo " ❆ 将重新测试"
         return 1
     fi
 
     # 2. 旧 txt 格式迁移
-    if [ -d "$old_config" ] && [ -s "$old_config/ui_max_bri.txt" ] && [ -s "$old_config/max_bri.txt" ]; then
+    if [ "$format" = "txt" ]; then
         echo ""
         sleep 1
         echo " ✦ 检测到旧格式配置，将迁移至 JSON:"
-        echo "    - 前台最大亮度: $(cat "$old_config/ui_max_bri.txt")"
-        echo "    - 峰值最大亮度: $(cat "$old_config/max_bri.txt")"
-        [ -s "$old_config/sleep_time.txt" ] && echo "    - 休眠时间: $(cat "$old_config/sleep_time.txt")"
-        [ -s "$old_config/auto_bri_sleep.txt" ] && echo "    - 自动亮度时休眠: $(cat "$old_config/auto_bri_sleep.txt" | sed 's/1/开启/;s/0/关闭/')"
-        [ -s "$old_config/steps_num.txt" ] && echo "    - 亮度步数: $(cat "$old_config/steps_num.txt")"
-        [ -s "$old_config/log_max_size.txt" ] && echo "    - 日志限制: $(cat "$old_config/log_max_size.txt") KB"
-        [ -s "$old_config/blacklist_apps.txt" ] && echo "    - 黑名单: $(wc -l <"$old_config/blacklist_apps.txt" | tr -d ' ') 个"
+        echo "    - 前台最大亮度: $(echo "$out" | field ui_max_bri)"
+        echo "    - 峰值最大亮度: $(echo "$out" | field max_bri)"
+        v="$(echo "$out" | field sleep_time)"
+        [ -n "$v" ] && echo "    - 休眠时间: $v"
+        v="$(echo "$out" | field auto_bri_sleep)"
+        [ -n "$v" ] && echo "    - 自动亮度时休眠: $(onoff "$v")"
+        v="$(echo "$out" | field steps_num)"
+        [ -n "$v" ] && echo "    - 亮度步数: $v"
+        v="$(echo "$out" | field log_max_size)"
+        [ -n "$v" ] && echo "    - 日志限制: $v KB"
+        v="$(echo "$out" | field blacklist_count)"
+        [ "$v" != "0" ] && [ -n "$v" ] && echo "    - 黑名单: $v 个"
         echo ""
         echo " ❆ 按音量 + 沿用旧配置, 按音量 - 重新测试"
         if [ "$(btn)" = "0" ]; then
-            cfg_ui_max_bri="$(read_old_txt ui_max_bri.txt '0')"
-            cfg_max_bri="$(read_old_txt max_bri.txt '0')"
-            cfg_steps_num="$(read_old_txt steps_num.txt '50')"
-            cfg_log_max_size="$(read_old_txt log_max_size.txt '512')"
-            cfg_auto_bri_sleep="$(read_old_txt auto_bri_sleep.txt '1')"
-            cfg_display_hdr_sleep="$(read_old_txt display_hdr_sleep.txt '0')"
-            cfg_compatibility_mode="$(read_old_txt compatibility_mode.txt '0')"
-            cfg_sleep_time="$(read_old_txt sleep_time.txt '')"
-            cfg_inotify_events="$(read_old_txt inotify_events.txt 'c')"
-            cfg_now_bri_file="$(read_old_txt path/now_bri_file.txt "$DEFAULT_NOW_BRI_FILE")"
-            cfg_max_bri_file="$(read_old_txt path/max_bri_file.txt "$DEFAULT_MAX_BRI_FILE")"
-
-            # 黑名单转 JSON 数组
-            if [ -s "$old_config/blacklist_apps.txt" ]; then
-                cfg_blacklist_apps=$("$JQ" -Rs 'split("\n") | map(select(length > 0))' \
-                    "$old_config/blacklist_apps.txt" 2>/dev/null || echo '[]')
-            else
-                cfg_blacklist_apps='[]'
-            fi
-
-            write_config_json
-
-            # 删除旧 txt 配置文件
-            rm -f "$old_config/"*.txt 2>/dev/null
-            rm -rf "$old_config/path" 2>/dev/null
+            "$BIN" config migrate "$old_config" >/dev/null 2>&1
+            "$BIN" config remove-old-txt "$old_config" >/dev/null 2>&1
             echo " ✦ 配置已迁移至 JSON, 旧文件已清理"
             return 0
-        else
-            echo " ❆ 将重新测试"
-            return 1
         fi
+        echo " ❆ 将重新测试"
+        return 1
     fi
 
     return 1
@@ -294,41 +229,12 @@ IMPORT_OLD_CONFIG() {
 # 初始化默认配置
 INIT_CONFIG() {
     mkdir -p "$mod_config"
-    if [ ! -f "$CONFIG_FILE" ]; then
-        cfg_ui_max_bri=0
-        cfg_max_bri=0
-        cfg_steps_num=50
-        cfg_log_max_size=512
-        cfg_auto_bri_sleep=1
-        cfg_display_hdr_sleep=0
-        cfg_hdr_enter_ratio=1.15
-        cfg_hdr_exit_ratio=1.05
-        cfg_compatibility_mode=0
-        cfg_sleep_time=""
-        cfg_inotify_events="c"
-        cfg_now_bri_file="$DEFAULT_NOW_BRI_FILE"
-        cfg_max_bri_file="$DEFAULT_MAX_BRI_FILE"
-        cfg_blacklist_apps="[]"
-        cfg_log_level="info"
-        write_config_json
-    fi
+    "$BIN" config init 2>/dev/null
 }
 
 # 补全缺失字段
 ENSURE_DEFAULTS() {
-    "$JQ" '
-        .steps_num         = (.steps_num         // 50) |
-        .log_max_size      = (.log_max_size       // 512) |
-        .auto_bri_sleep    = (.auto_bri_sleep     // 1) |
-        .display_hdr_sleep = (.display_hdr_sleep  // 0) |
-        .hdr_enter_ratio   = (.hdr_enter_ratio   // 1.15) |
-        .hdr_exit_ratio    = (.hdr_exit_ratio    // 1.05) |
-        .compatibility_mode= (.compatibility_mode // 0) |
-        .sleep_time        = (.sleep_time         // "") |
-        .inotify_events    = (.inotify_events     // "c") |
-        .log_level         = (.log_level          // "info") |
-        .blacklist_apps    = (.blacklist_apps     // [])
-    ' "$CONFIG_FILE" >"$CONFIG_FILE.tmp" && mv "$CONFIG_FILE.tmp" "$CONFIG_FILE"
+    "$BIN" config ensure 2>/dev/null
 }
 
 # 机型兼容性校验
@@ -340,9 +246,9 @@ CHECK_DEVICE_COMPATIBILITY() {
     if [ "$prefix" = "25128PNA1" ] || [ "$prefix" = "2512BPNDA" ]; then
         echo ""
         echo "  ✿ 您可能是 Xiaomi 17 Ultra 用户，建议使用 '0' 事件作为监测对象"
-        echo "  ✿ 是否将 inotifyd 监测事件修改为 '0'? (音量 + 确认，音量 - 跳过)"
+        echo "  ✿ 是否将监听事件修改为 '0'? (音量 + 确认，音量 - 跳过)"
         if [ "$(btn)" = "0" ]; then
-            "$JQ" '.inotify_events = "0"' "$CONFIG_FILE" >"$CONFIG_FILE.tmp" && mv "$CONFIG_FILE.tmp" "$CONFIG_FILE"
+            "$BIN" config set inotify_events=0 >/dev/null 2>&1
             echo " ✦ 已设置为 0 事件监测"
         else
             echo " ✦ 已跳过"
@@ -361,13 +267,16 @@ END() {
     echo ""
     sleep 1
 
+    local summary
+    summary="$("$BIN" config summary 2>/dev/null)"
+
     # 确保 now_bri_file / max_bri_file 已设置（import 路径可能未调用 CHECK_FILES）
     : "${now_bri_file:=$(cfg_get now_bri_file "$DEFAULT_NOW_BRI_FILE")}"
     : "${max_bri_file:=$(cfg_get max_bri_file "$DEFAULT_MAX_BRI_FILE")}"
 
     local final_ui final_max
-    final_ui=$("$JQ" -re 'if .ui_max_bri > 0 then .ui_max_bri else empty end' "$CONFIG_FILE" 2>/dev/null)
-    final_max=$("$JQ" -re 'if .max_bri > 0 then .max_bri else empty end' "$CONFIG_FILE" 2>/dev/null)
+    final_ui="$(cfg_pos ui_max_bri)"
+    final_max="$(cfg_pos max_bri)"
 
     if [ -z "$final_max" ] || [ -z "$final_ui" ]; then
         if [ "$NODE_MISSING" = "1" ]; then
@@ -386,51 +295,39 @@ END() {
             echo " ❆ 或按音量 + 现在进行测试, 按音量 - 跳过"
             if [ "$(btn)" = "0" ]; then
                 TEST_UI_MAX_BRI
-                final_ui=$("$JQ" -re 'if .ui_max_bri > 0 then .ui_max_bri else empty end' "$CONFIG_FILE" 2>/dev/null)
-                final_max=$("$JQ" -re 'if .max_bri > 0 then .max_bri else empty end' "$CONFIG_FILE" 2>/dev/null)
+                final_ui="$(cfg_pos ui_max_bri)"
+                final_max="$(cfg_pos max_bri)"
+                summary="$("$BIN" config summary 2>/dev/null)"
             fi
         fi
     fi
+
+    local steps log_size auto_bri disp_hdr st inotify bl_count now_path max_path
+    steps="$(echo "$summary" | field steps_num)"
+    log_size="$(echo "$summary" | field log_max_size)"
+    auto_bri="$(echo "$summary" | field auto_bri_sleep)"
+    disp_hdr="$(echo "$summary" | field display_hdr_sleep)"
+    st="$(echo "$summary" | field sleep_time)"
+    inotify="$(echo "$summary" | field inotify_events)"
+    now_path="$(echo "$summary" | field now_bri_file)"
+    max_path="$(echo "$summary" | field max_bri_file)"
+    bl_count="$(echo "$summary" | field blacklist_count)"
 
     echo ""
     echo "======== 将要应用的配置 ========"
     echo " - 前台最大亮度:   $final_ui"
     echo " - 峰值最大亮度:   $final_max"
-
-    local steps log_size auto_bri disp_hdr st inotify bl_count now_path max_path
-    steps=$("$JQ" -re '.steps_num' "$CONFIG_FILE" 2>/dev/null || echo "50")
-    log_size=$("$JQ" -re '.log_max_size' "$CONFIG_FILE" 2>/dev/null || echo "512")
-    auto_bri=$("$JQ" -re '.auto_bri_sleep' "$CONFIG_FILE" 2>/dev/null || echo "1")
-    disp_hdr=$("$JQ" -re '.display_hdr_sleep' "$CONFIG_FILE" 2>/dev/null || echo "0")
-    st=$("$JQ" -re '.sleep_time // empty' "$CONFIG_FILE" 2>/dev/null)
-    inotify=$("$JQ" -re '.inotify_events' "$CONFIG_FILE" 2>/dev/null || echo "c")
-    now_path=$("$JQ" -re '.now_bri_file' "$CONFIG_FILE" 2>/dev/null || echo "$DEFAULT_NOW_BRI_FILE")
-    max_path=$("$JQ" -re '.max_bri_file' "$CONFIG_FILE" 2>/dev/null || echo "$DEFAULT_MAX_BRI_FILE")
-    bl_count=$("$JQ" -re '.blacklist_apps | length' "$CONFIG_FILE" 2>/dev/null || echo "0")
-
     echo " - 亮度渐变步数:   $steps"
     echo " - 日志大小上限:   ${log_size} KB"
-    if [ "$auto_bri" = "1" ]; then
-        echo " - 自动亮度时跳过: 开启"
-    else
-        echo " - 自动亮度时跳过: 关闭"
-    fi
-    if [ "$disp_hdr" = "1" ]; then
-        echo " - HDR 内容时跳过: 开启"
-    else
-        echo " - HDR 内容时跳过: 关闭"
-    fi
-    if [ "$("$JQ" -re '.compatibility_mode' "$CONFIG_FILE" 2>/dev/null || echo "0")" = "1" ]; then
-        echo " - 兼容模式 (轮询):  开启"
-    else
-        echo " - 兼容模式 (轮询):  关闭"
-    fi
+    echo " - 自动亮度时跳过: $(onoff "$auto_bri")"
+    echo " - HDR 内容时跳过: $(onoff "$disp_hdr")"
+    echo " - 兼容模式 (轮询): $(onoff "$(echo "$summary" | field compatibility_mode)")"
     if [ -n "$st" ]; then
         echo " - 休眠时段:       $st"
     else
         echo " - 休眠时段:       未配置"
     fi
-    echo " - inotifyd 事件:  $inotify"
+    echo " - 监听事件:  $inotify"
     echo " - 当前亮度节点:   $now_path"
     echo " - 最大亮度节点:   $max_path"
     [ ! -f "$now_path" ] && echo " ⚠ 当前亮度节点不存在, 重启后功能将不会启用"

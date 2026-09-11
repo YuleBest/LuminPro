@@ -1,58 +1,68 @@
 import { ref, computed } from 'vue'
-import { runCmd, LOG_FILE } from '../utils.js'
+import { fetchLog, clearLog, exportLog } from '../api/luminpro.js'
 
+const LEVELS = ['', 'INFO', 'WARN', 'ERROR', 'SUCCESS']
+
+/** 日志：数据来自 Go 侧 `luminpro log tail`，等级过滤在前端进行 */
 export function useLog() {
-  const fullLog = ref('')
-  const filterLevel = ref('')
-  const isLoading = ref(false)
+  const entries = ref([])
+  const level = ref('')
+  const error = ref('')
+  const loading = ref(false)
 
-  const filteredLog = computed(() => {
-    if (!fullLog.value) return '暂无日志'
-    if (!filterLevel.value) return fullLog.value
-    const lines = fullLog.value.split('\n').filter((l) => l.includes(`[${filterLevel.value}]`))
-    return lines.length > 0 ? lines.join('\n') : `暂无 [${filterLevel.value}] 等级的日志`
-  })
+  const levels = LEVELS
+  const filtered = computed(() =>
+    level.value ? entries.value.filter((e) => e.level === level.value) : entries.value,
+  )
+
+  const asText = (list = filtered.value) =>
+    list.map((e) => `[${e.time}] [${e.tag}] [${e.level}] ${e.message}`.trim()).join('\n')
 
   async function load() {
-    const res = await runCmd(`tail -n 100 "${LOG_FILE}"`)
-    fullLog.value =
-      res.errno === 0 ? res.stdout.trim() || '暂无日志' : '无法读取日志 (可能模块尚未产生日志文件)'
+    loading.value = true
+    try {
+      const page = await fetchLog(200)
+      entries.value = page.entries ?? []
+      error.value = ''
+    } catch (e) {
+      error.value = e.message
+    } finally {
+      loading.value = false
+    }
   }
 
-  async function clear(toast) {
-    toast('正在清空日志...')
-    const res = await runCmd(`> "${LOG_FILE}"`)
-    if (res.errno === 0) {
-      fullLog.value = ''
-      toast('日志已清空')
-    } else toast('清空失败: ' + (res.stderr || '未知错误'))
+  async function clear(snackbar) {
+    try {
+      await clearLog()
+      entries.value = []
+      snackbar?.('日志已清空')
+    } catch (e) {
+      snackbar?.(`清空失败: ${e.message}`)
+    }
   }
 
-  async function copy(toast) {
-    const res = await runCmd(`tail -n 50 "${LOG_FILE}"`)
-    if (res.errno !== 0 || !res.stdout.trim()) {
-      toast('暂无日志内容')
+  async function exportTo(snackbar) {
+    try {
+      const res = await exportLog('/sdcard')
+      snackbar?.(`已导出到 ${res.path}`)
+    } catch (e) {
+      snackbar?.(`导出失败: ${e.message}`)
+    }
+  }
+
+  async function copy(snackbar) {
+    const text = asText()
+    if (!text) {
+      snackbar?.('暂无日志可复制')
       return
     }
     try {
-      await navigator.clipboard.writeText(res.stdout.trim())
+      await navigator.clipboard.writeText(text)
+      snackbar?.('日志已复制到剪贴板')
     } catch {
-      const ta = document.createElement('textarea')
-      ta.value = res.stdout.trim()
-      ta.style.cssText = 'position:fixed;opacity:0;pointer-events:none'
-      document.body.appendChild(ta)
-      ta.select()
-      document.execCommand('copy')
-      document.body.removeChild(ta)
+      snackbar?.('复制失败，请手动选择文本')
     }
-    toast('已复制最新 50 条日志')
   }
 
-  async function exportLog(toast) {
-    toast('正在导出...')
-    const res = await runCmd(`cp "${LOG_FILE}" "/sdcard/LuminPro_$(date '+%Y%m%d_%H%M%S').log"`)
-    toast(res.errno === 0 ? '日志已导出到 /sdcard' : '导出失败: ' + (res.stderr || '未知错误'))
-  }
-
-  return { fullLog, filterLevel, filteredLog, isLoading, load, clear, copy, exportLog }
+  return { entries, filtered, level, levels, error, loading, asText, load, clear, exportTo, copy }
 }

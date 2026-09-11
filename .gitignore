@@ -9,8 +9,8 @@ dist/
 webroot/*
 !webroot/.gitkeep
 
-# rust
-rust/target/
+# Go 编译产物（CI/本地构建生成）
+bin/luminpro
 
 # 本地脚本
 deploy.js
@@ -18,3 +18,6 @@ deploy.js
 
 # 编辑器 / 会话临时文件
 .zcode/
+
+# 构建产物（每次打包重新生成）
+SHA256SUMS

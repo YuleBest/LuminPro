@@ -1,0 +1,296 @@
+/* ==========================================================================
+   MD3 设计令牌
+   - 颜色：完整 MD3 角色集，沿用项目既有的 Google Blue 调色板
+   - 字阶 / 形状 / 动效 / 状态层：官方命名（--md-sys-*）
+   暗色为默认；浅色通过「系统偏好」或手动 .light 类生效。
+   ========================================================================== */
+
+:root {
+  /* ── 字阶 typescale ─────────────────────────────────────────────── */
+  --md-sys-typescale-display-large-size: 3.5625rem; /* 57sp */
+  --md-sys-typescale-display-large-line-height: 4rem;
+  --md-sys-typescale-display-large-weight: 400;
+  --md-sys-typescale-display-medium-size: 2.8125rem; /* 45sp */
+  --md-sys-typescale-display-medium-line-height: 3.25rem;
+  --md-sys-typescale-display-medium-weight: 400;
+  --md-sys-typescale-display-small-size: 2.25rem; /* 36sp */
+  --md-sys-typescale-display-small-line-height: 2.75rem;
+  --md-sys-typescale-display-small-weight: 400;
+
+  --md-sys-typescale-headline-large-size: 2rem; /* 32sp */
+  --md-sys-typescale-headline-large-line-height: 2.5rem;
+  --md-sys-typescale-headline-large-weight: 400;
+  --md-sys-typescale-headline-medium-size: 1.75rem; /* 28sp */
+  --md-sys-typescale-headline-medium-line-height: 2.25rem;
+  --md-sys-typescale-headline-medium-weight: 400;
+  --md-sys-typescale-headline-small-size: 1.5rem; /* 24sp */
+  --md-sys-typescale-headline-small-line-height: 2rem;
+  --md-sys-typescale-headline-small-weight: 400;
+
+  --md-sys-typescale-title-large-size: 1.375rem; /* 22sp */
+  --md-sys-typescale-title-large-line-height: 1.75rem;
+  --md-sys-typescale-title-large-weight: 400;
+  --md-sys-typescale-title-medium-size: 1rem; /* 16sp */
+  --md-sys-typescale-title-medium-line-height: 1.5rem;
+  --md-sys-typescale-title-medium-weight: 500;
+  --md-sys-typescale-title-medium-tracking: 0.0094em;
+  --md-sys-typescale-title-small-size: 0.875rem; /* 14sp */
+  --md-sys-typescale-title-small-line-height: 1.25rem;
+  --md-sys-typescale-title-small-weight: 500;
+  --md-sys-typescale-title-small-tracking: 0.0063em;
+
+  --md-sys-typescale-body-large-size: 1rem; /* 16sp */
+  --md-sys-typescale-body-large-line-height: 1.5rem;
+  --md-sys-typescale-body-large-weight: 400;
+  --md-sys-typescale-body-large-tracking: 0.0313em;
+  --md-sys-typescale-body-medium-size: 0.875rem; /* 14sp */
+  --md-sys-typescale-body-medium-line-height: 1.25rem;
+  --md-sys-typescale-body-medium-weight: 400;
+  --md-sys-typescale-body-medium-tracking: 0.0156em;
+  --md-sys-typescale-body-small-size: 0.75rem; /* 12sp */
+  --md-sys-typescale-body-small-line-height: 1rem;
+  --md-sys-typescale-body-small-weight: 400;
+  --md-sys-typescale-body-small-tracking: 0.025em;
+
+  --md-sys-typescale-label-large-size: 0.875rem; /* 14sp */
+  --md-sys-typescale-label-large-line-height: 1.25rem;
+  --md-sys-typescale-label-large-weight: 500;
+  --md-sys-typescale-label-large-tracking: 0.0063em;
+  --md-sys-typescale-label-medium-size: 0.75rem; /* 12sp */
+  --md-sys-typescale-label-medium-line-height: 1rem;
+  --md-sys-typescale-label-medium-weight: 500;
+  --md-sys-typescale-label-medium-tracking: 0.0313em;
+  --md-sys-typescale-label-small-size: 0.6875rem; /* 11sp */
+  --md-sys-typescale-label-small-line-height: 1rem;
+  --md-sys-typescale-label-small-weight: 500;
+  --md-sys-typescale-label-small-tracking: 0.0313em;
+
+  --md-sys-typescale-font: 'Geist', system-ui, -apple-system, sans-serif;
+  /* 等宽栈要带上 CJK 无衬线兜底：Geist Mono 无中文字形，直接落到通用 monospace
+     会在 Windows 上显示为宋体 */
+  --md-sys-typescale-font-mono:
+    'Geist Mono', ui-monospace, 'Microsoft YaHei', 'PingFang SC', 'Noto Sans CJK SC', monospace;
+
+  /* @material/web 组件内部的字体族取自 ref typeface（默认回退 Roboto），
+     必须显式指向项目字体，否则组件内文字与页面字体不一致 */
+  --md-ref-typeface-brand: 'Geist', system-ui, -apple-system, sans-serif;
+  --md-ref-typeface-plain: 'Geist', system-ui, -apple-system, sans-serif;
+  --md-ref-typeface-weight-regular: 400;
+  --md-ref-typeface-weight-medium: 500;
+
+  /* ── 形状 shape ─────────────────────────────────────────────────── */
+  --md-sys-shape-corner-none: 0;
+  --md-sys-shape-corner-extra-small: 4px;
+  --md-sys-shape-corner-small: 8px;
+  --md-sys-shape-corner-medium: 12px;
+  --md-sys-shape-corner-large: 16px;
+  --md-sys-shape-corner-large-increased: 20px;
+  --md-sys-shape-corner-extra-large: 28px;
+  --md-sys-shape-corner-extra-large-increased: 32px;
+  --md-sys-shape-corner-full: 9999px;
+
+  /* ── 间距（8dp 系统）────────────────────────────────────────────── */
+  --md-sys-spacing-1: 4px;
+  --md-sys-spacing-2: 8px;
+  --md-sys-spacing-3: 12px;
+  --md-sys-spacing-4: 16px;
+  --md-sys-spacing-5: 24px;
+  --md-sys-spacing-6: 32px;
+
+  /* ── 动效 motion ────────────────────────────────────────────────── */
+  --md-sys-motion-duration-short2: 100ms;
+  --md-sys-motion-duration-short4: 200ms;
+  --md-sys-motion-duration-medium2: 300ms;
+  --md-sys-motion-duration-medium4: 400ms;
+  --md-sys-motion-duration-long2: 500ms;
+  --md-sys-motion-easing-standard: cubic-bezier(0.2, 0, 0, 1);
+  --md-sys-motion-easing-standard-decelerate: cubic-bezier(0, 0, 0, 1);
+  --md-sys-motion-easing-standard-accelerate: cubic-bezier(0.3, 0, 1, 1);
+  --md-sys-motion-easing-emphasized: cubic-bezier(0.2, 0, 0, 1);
+  --md-sys-motion-easing-emphasized-decelerate: cubic-bezier(0.05, 0.7, 0.1, 1);
+  --md-sys-motion-easing-emphasized-accelerate: cubic-bezier(0.3, 0, 0.8, 0.15);
+
+  /* ── 状态层 state layer ─────────────────────────────────────────── */
+  --md-sys-state-hover-opacity: 0.08;
+  --md-sys-state-focus-opacity: 0.1;
+  --md-sys-state-pressed-opacity: 0.1;
+  --md-sys-state-dragged-opacity: 0.16;
+
+  /* ── 项目扩展角色（MD3 无 warning/success）──────────────────────── */
+  --lp-color-warning: #f59e0b;
+  --lp-color-success: #4ade80;
+}
+
+/* ==========================================================================
+   暗色（默认）
+   ========================================================================== */
+:root,
+:root.dark {
+  --md-sys-color-primary: #a8c7fa;
+  --md-sys-color-on-primary: #062e6f;
+  --md-sys-color-primary-container: #1b4b9b;
+  --md-sys-color-on-primary-container: #d3e3fd;
+
+  --md-sys-color-secondary: #bec6dc;
+  --md-sys-color-on-secondary: #283141;
+  --md-sys-color-secondary-container: #3e4759;
+  --md-sys-color-on-secondary-container: #dae2f9;
+
+  --md-sys-color-tertiary: #d6bee4;
+  --md-sys-color-on-tertiary: #3b2948;
+  --md-sys-color-tertiary-container: #523f5f;
+  --md-sys-color-on-tertiary-container: #f2daff;
+
+  --md-sys-color-error: #ffb4ab;
+  --md-sys-color-on-error: #690005;
+  --md-sys-color-error-container: #93000a;
+  --md-sys-color-on-error-container: #ffdad6;
+
+  --md-sys-color-background: #111318;
+  --md-sys-color-on-background: #e2e2e9;
+  --md-sys-color-surface: #1e1f25;
+  --md-sys-color-on-surface: #e2e2e9;
+  --md-sys-color-surface-variant: #44474f;
+  --md-sys-color-on-surface-variant: #c4c6d0;
+
+  --md-sys-color-surface-dim: #111318;
+  --md-sys-color-surface-bright: #37393f;
+  --md-sys-color-surface-container-lowest: #0d0e12;
+  --md-sys-color-surface-container-low: #1a1c22;
+  --md-sys-color-surface-container: #212429;
+  --md-sys-color-surface-container-high: #2b2930;
+  --md-sys-color-surface-container-highest: #36343b;
+
+  --md-sys-color-inverse-surface: #e2e2e9;
+  --md-sys-color-inverse-on-surface: #2f3033;
+  --md-sys-color-inverse-primary: #0b57d0;
+
+  --md-sys-color-outline: #8e9099;
+  --md-sys-color-outline-variant: #44474f;
+  --md-sys-color-shadow: #000000;
+  --md-sys-color-scrim: #000000;
+
+  --lp-color-warning: #f59e0b;
+  --lp-color-warning-container: rgba(245, 158, 11, 0.16);
+  --lp-color-success: #4ade80;
+  --lp-color-success-container: rgba(74, 222, 128, 0.16);
+  --md-sys-color-scrim-rgb: 0, 0, 0;
+}
+
+/* ==========================================================================
+   浅色
+   ========================================================================== */
+@media (prefers-color-scheme: light) {
+  :root:not(.dark) {
+    --md-sys-color-primary: #0b57d0;
+    --md-sys-color-on-primary: #ffffff;
+    --md-sys-color-primary-container: #d3e3fd;
+    --md-sys-color-on-primary-container: #041e49;
+
+    --md-sys-color-secondary: #565e71;
+    --md-sys-color-on-secondary: #ffffff;
+    --md-sys-color-secondary-container: #dae2f9;
+    --md-sys-color-on-secondary-container: #131c2b;
+
+    --md-sys-color-tertiary: #6b5778;
+    --md-sys-color-on-tertiary: #ffffff;
+    --md-sys-color-tertiary-container: #f2daff;
+    --md-sys-color-on-tertiary-container: #251431;
+
+    --md-sys-color-error: #b3261e;
+    --md-sys-color-on-error: #ffffff;
+    --md-sys-color-error-container: #f9dedc;
+    --md-sys-color-on-error-container: #410e0b;
+
+    --md-sys-color-background: #f8f9fc;
+    --md-sys-color-on-background: #191c20;
+    --md-sys-color-surface: #ffffff;
+    --md-sys-color-on-surface: #191c20;
+    --md-sys-color-surface-variant: #e1e2ec;
+    --md-sys-color-on-surface-variant: #44474f;
+
+    --md-sys-color-surface-dim: #d9dae0;
+    --md-sys-color-surface-bright: #ffffff;
+    --md-sys-color-surface-container-lowest: #ffffff;
+    --md-sys-color-surface-container-low: #f3f4f9;
+    --md-sys-color-surface-container: #eff1f6;
+    --md-sys-color-surface-container-high: #e8eaf0;
+    --md-sys-color-surface-container-highest: #e2e4eb;
+
+    --md-sys-color-inverse-surface: #2f3033;
+    --md-sys-color-inverse-on-surface: #f1f0f4;
+    --md-sys-color-inverse-primary: #a8c7fa;
+
+    --md-sys-color-outline: #74777f;
+    --md-sys-color-outline-variant: #c4c7d0;
+
+    --lp-color-warning: #b45309;
+    --lp-color-warning-container: rgba(180, 83, 9, 0.14);
+    --lp-color-success: #2f9e63;
+    --lp-color-success-container: rgba(47, 158, 99, 0.14);
+  }
+}
+
+/* 手动指定浅色（Web UI 设置里的「浅色」）*/
+:root.light {
+  --md-sys-color-primary: #0b57d0;
+  --md-sys-color-on-primary: #ffffff;
+  --md-sys-color-primary-container: #d3e3fd;
+  --md-sys-color-on-primary-container: #041e49;
+
+  --md-sys-color-secondary: #565e71;
+  --md-sys-color-on-secondary: #ffffff;
+  --md-sys-color-secondary-container: #dae2f9;
+  --md-sys-color-on-secondary-container: #131c2b;
+
+  --md-sys-color-tertiary: #6b5778;
+  --md-sys-color-on-tertiary: #ffffff;
+  --md-sys-color-tertiary-container: #f2daff;
+  --md-sys-color-on-tertiary-container: #251431;
+
+  --md-sys-color-error: #b3261e;
+  --md-sys-color-on-error: #ffffff;
+  --md-sys-color-error-container: #f9dedc;
+  --md-sys-color-on-error-container: #410e0b;
+
+  --md-sys-color-background: #f8f9fc;
+  --md-sys-color-on-background: #191c20;
+  --md-sys-color-surface: #ffffff;
+  --md-sys-color-on-surface: #191c20;
+  --md-sys-color-surface-variant: #e1e2ec;
+  --md-sys-color-on-surface-variant: #44474f;
+
+  --md-sys-color-surface-dim: #d9dae0;
+  --md-sys-color-surface-bright: #ffffff;
+  --md-sys-color-surface-container-lowest: #ffffff;
+  --md-sys-color-surface-container-low: #f3f4f9;
+  --md-sys-color-surface-container: #eff1f6;
+  --md-sys-color-surface-container-high: #e8eaf0;
+  --md-sys-color-surface-container-highest: #e2e4eb;
+
+  --md-sys-color-inverse-surface: #2f3033;
+  --md-sys-color-inverse-on-surface: #f1f0f4;
+  --md-sys-color-inverse-primary: #a8c7fa;
+
+  --md-sys-color-outline: #74777f;
+  --md-sys-color-outline-variant: #c4c7d0;
+  --md-sys-color-scrim-rgb: 0, 0, 0;
+
+  --lp-color-warning: #b45309;
+  --lp-color-warning-container: rgba(180, 83, 9, 0.14);
+  --lp-color-success: #2f9e63;
+  --lp-color-success-container: rgba(47, 158, 99, 0.14);
+}
+
+/* ==========================================================================
+   @material/web 组件接入令牌
+   ========================================================================== */
+:root {
+  /* 默认控件高度与形状对齐 MD3 */
+  --md-filled-button-container-shape: var(--md-sys-shape-corner-full);
+  --md-outlined-button-container-shape: var(--md-sys-shape-corner-full);
+  --md-text-button-container-shape: var(--md-sys-shape-corner-full);
+  --md-filled-tonal-button-container-shape: var(--md-sys-shape-corner-full);
+  --md-outlined-text-field-container-shape: var(--md-sys-shape-corner-small);
+  --md-outlined-select-text-field-container-shape: var(--md-sys-shape-corner-small);
+}

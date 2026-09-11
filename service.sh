@@ -1,28 +1,19 @@
 #!/system/bin/sh
 #shellcheck shell=ash
 
+# LuminPro 模块启动入口：等待系统就绪后拉起 Go 守护进程
+
 MODDIR="${0%/*}"
-CONFIG_FILE="$MODDIR/config/config.json"
-JQ="$MODDIR/bin/jq"
+BIN="$MODDIR/bin/luminpro"
 log_file="$MODDIR/service.log"
 
 DEFAULT_NOW_BRI_FILE="/sys/class/backlight/panel0-backlight/brightness"
-DEFAULT_MAX_BRI_FILE="/sys/class/backlight/panel0-backlight/max_brightness"
-
-get_cfg() {
-    local key="$1" default="$2"
-    local val
-    if val=$("$JQ" -re ".${key}" "$CONFIG_FILE" 2>/dev/null); then
-        echo "$val"
-    else
-        echo "$default"
-    fi
-}
 
 _log() {
     local level="${2:-INFO}"
     local ll
-    ll="$(get_cfg log_level "info")"
+    ll="$("$BIN" config get log_level 2>/dev/null)"
+    [ -n "$ll" ] || ll="info"
     case "$ll" in
     off) return ;;
     error) case "$level" in ERROR) ;; *) return ;; esac ;;
@@ -35,17 +26,13 @@ _log() {
 sleep 30
 
 # 清理上次遗留的标记文件
-rm -f "$MODDIR/pid/"*.flag "$MODDIR/pid/"*.pause "$MODDIR/pid/"*.lock "$MODDIR/pid/oplock" "$MODDIR/pid/.hdr_ratio_cache"
+rm -f "$MODDIR/pid/"*.flag "$MODDIR/pid/"*.pause "$MODDIR/pid/"*.lock "$MODDIR/pid/oplock" "$MODDIR/pid/state.json" "$MODDIR/pid/.hdr_ratio_cache"
 
 _log "LuminPro 服务启动" "INFO"
-_log "前台最大亮度: $(get_cfg ui_max_bri 0)" "INFO"
-_log "峰值最大亮度: $(get_cfg max_bri 0)" "INFO"
-_log "休眠时段: $(get_cfg sleep_time '')" "INFO"
 
-now_bri_file="$(get_cfg now_bri_file "$DEFAULT_NOW_BRI_FILE")"
-max_bri_file="$(get_cfg max_bri_file "$DEFAULT_MAX_BRI_FILE")"
+now_bri_file="$("$BIN" config get now_bri_file 2>/dev/null)"
+[ -n "$now_bri_file" ] || now_bri_file="$DEFAULT_NOW_BRI_FILE"
 _log "当前亮度节点: $now_bri_file" "INFO"
-_log "最大亮度节点: $max_bri_file" "INFO"
 
 # 亮度节点不存在时不启动守护进程 (节点不可用的设备允许安装但功能保持关闭)
 if [ ! -f "$now_bri_file" ]; then
@@ -54,12 +41,8 @@ if [ ! -f "$now_bri_file" ]; then
     exit 0
 fi
 
-_log "正在启动守护进程" "INFO"
-chmod 755 "$MODDIR/script/up.sh"
-chmod 755 "$MODDIR/script/daemon.sh"
-chmod 755 "$MODDIR/bin/lumipro"
-
-sh "$MODDIR/script/daemon.sh" &
+chmod 755 "$BIN"
+"$BIN" daemon >>"$log_file" 2>&1 &
 _log "守护进程已启动 (PID: $!)" "SUCCESS"
 
 exit 0

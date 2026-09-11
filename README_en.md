@@ -5,18 +5,18 @@
 [中文简体](https://github.com/YuleBest/LuminPro/blob/main/README.md) 丨 **English**
 
 Break past the Android foreground brightness cap and push your screen to its hardware peak — anytime  
-_Powered by KernelSU WebUI + Rust Event-Driven Architecture_
+_Powered by KernelSU WebUI + Go Event-Driven Architecture_
 
 </div>
 
 ## Overview
 
-LuminPro monitors the system brightness sysfs node via a Rust-native `lumipro` binary. Whenever the current brightness exceeds a configured threshold, it smoothly ramps the display up to the hardware maximum — ideal for outdoor readability. A resident daemon (`daemon.sh`) keeps the listener alive, and the full KernelSU WebUI lets you tune every parameter without a reboot.
+LuminPro monitors the system brightness sysfs node via a Go-native resident daemon (`luminpro`). Whenever the current brightness exceeds a configured threshold, it smoothly ramps the display up to the hardware maximum — ideal for outdoor readability. The daemon owns listening, decision-making, ramping and state files in a single process, and the full KernelSU WebUI lets you tune every parameter without a reboot.
 
 ## V2.3 Core Features
 
-- **Zero-Overhead Event Listener (lumipro)**  
-  No polling loops, no background spin. LuminPro now uses a Rust-native `lumipro` binary with built-in debouncing and debug mode, replacing the old `inotifyd` approach. A companion daemon process continuously watches the listener and restarts it if it ever dies, guaranteeing an unbroken monitoring chain.
+- **Zero-Overhead Event Listener (luminpro)**  
+  No polling loops, no background spin. The Go daemon (`luminpro`) watches the brightness node with raw inotify, responds only when the file actually changes, and includes a 300ms debounce plus event draining. It self-heals: a lost watch is rebuilt automatically and stale locks are reclaimed.
 
 - **KernelSU WebUI Configuration**  
   Adjust all settings visually inside the module's settings page. Changes take effect **immediately** — no reboot required:
@@ -26,7 +26,7 @@ LuminPro monitors the system brightness sysfs node via a Rust-native `lumipro` b
   - `Sleep Hours` — time range to suppress boosts (e.g. `2200-0700`)
   - `Log Level` — control log verbosity (off / error / warn / info)
   - `Brightness / Max-Brightness node paths` — custom sysfs paths for non-standard devices
-  - `inotify Event Types` — which events `lumipro` should watch
+  - `inotify Event Types` — which events the daemon should watch
 
 - **Smooth Step Transition**  
   Millisecond-level 50-step interpolation prevents jarring brightness jumps. The step count is configurable.
@@ -45,7 +45,7 @@ LuminPro monitors the system brightness sysfs node via a Rust-native `lumipro` b
   Trigger a one-shot peak brightness via the manager's Action button or `action.sh`. A second tap restores the original brightness.
 
 - **Live Status & Log Dashboard**  
-  The WebUI status page shows real-time brightness, the active `lumipro` PID, and service state. The log page supports level filtering (`INFO` / `WARN` / `ERROR`) and lets you copy or export logs to `/sdcard` with one tap.
+  The WebUI status page shows real-time brightness, the daemon PID, and service state. The log page supports level filtering (`INFO` / `WARN` / `ERROR`) and lets you copy or export logs to `/sdcard` with one tap.
 
 ## Configuration Reference
 
@@ -62,7 +62,7 @@ LuminPro monitors the system brightness sysfs node via a Rust-native `lumipro` b
 | `now_bri_file`      | Current brightness sysfs node path      | standard panel0 path       |
 | `max_bri_file`      | Max brightness sysfs node path          | standard panel0 path       |
 | `blacklist_apps`    | Blacklisted packages / activities       | `[]`                       |
-| `inotify_events`    | lumipro event mask                      | `c`                        |
+| `inotify_events`    | inotify event mask                      | `c`                        |
 
 ## Installation
 

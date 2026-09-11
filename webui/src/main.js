@@ -1,11 +1,13 @@
 import { createApp } from 'vue'
-import App from './App.vue'
-import './index.css'
-import './style.css'
-import './header.css'
-import './components.css'
-import './about.css'
-import './apps.css'
-import './log.css'
+import { applyEdgeToEdge } from './api/ksu.js'
+import './mwc.js'
 
+import './theme/tokens.css'
+import './theme/base.css'
+import './theme/components.css'
+import './theme/app.css'
+
+import App from './App.vue'
+
+applyEdgeToEdge()
 createApp(App).mount('#app')
