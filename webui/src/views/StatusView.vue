@@ -44,13 +44,31 @@ async function refresh() {
   snackbar('已刷新')
 }
 
-async function applyBrightness(value) {
+let lastApplied = null
+
+/** 拖动中节流：距上次应用超过 3% 才写一次节点，避免每个像素都 exec */
+const DRAG_APPLY_STEP_PERCENT = 3
+
+async function applyBrightness(value, { silent = false } = {}) {
   try {
     await status.setBrightness(value)
-    snackbar(`亮度已设为 ${value}`)
+    lastApplied = value
+    if (!silent) snackbar(`亮度已设为 ${value}`)
   } catch (e) {
-    snackbar(`设置失败: ${e.message}`)
+    if (!silent) snackbar(`设置失败: ${e.message}`)
   }
+}
+
+/** 拖动过程中（input 事件）按比例阈值应用 */
+async function onSliderInput(event) {
+  const value = Number(event.target.value)
+  const max = maxBrightness.value || 255
+  if (lastApplied === null) {
+    lastApplied = currentBrightness.value
+  }
+  const step = (max * DRAG_APPLY_STEP_PERCENT) / 100
+  if (Math.abs(value - lastApplied) < step) return
+  await applyBrightness(value, { silent: true })
 }
 
 async function onSliderChange(event) {
@@ -62,6 +80,7 @@ async function onSliderChange(event) {
     return
   }
   await applyBrightness(value)
+  lastApplied = value
 }
 
 function cancelLow() {
@@ -118,6 +137,7 @@ async function confirmLow() {
         :max="maxBrightness"
         :value="currentBrightness"
         labeled
+        @input="onSliderInput"
         @change="onSliderChange"
       ></md-slider>
     </div>

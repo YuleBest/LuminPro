@@ -1,4 +1,5 @@
 import { createApp } from 'vue'
+import { applyEdgeToEdge } from './api/ksu.js'
 import './mwc.js'
 
 import './theme/tokens.css'
@@ -8,4 +9,5 @@ import './theme/app.css'
 
 import App from './App.vue'
 
+applyEdgeToEdge()
 createApp(App).mount('#app')
