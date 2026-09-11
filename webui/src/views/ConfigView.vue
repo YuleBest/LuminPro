@@ -41,6 +41,11 @@ async function openHelp() {
   helpDialog.value?.show()
 }
 
+function closeHelp() {
+  helpDialog.value?.close()
+  helpOpen.value = false
+}
+
 // ── 定时休眠：HHMM 起止时间 ────────────────────────────────────────
 const sleepStart = computed(() => config.sleepParts.value[0] + config.sleepParts.value[1])
 const sleepEnd = computed(() => config.sleepParts.value[2] + config.sleepParts.value[3])
@@ -316,7 +321,7 @@ async function confirmReset() {
     <div slot="headline">支持的事件字母</div>
     <pre slot="content" class="help-text">{{ INOTIFY_HELP }}</pre>
     <div slot="actions">
-      <md-filled-button @click="helpOpen = false">知道了</md-filled-button>
+      <md-filled-button @click="closeHelp">知道了</md-filled-button>
     </div>
   </md-dialog>
 </template>
