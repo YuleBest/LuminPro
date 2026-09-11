@@ -211,6 +211,10 @@ func TestReadModuleInfo(t *testing.T) {
 	}
 }
 
+// fixedNow 是状态聚合测试的基准时间：运行时长等字段依赖「当前时间」，
+// 必须与写入 state 的 startedAt 用同一基准，否则测试会随执行时机漂移。
+var fixedNow = time.Date(2026, 9, 10, 12, 0, 0, 0, time.Local)
+
 func TestBuildStatus(t *testing.T) {
 	dir := t.TempDir()
 	paths := DefaultPaths(dir)
@@ -247,9 +251,9 @@ func TestBuildStatus(t *testing.T) {
 	}
 	if err := WriteState(paths.StateFile, DaemonState{
 		PID:       os.Getpid(),
-		StartedAt: time.Now().Add(-90 * time.Second).Unix(),
+		StartedAt: fixedNow.Add(-90 * time.Second).Unix(),
 		Mode:      "event",
-		Ratio:     &RatioInfo{Value: 1.08, At: time.Now().Unix()},
+		Ratio:     &RatioInfo{Value: 1.08, At: fixedNow.Unix()},
 		HdrSleep:  true,
 	}); err != nil {
 		t.Fatal(err)
@@ -265,7 +269,7 @@ func TestBuildStatus(t *testing.T) {
 	status := BuildStatus(paths, cfg, StatusDeps{
 		AutoBrightness: system.AutoBrightness{Runner: runner},
 		HDR:            system.HdrRatio{Runner: runner},
-		Now:            func() time.Time { return time.Date(2026, 9, 10, 12, 0, 0, 0, time.Local) },
+		Now:            func() time.Time { return fixedNow },
 	}, StatusOptions{IncludeDisplay: true})
 
 	if status.Module.Version != "" && status.Module.Channel != "stable" {
