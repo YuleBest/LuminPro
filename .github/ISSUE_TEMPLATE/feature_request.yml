@@ -1,0 +1,69 @@
+name: 改进建议
+description: 提交一个功能建议或改进想法。
+title: '[建议]: '
+labels: ['enhancement']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢你的建议！请尽量描述清楚你的使用场景和期望效果。
+        提交前请先搜索是否已有类似 Issue。
+
+  - type: dropdown
+    id: suggestion-type
+    attributes:
+      label: 建议类型
+      description: 这个建议主要属于哪一类？
+      options:
+        - 新功能
+        - 体验优化
+        - 性能改进
+        - 文档改进
+        - 其他
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: 当前问题 / 使用场景
+      description: 描述你遇到了什么不便，或这个建议能解决什么问题。
+      placeholder: 例如：目前导出数据需要手动逐个复制，效率很低。
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 期望的改进
+      description: 描述你希望增加或改变什么，越具体越好。
+      placeholder: 例如：希望支持一键导出全部数据为 CSV。
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 替代方案（可选）
+      description: 你考虑过的其他实现方式，或目前的临时解决办法。
+      placeholder: 例如：目前只能通过脚本调用 API 实现。
+    validations:
+      required: false
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: 截图 / 示例（可选）
+      description: 可以拖拽图片到此处上传，或粘贴参考链接、示例代码。
+      placeholder: 拖拽截图到这里，或粘贴示例链接...
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional-info
+    attributes:
+      label: 更多信息（可选）
+      description: 其他补充信息，例如优先级、影响范围、相关 Issue 等。
+      placeholder: 其他信息...
+    validations:
+      required: false
