@@ -149,6 +149,9 @@
 
 md-navigation-bar {
   --md-navigation-bar-container-color: var(--md-sys-color-surface-container);
+  /* 去掉容器阴影：手势条区域用同色填充，阴影会在底部露出一条边 */
+  --md-navigation-bar-container-elevation: 0;
+  box-shadow: none;
   --md-navigation-bar-active-indicator-color: var(--md-sys-color-secondary-container);
   --md-navigation-bar-active-icon-color: var(--md-sys-color-on-secondary-container);
   --md-navigation-bar-active-label-text-color: var(--md-sys-color-on-surface);
