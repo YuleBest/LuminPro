@@ -138,10 +138,16 @@
 }
 
 /* ── M3 导航栏 ────────────────────────────────────────────────────── */
-md-navigation-bar {
+/* 底栏容器：色块填充法——容器背景延伸至屏幕最底部，手势导航条区域
+   与导航栏同色；内边距把导航内容抬到手势条之上。
+   安全区变量在不同 KernelSU 版本命名不同，最后兜底 env()。 */
+.bottom-nav {
   flex: 0 0 auto;
-  /* 背景延伸到屏幕底部，内容抬到手势条之上 */
-  padding-bottom: var(--safe-area-inset-bottom, var(--window-inset-bottom, 0px));
+  background-color: var(--md-sys-color-surface-container);
+  padding-bottom: var(--safe-area-inset-bottom, var(--window-inset-bottom, env(safe-area-inset-bottom, 0px)));
+}
+
+md-navigation-bar {
   --md-navigation-bar-container-color: var(--md-sys-color-surface-container);
   --md-navigation-bar-active-indicator-color: var(--md-sys-color-secondary-container);
   --md-navigation-bar-active-icon-color: var(--md-sys-color-on-secondary-container);

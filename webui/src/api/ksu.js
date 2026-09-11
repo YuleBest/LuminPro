@@ -1,4 +1,4 @@
-import { exec, moduleInfo, enableEdgeToEdge } from 'kernelsu'
+import { exec, moduleInfo } from 'kernelsu'
 import { devMock } from './devMock.js'
 
 export const MODULE_DIR = '/data/adb/modules/LuminPro'
@@ -42,13 +42,19 @@ export function shellQuote(value) {
 }
 
 /**
- * 启用 edge-to-edge：内容延伸至状态栏/手势条区域，
- * insets.css 的 --window-inset-* 随之生效，顶栏/底栏据此避让。
- * 不同 KernelSU 版本的命名不同，逐个尝试，全部不可用则忽略。
+ * 启用 edge-to-edge：内容延伸至状态栏/手势条区域，insets.css 的
+ * --window-inset-* / --safe-area-inset-* 随之生效。
+ *
+ * 注意：不能直接调用从 npm 包 import 的 enableEdgeToEdge——该绑定总是存在，
+ * 不支持时是包内部调用 ksu 对象时抛错，会打断后续脚本（FontMM 踩过同样的坑）。
+ * 这里改为探测全局 ksu 对象，并兼容 KernelSU-Next 的 enableInsets 命名。
  */
 export function applyEdgeToEdge() {
   try {
-    enableEdgeToEdge(true)
+    const ksuApi = globalThis.ksu
+    if (!ksuApi) return
+    const fn = ksuApi.enableEdgeToEdge ?? ksuApi.enableInsets
+    if (typeof fn === 'function') fn.call(ksuApi, true)
   } catch {
     /* 老版本没有该 API：布局仍可用，只是安全区取 0 */
   }
