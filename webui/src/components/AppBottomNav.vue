@@ -16,16 +16,18 @@ const tabs = [
 </script>
 
 <template>
-  <md-navigation-bar>
-    <md-navigation-tab
-      v-for="tab in tabs"
-      :key="tab.key"
-      :label="tab.label"
-      :active="modelValue === tab.key"
-      @click="emit('update:modelValue', tab.key)"
-    >
-      <component :is="tab.icon" slot="active-icon" :size="24" />
-      <component :is="tab.icon" slot="inactive-icon" :size="24" />
-    </md-navigation-tab>
-  </md-navigation-bar>
+  <nav class="bottom-nav">
+    <md-navigation-bar>
+      <md-navigation-tab
+        v-for="tab in tabs"
+        :key="tab.key"
+        :label="tab.label"
+        :active="modelValue === tab.key"
+        @click="emit('update:modelValue', tab.key)"
+      >
+        <component :is="tab.icon" slot="active-icon" :size="24" />
+        <component :is="tab.icon" slot="inactive-icon" :size="24" />
+      </md-navigation-tab>
+    </md-navigation-bar>
+  </nav>
 </template>
