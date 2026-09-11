@@ -1,5 +1,10 @@
 # 更新日志
 
+## V2.5.0-beta.4
+
+- 修复: 手势导航条区域未适配（改为色块填充：底栏背景延伸到屏幕底部，与导航栏同色）
+- 修复: edge-to-edge 在部分 KernelSU 版本未生效（改为探测全局 ksu 对象并兼容 enableInsets 命名）
+
 ## V2.5.0-beta.3
 
 - 修复: 底部导航栏未适配手势导航条（补 viewport-fit=cover 与 edge-to-edge，安全区变量此前恒为 0）
