@@ -1,0 +1,80 @@
+name: Bug 反馈
+description: 提交一个 Bug，帮助我们定位和修复问题。
+title: '[Bug]: '
+labels: ['bug']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢你提交 Bug！请尽量填写完整，带 * 的为必填项。
+        提交前请先搜索是否已有类似 Issue。
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: 遇到了什么？
+      description: 请描述实际发生了什么，以及你期望发生什么。
+      placeholder: 例如：点击保存按钮后页面崩溃，期望正常保存并提示成功。
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps-to-reproduce
+    attributes:
+      label: 操作步骤
+      description: 请按顺序列出可复现问题的步骤。
+      placeholder: |
+        1. 打开...
+        2. 点击...
+        3. 看到...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: version-channel
+    attributes:
+      label: 版本渠道
+      description: 你使用的是哪个版本渠道？
+      options:
+        - Release
+        - Beta
+        - Dev
+    validations:
+      required: true
+
+  - type: input
+    id: version-number
+    attributes:
+      label: 版本号
+      description: 请填写完整版本号，例如 1.2.3 或 1.2.3-beta.1
+      placeholder: 例如 1.2.3
+    validations:
+      required: true
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: 截图（可选）
+      description: 可以直接拖拽图片到此处上传，或粘贴图片链接。
+      placeholder: 拖拽截图到这里...
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: 日志（可选）
+      description: 请粘贴相关日志、错误堆栈或控制台输出。注意删除敏感信息。
+      render: shell
+      placeholder: 粘贴日志...
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional-info
+    attributes:
+      label: 更多信息（可选）
+      description: 其他有助于定位问题的信息，例如系统环境等。
+      placeholder: 其他信息...
+    validations:
+      required: false
