@@ -155,13 +155,22 @@ func (w *Watcher) Add(path, letters string) error {
 	return nil
 }
 
-// Close 释放资源。
+// Close 释放资源。重复调用安全。
 func (w *Watcher) Close() error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
-	_ = unix.Close(w.wakeR)
-	_ = unix.Close(w.wakeW)
-	w.wakeR, w.wakeW = -1, -1
+	// 先唤醒 Run：直接关闭 fd 会让阻塞中的 poll 拿不到退出信号
+	if w.wakeW >= 0 {
+		_, _ = unix.Write(w.wakeW, []byte{1})
+	}
+	if w.wakeR >= 0 {
+		_ = unix.Close(w.wakeR)
+		w.wakeR = -1
+	}
+	if w.wakeW >= 0 {
+		_ = unix.Close(w.wakeW)
+		w.wakeW = -1
+	}
 	if w.fd >= 0 {
 		err := unix.Close(w.fd)
 		w.fd = -1
@@ -170,10 +179,13 @@ func (w *Watcher) Close() error {
 	return nil
 }
 
-// wake 唤醒正在 poll 的 Run。
+// wake 唤醒正在 poll 的 Run。并发/重复调用安全。
 func (w *Watcher) wake() {
-	if w.wakeW >= 0 {
-		_, _ = unix.Write(w.wakeW, []byte{1})
+	w.mu.Lock()
+	fd := w.wakeW
+	w.mu.Unlock()
+	if fd >= 0 {
+		_, _ = unix.Write(fd, []byte{1})
 	}
 }
 

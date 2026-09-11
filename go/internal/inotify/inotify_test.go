@@ -80,6 +80,8 @@ func startRunner(t *testing.T, w *Watcher, debounce time.Duration, handler func(
 		_ = w.NewRunner(debounce, nil).Run(handler, stop)
 	}()
 	t.Cleanup(func() {
+		// 必须先让 Run 退出，再关闭 watcher：反过来会先关掉唤醒管道，
+		// Stop 的唤醒丢失，Run 会卡在 poll 里直到超时（CI 上偶发）
 		close(stop)
 		w.Stop()
 		select {
@@ -87,6 +89,7 @@ func startRunner(t *testing.T, w *Watcher, debounce time.Duration, handler func(
 		case <-time.After(2 * time.Second):
 			t.Error("Run 未能退出")
 		}
+		w.Close()
 	})
 	return stop
 }
@@ -113,7 +116,6 @@ func TestWatchModifyDeliversEvent(t *testing.T) {
 	if err != nil {
 		t.Skipf("当前环境不支持 inotify: %v", err)
 	}
-	defer w.Close()
 	if err := w.Add(path, "c"); err != nil {
 		t.Fatal(err)
 	}
@@ -144,7 +146,6 @@ func TestCloseWriteLetter(t *testing.T) {
 	if err != nil {
 		t.Skipf("当前环境不支持 inotify: %v", err)
 	}
-	defer w.Close()
 	if err := w.Add(path, "w"); err != nil {
 		t.Fatal(err)
 	}
@@ -181,7 +182,6 @@ func TestCloseNoWriteLetter(t *testing.T) {
 	if err != nil {
 		t.Skipf("当前环境不支持 inotify: %v", err)
 	}
-	defer w.Close()
 	if err := w.Add(path, "0"); err != nil {
 		t.Fatal(err)
 	}
@@ -216,25 +216,26 @@ func TestDebounceCoalescesBurst(t *testing.T) {
 	if err != nil {
 		t.Skipf("当前环境不支持 inotify: %v", err)
 	}
-	defer w.Close()
 	if err := w.Add(path, "c"); err != nil {
 		t.Fatal(err)
 	}
 
 	c := &collector{}
-	startRunner(t, w, 200*time.Millisecond, c.add)
+	// 防抖窗口取大一些：CI 上单次写文件可能耗时数十毫秒，
+	// 窗口过短会让连写跨越窗口边界，产生第 2 次触发（测试因此偶发失败）
+	const debounceWindow = 800 * time.Millisecond
+	startRunner(t, w, debounceWindow, c.add)
 
 	for i := 0; i < 5; i++ {
 		if err := os.WriteFile(path, []byte("x"), 0o644); err != nil {
 			t.Fatal(err)
 		}
-		time.Sleep(10 * time.Millisecond)
 	}
 
-	if !waitFor(t, 2*time.Second, func() bool { return len(c.snapshot()) > 0 }) {
+	if !waitFor(t, 3*time.Second, func() bool { return len(c.snapshot()) > 0 }) {
 		t.Fatal("未收到事件")
 	}
-	time.Sleep(300 * time.Millisecond) // 等超过一个防抖窗口
+	time.Sleep(debounceWindow + 400*time.Millisecond) // 等超过一个防抖窗口
 	if got := len(c.snapshot()); got != 1 {
 		t.Fatalf("防抖后应只触发 1 次, 实际 %d 次", got)
 	}
@@ -251,7 +252,6 @@ func TestDrainPreventsRecursion(t *testing.T) {
 	if err != nil {
 		t.Skipf("当前环境不支持 inotify: %v", err)
 	}
-	defer w.Close()
 	if err := w.Add(path, "c"); err != nil {
 		t.Fatal(err)
 	}
@@ -287,7 +287,6 @@ func TestStopExitsBlockingRun(t *testing.T) {
 	if err != nil {
 		t.Skipf("当前环境不支持 inotify: %v", err)
 	}
-	defer w.Close()
 	if err := w.Add(path, "c"); err != nil {
 		t.Fatal(err)
 	}
@@ -317,7 +316,6 @@ func TestAddMissingPathFails(t *testing.T) {
 	if err != nil {
 		t.Skipf("当前环境不支持 inotify: %v", err)
 	}
-	defer w.Close()
 	if err := w.Add(filepath.Join(t.TempDir(), "不存在"), "c"); err == nil {
 		t.Fatal("监听不存在的路径应报错")
 	}
